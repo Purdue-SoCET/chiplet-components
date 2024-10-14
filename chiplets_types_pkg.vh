@@ -49,3 +49,6 @@ typedef struct packed {
     logic [4:0]     req;
     logic [31:0]    payload;
 } flit_t
+
+endpackage
+`endif //CHIPLETS_TYPES_PKG_VH
