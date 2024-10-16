@@ -1,0 +1,95 @@
+CAPI=2:
+name: "socet:chiplet:include:0.0.1"
+description: "Include files required for working with the chiplet protocol"
+
+filesets:
+    rtl:
+        files:
+            - "source/chiplet_types_pkg.vh" : {is_include_file: true}
+        file_type: systemVerilogSource
+        # depend:
+        #     - "fusesoc:core:name"
+
+    synth:
+        depend:
+            - "ece337:tech:AMI_05_LIB"
+            - "socet:chiplet:include_syn"
+
+    tb:
+        files:
+            - "testbench/tb_include.sv"
+            - "waves/include.do": { file_type: user }
+            - "waves/include.gtkw": { file_type: user }
+            # - "data/file.txt": { file_type: user }
+        file_type: systemVerilogSource
+
+    synfiles:
+        depend:
+            - "socet:chiplet:synfiles"
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: include
+
+    sim: &sim
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        toplevel: tb_include
+        tools:
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+                    - -do waves/include.do
+                    - -onfinish stop
+                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
+                    - -coverage
+                vlog_options:
+                    - +cover
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --main
+                    - --timing
+                    - --coverage
+                make_options:
+                    - -j
+
+    lint:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        tools:
+            verilator:
+                mode: lint-only
+                verilator_options:
+                    - --timing
+                    - -Wall
+
+    syn:
+        <<: *default
+        filesets_append:
+            - synfiles
+        default_tool: design_compiler
+        toplevel: include
+        tools:
+            design_compiler:
+                script_dir: "src/socet_chiplet_synfiles_0"
+                dc_script: "synth.tcl"
+                report_dir: "reports"
+                target_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db"
+                link_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db dw_foundation.sldb"
+
+    syn_sim:
+        <<: *sim
+        filesets:
+            - synth
+            - tb
+
