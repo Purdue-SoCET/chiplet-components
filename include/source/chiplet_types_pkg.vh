@@ -58,7 +58,7 @@ package chiplet_types_pkg;
         logic [7:0]     data_hi;
         logic [8:0]     addr;
         logic [6:0]     data_lo;
-    } resp_hdr_t;
+    } switch_cfg_hdr_t;
 
     // Flit Format
     typedef struct packed {
