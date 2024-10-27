@@ -1,7 +1,9 @@
 `include "chiplet_types_pkg.vh"
 `include "phy_manager_if.vh"
 
-module tx_fsm(
+module tx_fsm#(
+    parameter NUM_MSGS=4
+)(
     input logic clk, n_rst,
     phy_manager_if.rx_switch switch_if
     // TODO: need bus_if to tx cache and logic to master
@@ -16,6 +18,8 @@ module tx_fsm(
     } state_e;
 
     typedef logic [LENGTH_WIDTH-1:0] length_counter_t;
+
+    message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
 
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length;
@@ -37,6 +41,12 @@ module tx_fsm(
         .overflow_val(curr_pkt_length),
         .count_out(length),
         .overflow_flag(length_done)
+    );
+
+    message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
+        .clk(clk),
+        .n_rst(n_rst),
+        .msg_if(msg_if)
     );
 
     always_ff @(posedge clk, negedge n_rst) begin

@@ -1,16 +1,16 @@
 `timescale 1ns / 10ps
 `include "chiplet_types_pkg.vh"
 `include "phy_manager_if.vh"
+`include "message_table_if.vh"
 
 module endpoint #(
-    // parameters
+    parameter NUM_MSGS=4
 ) (
     input logic clk, n_rst,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
 
-    localparam NUM_MSGS = 4;
     localparam CACHE_NUM_WORDS = 128;
     localparam ADDR_WIDTH = $clog2(CACHE_NUM_WORDS) + 2;
     localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;

@@ -8,6 +8,8 @@ filesets:
             - "source/endpoint.sv"
             - "source/cache.sv"
             - "source/tx_fsm.sv"
+            - "source/message_table.sv"
+            - "include/message_table_if.vh" : {is_include_file: true}
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"
@@ -96,3 +98,8 @@ targets:
             - synth
             - tb
 
+parameters:
+    NUM_MSGS:
+        datatype: int
+        description: Number of packets in flight at a single time
+        paramtype: vlogparam
