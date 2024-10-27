@@ -7,6 +7,7 @@ filesets:
         files:
             - "source/endpoint.sv"
             - "source/cache.sv"
+            - "source/tx_fsm.sv"
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"

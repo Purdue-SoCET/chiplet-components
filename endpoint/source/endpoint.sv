@@ -1,5 +1,6 @@
 `timescale 1ns / 10ps
 `include "chiplet_types_pkg.vh"
+`include "phy_manager_if.vh"
 
 module endpoint #(
     // parameters
@@ -60,6 +61,8 @@ module endpoint #(
         bus_if.request_stall = 0;
         next_pkt_start_addr = pkt_start_addr;
 
+        // TODO: what's the best way to route this, I want to define maps,
+        // send them to whereever they need to go, and have this logic there
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
             if (bus_if.ren) begin
                 bus_if.rdata = pkt_start_addr[bus_if.addr[2+:$clog2(NUM_MSGS)]];
