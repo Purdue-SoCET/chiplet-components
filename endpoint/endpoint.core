@@ -1,0 +1,107 @@
+CAPI=2:
+name: "socet:chiplet:endpoint:0.0.1"
+description: ""
+
+filesets:
+    rtl:
+        files:
+            - "source/endpoint.sv"
+            - "source/cache.sv"
+            - "source/tx_fsm.sv"
+            - "source/message_table.sv"
+            - "include/message_table_if.sv" : {is_include_file: true}
+            - "include/tx_fsm_if.sv" : {is_include_file: true}
+        file_type: systemVerilogSource
+        depend:
+            - "socet:chiplet:include"
+            - "socet:bus-components:bus_protocol_if"
+            - "socet:digital-lib:counter:0.0.1"
+
+    synth:
+        depend:
+            - "ece337:tech:AMI_05_LIB"
+            - "socet:chiplet:endpoint_syn"
+
+    tb:
+        files:
+            - "testbench/tb_endpoint.sv"
+            - "waves/endpoint.do": { file_type: user }
+            - "waves/endpoint.gtkw": { file_type: user }
+            # - "data/file.txt": { file_type: user }
+        file_type: systemVerilogSource
+
+    synfiles:
+        depend:
+            - "socet:chiplet:synfiles"
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: endpoint
+
+    sim: &sim
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        toplevel: tb_endpoint
+        tools:
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+                    - -do waves/endpoint.do
+                    - -onfinish stop
+                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
+                    - -coverage
+                vlog_options:
+                    - +cover
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --main
+                    - --timing
+                    - --coverage
+                make_options:
+                    - -j
+
+    lint:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        tools:
+            verilator:
+                mode: lint-only
+                verilator_options:
+                    - --timing
+                    - -Wall
+
+    syn:
+        <<: *default
+        filesets_append:
+            - synfiles
+        default_tool: design_compiler
+        toplevel: endpoint
+        tools:
+            design_compiler:
+                script_dir: "src/socet_chiplet_synfiles_0"
+                dc_script: "synth.tcl"
+                report_dir: "reports"
+                target_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db"
+                link_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db dw_foundation.sldb"
+
+    syn_sim:
+        <<: *sim
+        filesets:
+            - synth
+            - tb
+
+parameters:
+    NUM_MSGS:
+        datatype: int
+        description: Number of packets in flight at a single time
+        paramtype: vlogparam
