@@ -49,17 +49,16 @@ module rx_phy_manager #() (
         end
 
     end
-
-    always_comb begin //format check
-        if(curr_id != next_id) begin
-            format = format_e'(flit.payload[31:28]);
-        end
-        else format = format;
-        if(format == FMT_MSG) begin
-
-        end
-
-    end
-
-
 endmodule
+
+
+    // always_comb begin //format check
+    //     if(curr_id != next_id) begin
+    //         format = format_e'(flit.payload[31:28]);
+    //     end
+    //     else format = format;
+    //     if(format == FMT_MSG) begin
+
+    //     end
+
+    // end
