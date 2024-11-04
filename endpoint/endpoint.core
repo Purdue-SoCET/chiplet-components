@@ -9,11 +9,13 @@ filesets:
             - "source/cache.sv"
             - "source/tx_fsm.sv"
             - "source/message_table.sv"
-            - "include/message_table_if.vh" : {is_include_file: true}
+            - "include/message_table_if.sv" : {is_include_file: true}
+            - "include/tx_fsm_if.sv" : {is_include_file: true}
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"
             - "socet:bus-components:bus_protocol_if"
+            - "socet:digital-lib:counter:0.0.1"
 
     synth:
         depend:

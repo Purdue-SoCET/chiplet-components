@@ -1,12 +1,16 @@
 `include "chiplet_types_pkg.vh"
 `include "phy_manager_if.vh"
+`include "tx_fsm_if.sv"
 
 module tx_fsm#(
-    parameter NUM_MSGS=4
+    parameter NUM_MSGS=4,
+    parameter TX_SEND_ADDR=32'h1004
 )(
     input logic clk, n_rst,
-    phy_manager_if.rx_switch switch_if
-    // TODO: need bus_if to tx cache and logic to master
+    tx_fsm_if.tx_fsm tx_if,
+    phy_manager_if.rx_switch switch_if,
+    bus_protocol_if.protocol tx_cache_if,
+    message_table_if.endpoint msg_if
 );
     import chiplet_types_pkg::*;
 
@@ -19,10 +23,8 @@ module tx_fsm#(
 
     typedef logic [LENGTH_WIDTH-1:0] length_counter_t;
 
-    message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
-
     state_e state, next_state;
-    length_counter_t curr_pkt_length, next_curr_pkt_length, length;
+    length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     logic length_clear, length_done;
     logic flit_sent;
     flit_t flit;
@@ -43,22 +45,14 @@ module tx_fsm#(
         .overflow_flag(length_done)
     );
 
-    message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
-        .clk(clk),
-        .n_rst(n_rst),
-        .msg_if(msg_if)
-    );
-
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             state <= IDLE;
             curr_pkt_length <= 0;
-            length <= 0;
             curr_pkt_id <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
-            length <= next_length;
             curr_pkt_id <= next_curr_pkt_id;
         end
     end
@@ -67,9 +61,9 @@ module tx_fsm#(
 
     // Next state logic
     always_comb begin
-        case (state)
+        casez (state)
             IDLE : begin
-                if (bus_if.addr == TX_SEND_ADDR && bus_if.wen) begin
+                if (|msg_if.trigger_send) begin
                     next_state = START_SEND_PKT;
                 end
             end
@@ -86,7 +80,15 @@ module tx_fsm#(
 
     // State output logic
     always_comb begin
-        tx_bus_if.addr = pkt_start_addr[curr_pkt_id] + (length * 4);
+        tx_cache_if.addr = tx_if.pkt_start_addr[curr_pkt_id] + (length * 4);
+        tx_cache_if.ren = 0;
+        tx_cache_if.wen = 0;
+        tx_cache_if.strobe = '0;
+        // TODO:
+        tx_cache_if.is_burst = '0;
+        tx_cache_if.burst_type = '0;
+        tx_cache_if.burst_length = 0;
+        tx_cache_if.secure_transfer = 0;
         long_hdr = long_hdr_t'(tx_bus_if.rdata);
         short_hdr = short_hdr_t'(tx_bus_if.rdata);
         msg_hdr = msg_hdr_t'(tx_bus_if.rdata);
@@ -96,7 +98,7 @@ module tx_fsm#(
         switch_if.data_ready = 0;
         flit = flit_t'(0);
 
-        case (state)
+        casez (state)
             IDLE : begin end
             START_SEND_PKT : begin
                 case (long_hdr.format)
@@ -129,9 +131,11 @@ module tx_fsm#(
             end
             SEND_PKT : begin
                 switch_if.data_ready = 1;
+                tx_cache_if.ren = 1;
+                // TODO: how to tell that switch consumed value?
                 flit.vc = 0;
                 flit.id = curr_pkt_id;
-                flit.req = node_id;
+                flit.req = tx_if.node_id;
                 flit.payload = tx_bus_if.rdata;
             end
         endcase
