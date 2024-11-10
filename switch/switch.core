@@ -6,6 +6,7 @@ filesets:
     rtl:
         files:
             - "source/switch.sv"
+            - "source/crossbar.sv"
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:
