@@ -8,6 +8,8 @@ filesets:
             - "source/switch.sv"
             - "source/crossbar.sv"
             - "source/switch_allocator.sv"
+            - "source/vc_allocator.sv"
+            - "include/vc_allocator_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:
