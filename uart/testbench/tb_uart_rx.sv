@@ -57,7 +57,7 @@ parameter [1:0]SELECT_COMMA_DATA   = 2'b11;
         start = 1'b0;
         comma_sel ='b0;
         wait_cycles(CLKDIV_COUNT * 12 + 1);
-        assert(received_data == data_in) $display("correct data recieved");
+        if(received_data == data_in) $display("correct data recieved");
         else $display("incorect data recieved");
     end
     endtask
@@ -73,7 +73,7 @@ parameter [1:0]SELECT_COMMA_DATA   = 2'b11;
         start = 1'b0;
         comma_sel ='b0;
         wait_cycles(CLKDIV_COUNT * 4 + 1);
-        assert(received_data[9:0] == data_in[49:40]) $display("correct data recieved");
+        if(received_data[9:0] == data_in[49:40]) $display("correct data recieved");
         else $display("incorect data recieved");
     end
     endtask
@@ -89,7 +89,7 @@ parameter [1:0]SELECT_COMMA_DATA   = 2'b11;
         start = 1'b0;
         comma_sel ='b0;
         wait_cycles(CLKDIV_COUNT * 6 + 1);
-        assert(received_data[19:0] == data_in[49:30]) $display("correct data recieved");
+        if(received_data[19:0] == data_in[49:30]) $display("correct data recieved");
         else $display("incorect data recieved");
     end
   endtask

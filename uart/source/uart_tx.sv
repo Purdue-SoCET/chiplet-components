@@ -22,11 +22,12 @@ parameter [1:0]SELECT_COMMA_DATA   = 2'd3;
 logic shift_en;
 logic [(PORTCOUNT - 1):0]shift_reg_out;
 logic [1:0]comma_sel_reg, n_comma_sel_reg;
+logic byte_flag;
 genvar i;
 generate for (i = 0; i < PORTCOUNT;i = i +1) begin : shift_reg_block
 socetlib_shift_reg #(
     .NUM_BITS(10),
-	.SHIFT_MSB(1)  
+	.SHIFT_MSB(1)
 ) sr
 (   .clk(CLK),
 	.nRST(nRST),
@@ -35,6 +36,7 @@ socetlib_shift_reg #(
     .serial_in('1),
 	.parallel_in({data[9 * PORTCOUNT + i],data[8 * PORTCOUNT + i],data[7 * PORTCOUNT + i],data[6 * PORTCOUNT + i],data[5 * PORTCOUNT + i],
                   data[4 * PORTCOUNT + i],data[3 * PORTCOUNT + i],data[2 * PORTCOUNT + i],data[PORTCOUNT  + i],data[i]}),
+    .parallel_out(),
 	.serial_out(shift_reg_out[i])
 );
 end
@@ -47,6 +49,7 @@ socetlib_counter #(.NBITS(CLKDIV_W)) clk_count
     .clear(tx_err),
     .overflow_val((CLKDIV_COUNT)),
     .count_enable(clk_en),
+    .count_out(),
     .overflow_flag(clk_flag)
 );
 //clk div
@@ -62,12 +65,13 @@ socetlib_counter #(.NBITS(4))  bit_count
     .count_enable(clk_flag),
 
     .overflow_val(length_of_message),
+    .count_out(),
     .overflow_flag(byte_flag)
 );
 
 always_comb begin
     length_of_message = '0;
-    case (comma_sel_reg) 
+    casez (comma_sel_reg)
     SELECT_COMMA_1_FLIT :begin
             length_of_message = 4'd3;
         end
@@ -76,8 +80,8 @@ always_comb begin
         end
     SELECT_COMMA_DATA   :begin
             length_of_message = 4'd11;
-
         end
+    default : begin end
     endcase
 end
 
@@ -104,7 +108,7 @@ always_comb begin
     n_comma_sel_reg = comma_sel_reg;
     clk_en = '0;
     tx_err = '0;
-    case (state)
+    casez (state)
     IDLE: begin
         uart_out = '1;
         if (start) begin
@@ -126,18 +130,18 @@ always_comb begin
         uart_out = shift_reg_out;
         clk_en = 1'b1;
         shift_en = 1'b0;
-        
+
         if (clk_flag) begin
             shift_en = 1'b1;
         end
-        
+
         if (start) begin
             n_state = ERROR;
         end
         else if (byte_flag) begin
             shift_en = 1'b1;
             n_state = DONE;
-        end 
+        end
     end
     DONE: begin
         clk_en = 1'b1;
@@ -145,11 +149,11 @@ always_comb begin
         uart_out = '1;
         if ( clk_flag) begin
             done = '1;
-            n_state = IDLE; 
+            n_state = IDLE;
         end
         else if (start) begin
             n_state = ERROR;
-        end 
+        end
     end
     ERROR:begin
         tx_err = '1;
@@ -157,6 +161,7 @@ always_comb begin
             n_state = START;
         end
     end
+    default : begin end
     endcase
 
 end

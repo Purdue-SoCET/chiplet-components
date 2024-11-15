@@ -213,7 +213,12 @@ SYN_TOOL = design_compiler
 # SYNTHESIS TARGETS
 
 syn_%: clean_build
+	@$(CLR_BS_ERR)
+	@echo -e "\nSynthesis currently not supported.\n"
+	@$(CLR_RST)
+	@exit 1
 
+	@$(call ftest,$(SCRIPTS)/synth.tcl,"Could not find synthesis script. Have you run \"make buildsys_setup\" yet?")
 	@echo "Synthesizing the $(ORG):$(PROJECT):$* design using $(SYN_TOOL)..."
 	@fusesoc --cores-root . run --build-root $(BUILD) --setup --build --run --target syn --tool $(SYN_TOOL) $(ORG):$(PROJECT):$*
 
@@ -246,13 +251,14 @@ syn_%: clean_build
 PROJECT_LIB_DIR = /home/ecegrid/a/ece337/summer24-refactor/course-lib
 
 # Directories
-DIR_ROOT = uart_rx
-BUILD = uart_rx/build
-SYN = uart_rx/syn
-SCRIPTS = uart_rx/scripts
+DIR_ROOT = tmp
+BUILD = tmp/build
+SYN = tmp/syn
+SCRIPTS = tmp/scripts
 REPORTS = reports
 TB_OUT_DIR = tb_output_files
-TB_OUT_DIR_VIS = uart_rx/tb_output_files
+TB_OUT_DIR_VIS = tmp/tb_output_files
+
 # FuseSoC behavior
 # amount of directories that FuseSoC adds onto each file in the .eda.yml
 FS_DIRPAD = 2
