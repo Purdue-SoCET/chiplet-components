@@ -14,15 +14,12 @@ module rx_timer
     input nRST,
     input clear,
     input count_enable,
-    input [(NBITS - 1) : 0] overflow_val,
-    output logic [(NBITS - 1) : 0] count_out,
     output logic overflow_flag
 );
     logic [(NBITS - 1) : 0] count;
     logic [(NBITS - 1) : 0] n_count;
     logic of; //overflow 
     logic n_of; //next_overflow
-    assign count_out = count;
     assign overflow_flag = of;
 
     always_ff @(posedge CLK, negedge nRST) begin

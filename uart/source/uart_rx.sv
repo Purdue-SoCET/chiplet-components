@@ -11,13 +11,13 @@ module uart_rx # (parameter PORTCOUNT =5, parameter CLKDIV_W = 10,  parameter [(
 parameter [1:0]SELECT_COMMA_1_FLIT = 2'b1;
 parameter [1:0]SELECT_COMMA_2_FLIT = 2'b10;
 parameter[1:0] SELECT_COMMA_DATA   = 2'b11;
-logic message_done, start,clk_en,sent_flag,shift_en; 
+logic message_done, start,clk_en,sent_flag,shift_en, clk_flag;
 logic [(PORTCOUNT - 1):0] sync_out;
 logic [3:0]bit_sent_count;
 logic [3:0] length_of_message;
 typedef enum logic [3:0]{IDLE, RECIEVE, ERROR,DONE, START} rx_states;
 rx_states state , n_state;
-assign message_done = & sync_out;
+assign message_done = &sync_out;
 assign start = ~(|sync_out);
 genvar i;
 generate for (i = 0; i < PORTCOUNT;i = i +1) begin : sync_block
@@ -31,14 +31,18 @@ end
 endgenerate
 
 generate for (i = 0; i < PORTCOUNT;i = i +1) begin : shift_reg
-socetlib_shift_reg shift_reg
-(   .clk(CLK),
-	.nRST(nRST),
-	.shift_enable(shift_en),
-	.serial_in(sync_out[i]),
-    .parallel_load(),
-	.parallel_out({data[9 * PORTCOUNT + i],data[8 * PORTCOUNT + i],data[7 * PORTCOUNT + i],data[6 * PORTCOUNT + i],data[5 * PORTCOUNT + i],
-                  data[4 * PORTCOUNT + i],data[3 * PORTCOUNT + i],data[2 * PORTCOUNT + i],data[PORTCOUNT  + i],data[i]})
+    socetlib_shift_reg #(
+        .NUM_BITS(10)
+    ) shift_reg (
+        .clk(CLK),
+        .nRST(nRST),
+        .shift_enable(shift_en),
+        .serial_in(sync_out[i]),
+        .parallel_load(0),
+        .parallel_in('1),
+        .serial_out(),
+        .parallel_out({data[9 * PORTCOUNT + i],data[8 * PORTCOUNT + i],data[7 * PORTCOUNT + i],data[6 * PORTCOUNT + i],data[5 * PORTCOUNT + i],
+                      data[4 * PORTCOUNT + i],data[3 * PORTCOUNT + i],data[2 * PORTCOUNT + i],data[PORTCOUNT  + i],data[i]})
 );
 end
 endgenerate
@@ -118,9 +122,6 @@ always_comb begin
             else if (clk_flag) begin
                 shift_en = 1'b1;
             end
-            
-
-            
         end
         DONE:
         begin
@@ -134,14 +135,13 @@ always_comb begin
             endcase
                 n_state = IDLE;
         end
-        
         ERROR: begin
             rx_err = 1'b1;
             if(start) begin
                 n_state = START;
             end
         end
-
+        default : begin end
     endcase
 
 end
