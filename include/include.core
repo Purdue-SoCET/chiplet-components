@@ -1,0 +1,14 @@
+CAPI=2:
+name: "socet:chiplet:include:0.0.1"
+description: "Include files required for working with the chiplet protocol"
+
+filesets:
+    rtl:
+        files:
+            - "source/chiplet_types_pkg.vh" : {is_include_file: true}
+        file_type: systemVerilogSource
+
+targets:
+    default: &default
+        filesets:
+            - rtl

@@ -4,7 +4,7 @@
 
 `timescale 1ns / 10ps
 
-module socetlib_counter_rx_timer
+module rx_timer
 #(
     parameter int NBITS = 4,
     parameter [(NBITS -1):0] COUNT_TO

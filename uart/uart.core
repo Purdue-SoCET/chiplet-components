@@ -1,25 +1,30 @@
 CAPI=2:
-name: "socet:chiplet:.o:1.0.0"
+name: "socet:chiplet:uart:1.0.0"
 description: ""
 
 filesets:
     rtl:
         files:
-            - "source/.o.sv"
+            - "source/uart_rx.sv"
+            - "source/uart_tx.sv"
+            - "source/rx_timer.sv"
         file_type: systemVerilogSource
-        # depend:
-        #     - "fusesoc:core:name"
-
+        depend:
+            - "socet:digital-lib:counter"
+            - "socet:digital-lib:edge_detector"
+            - "socet:digital-lib:shift_register"
+            - "socet:digital-lib:synchronizer"
+             
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
-            - "socet:chiplet:.o_syn"
+            - "socet:chiplet:syn"
 
     tb:
         files:
-            - "testbench/tb_.o.sv"
-            - "waves/.o.do": { file_type: user }
-            - "waves/.o.gtkw": { file_type: user }
+            - "testbench/tb_uart_rx.sv"
+            - "waves/uart_rx.do": { file_type: user }
+            - "waves/uart_rx.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
@@ -31,21 +36,21 @@ targets:
     default: &default
         filesets:
             - rtl
-        toplevel: .o
+        toplevel: uart_rx
 
     sim: &sim
         <<: *default
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_.o
+        toplevel: tb_uart_rx
         tools:
             modelsim:
                 vsim_options:
                     - -vopt
                     - -voptargs='+acc'
                     - -t ps
-                    - -do waves/.o.do
+                    - -do waves/uart_rx.do
                     - -onfinish stop
                     - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
                     - -coverage
@@ -78,7 +83,7 @@ targets:
         filesets_append:
             - synfiles
         default_tool: design_compiler
-        toplevel: .o
+        toplevel: uart_rx
         tools:
             design_compiler:
                 script_dir: "src/socet_chiplet_synfiles_0"

@@ -43,7 +43,7 @@ socetlib_shift_reg shift_reg
 end
 endgenerate
 
-socetlib_counter_rx_timer #(.NBITS(CLKDIV_W),.COUNT_TO(CLKDIV_COUNT))
+rx_timer #(.NBITS(CLKDIV_W),.COUNT_TO(CLKDIV_COUNT))
  clk_count
 (
     .CLK(CLK),
