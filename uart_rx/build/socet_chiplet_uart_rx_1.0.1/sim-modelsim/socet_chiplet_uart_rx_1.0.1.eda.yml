@@ -1,0 +1,50 @@
+version: 0.2.1
+dependencies:
+  socet:chiplet:uart_rx:1.0.1: []
+files:
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/uart_rx.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/socetlib_shiftreg.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/socetlib_synchronizer.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter_rx_timer.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/testbench/tb_uart_rx.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: systemVerilogSource
+  name: src/socet_chiplet_uart_rx_1.0.1/source/uart_tx.sv
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: user
+  name: src/socet_chiplet_uart_rx_1.0.1/waves/uart_rx.do
+  core: socet:chiplet:uart_rx:1.0.1
+- file_type: user
+  name: src/socet_chiplet_uart_rx_1.0.1/waves/uart_rx.gtkw
+  core: socet:chiplet:uart_rx:1.0.1
+hooks: {}
+name: socet_chiplet_uart_rx_1.0.1
+parameters: {}
+tool_options:
+  modelsim:
+    vsim_options:
+    - -vopt
+    - -voptargs='+acc'
+    - -t ps
+    - -do waves/uart_rx.do
+    - -onfinish stop
+    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript)
+      1"
+    - -coverage
+    vlog_options:
+    - +cover
+toplevel: tb_uart_rx
+vpi: []
+flow_options: {}

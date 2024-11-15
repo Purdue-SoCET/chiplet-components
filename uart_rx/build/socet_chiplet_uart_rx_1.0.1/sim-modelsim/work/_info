@@ -1,0 +1,197 @@
+m255
+K4
+z2
+!s99 nomlopt
+!s11f vlog 2021.4 2021.10, Oct 13 2021
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/asicfab/a/socet49/phy_layer/chiplet-components/uart_rx/build/socet_chiplet_uart_rx_1.0.1/sim-modelsim
+T_opt
+!s110 1731689217
+V0HeC3;bS_Ulmz<3FDR?_?2
+04 10 4 work tb_uart_rx fast 0
+=1-70b5e8f06e3e-67377b01-a668d-cae2
+!s124 OEM100
+o-quiet -auto_acc_if_foreign -work work +acc
+Z1 tCvgOpt 0
+n@_opt
+OL;O;2021.4;73
+vsocetlib_counter
+Z2 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
+Z3 !s110 1731689213
+!i10b 1
+!s100 ?JGW]Mh?8FPkdd;P^CAGz1
+I]MHA[`^PL8LzkIKL=PUDd2
+S1
+R0
+w1730578525
+8src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter.sv
+!i122 1
+L0 7 53
+Z4 VDg1SIo80bB@j0V0VzS_@n1
+Z5 OL;L;2021.4;73
+r1
+!s85 0
+31
+Z6 !s108 1731689213.000000
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter.sv|
+!i113 0
+Z7 !s102 +cover
+Z8 o-quiet +cover -sv -work work -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R1
+vsocetlib_counter_rx_timer
+R2
+R3
+!i10b 1
+!s100 <D4FVb_jA0]:T6MXCn^?82
+I=fzV1BSzh88i<[Ia3CDfA3
+S1
+R0
+w1730669798
+8src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter_rx_timer.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter_rx_timer.sv
+!i122 4
+L0 7 54
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter_rx_timer.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/socetlib_counter_rx_timer.sv|
+!i113 0
+R7
+R8
+R1
+vsocetlib_shift_reg
+R2
+R3
+!i10b 1
+!s100 BljLj6_oKGo9;YC1D4XQ80
+IF49WCGc_QG161m7fkLEb_0
+S1
+R0
+w1730587616
+8src/socet_chiplet_uart_rx_1.0.1/source/socetlib_shiftreg.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/socetlib_shiftreg.sv
+!i122 2
+L0 4 45
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/socetlib_shiftreg.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/socetlib_shiftreg.sv|
+!i113 0
+R7
+R8
+R1
+vsocetlib_synchronizer
+R2
+R3
+!i10b 1
+!s100 NKfC=3JWnC8GR[3EJXN4F3
+I<eKal`dQ:00TFRiZL14cE0
+S1
+R0
+w1730582048
+8src/socet_chiplet_uart_rx_1.0.1/source/socetlib_synchronizer.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/socetlib_synchronizer.sv
+!i122 3
+L0 2 33
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/socetlib_synchronizer.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/socetlib_synchronizer.sv|
+!i113 0
+R7
+R8
+R1
+vtb_uart_rx
+R2
+R3
+!i10b 1
+!s100 S=kFRFimND6l543WHnYTW1
+IEAF<>CJ13VP90c4dKlU7X0
+S1
+R0
+w1730672779
+8src/socet_chiplet_uart_rx_1.0.1/testbench/tb_uart_rx.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/testbench/tb_uart_rx.sv
+!i122 5
+L0 2 140
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/testbench/tb_uart_rx.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/testbench/tb_uart_rx.sv|
+!i113 0
+R7
+R8
+R1
+vuart_rx
+R2
+R3
+!i10b 1
+!s100 WAh>c^?DD6BXMNKjZ1E5P1
+IWo:?=EJA9iD`jk@=]Q4dz2
+S1
+R0
+w1730671938
+8src/socet_chiplet_uart_rx_1.0.1/source/uart_rx.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/uart_rx.sv
+!i122 0
+L0 4 145
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/uart_rx.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/uart_rx.sv|
+!i113 0
+R7
+R8
+R1
+vuart_tx
+R2
+R3
+!i10b 1
+!s100 5EMN1b4mfHWN7Z;^b?`8H1
+I=lFV>]`Q<f563[lM1BeB:3
+S1
+R0
+w1730668035
+8src/socet_chiplet_uart_rx_1.0.1/source/uart_tx.sv
+Fsrc/socet_chiplet_uart_rx_1.0.1/source/uart_tx.sv
+!i122 6
+L0 10 155
+R4
+R5
+r1
+!s85 0
+31
+R6
+!s107 src/socet_chiplet_uart_rx_1.0.1/source/uart_tx.sv|
+!s90 +cover|-sv|-quiet|-work|work|src/socet_chiplet_uart_rx_1.0.1/source/uart_tx.sv|
+!i113 0
+R7
+R8
+R1

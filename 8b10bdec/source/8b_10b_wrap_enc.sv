@@ -1,0 +1,1 @@
+module 8b_10b_wrap_enc(input logic CLK, nRST,start,  output flit_t)
