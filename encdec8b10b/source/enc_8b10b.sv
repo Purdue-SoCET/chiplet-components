@@ -1,10 +1,12 @@
 `timescale 1ns / 10ps
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"
-module enc_8b10b(input logic CLK, nRST, input logic [7:0] data_in,
-                output logic [9:0] data_out);
-    // 3b/4b encoding
-import phy_types_pkg::*;
+
+module enc_8b10b(
+    input logic [7:0] data_in,
+    output logic [9:0] data_out
+);
+    import phy_types_pkg::*;
 
     always_comb begin
         case (data_in[7:5])
@@ -20,7 +22,6 @@ import phy_types_pkg::*;
     end
 
     // 5b/6b encoding
-
     always_comb begin
         case (data_in[4:0])
             'd0: data_out[5:0] = D5b0;
@@ -57,5 +58,4 @@ import phy_types_pkg::*;
             'd31: data_out[5:0] = D5b31;
         endcase
     end
-
-endmodule
+endmodule 

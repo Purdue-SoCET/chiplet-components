@@ -1,26 +1,33 @@
 CAPI=2:
-name: "socet:chiplet:.o:1.0.0"
+name: "socet:chiplet:encdec8b10b:1.0.0"
 description: ""
 
 filesets:
     rtl:
         files:
-            - "source/.o.sv"
+            - "source/enc_8b10b.sv"
+            - "source/dec_8b10b.sv"
+            - "source/wrap_dec_8b_10b.sv"
+            - "source/wrap_enc_8b_10b.sv"
+            - "include/wrap_dec_8b_10b_if.sv" : {is_include_file: true}
+            - "include/wrap_enc_8b_10b_if.sv" : {is_include_file: true}
         file_type: systemVerilogSource
-        # depend:
-        #     - "fusesoc:core:name"
+        depend:
+            - "socet:chiplet:include:0.0.1"
 
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
-            - "socet:chiplet:.o_syn"
+            - "socet:chiplet:encdec8b10b_syn"
 
     tb:
         files:
-            - "testbench/tb_.o.sv"
-            - "waves/.o.do": { file_type: user }
-            - "waves/.o.gtkw": { file_type: user }
-            # - "data/file.txt": { file_type: user }
+            - "testbench/tb_8b_10b_dec.sv"
+        file_type: systemVerilogSource
+
+    tb_wrap:
+        files:
+            - "testbench/tb_8b_10b_dec_wrap.sv"
         file_type: systemVerilogSource
 
     synfiles:
@@ -31,21 +38,49 @@ targets:
     default: &default
         filesets:
             - rtl
-        toplevel: .o
+        toplevel: enc_8b10b
 
     sim: &sim
         <<: *default
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_.o
+        toplevel: tb_8b_10b_dec
         tools:
             modelsim:
                 vsim_options:
                     - -vopt
                     - -voptargs='+acc'
                     - -t ps
-                    - -do waves/.o.do
+                    - -do waves/encdec8b10b.do
+                    - -onfinish stop
+                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
+                    - -coverage
+                vlog_options:
+                    - +cover
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --main
+                    - --timing
+                    - --coverage
+                make_options:
+                    - -j
+
+    sim_wrap: &sim_wrap
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb_wrap
+        toplevel: tb_8b_10b_dec_wrap
+        tools:
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+                    - -do waves/encdec8b10b.do
                     - -onfinish stop
                     - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
                     - -coverage
@@ -78,7 +113,7 @@ targets:
         filesets_append:
             - synfiles
         default_tool: design_compiler
-        toplevel: .o
+        toplevel: encdec8b10b
         tools:
             design_compiler:
                 script_dir: "src/socet_chiplet_synfiles_0"

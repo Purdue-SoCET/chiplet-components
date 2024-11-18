@@ -335,7 +335,7 @@ buildsys_setup:
 
 # MODULE GENERATION TARGETS
 
-SUB_DIR ?= ./encoding8b10b
+SUB_DIR ?= .
 module_%: $(SUB_DIR)
 	@echo "Creating files for module $* in ${SUB_DIR} ..."
 	@mkdir -p ${SUB_DIR}/source
