@@ -1,6 +1,6 @@
 `ifndef CHIPLET_TYPES_PKG_VH
 `define CHIPLET_TYPES_PKG_VH
-
+`timescale 1ns / 10ps
 package chiplet_types_pkg;
     // Word
     parameter WORD_W    = 32;
