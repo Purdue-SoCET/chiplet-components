@@ -1,12 +1,11 @@
 CAPI=2:
-name: "socet:chiplet:8b_10b_dec:1.0.0"
+name: "socet:chiplet:.o:1.0.0"
 description: ""
 
 filesets:
     rtl:
         files:
-            - "source/enc_8b10b.sv"
-            - "source/dec_8b10b.sv"
+            - "source/.o.sv"
         file_type: systemVerilogSource
         # depend:
         #     - "fusesoc:core:name"
@@ -14,13 +13,13 @@ filesets:
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
-            - "socet:chiplet:8b_10b_dec_syn"
+            - "socet:chiplet:.o_syn"
 
     tb:
         files:
-            - "testbench/tb_8b_10b_dec.sv"
-            - "waves/8b_10b_dec.do": { file_type: user }
-            - "waves/8b_10b_dec.gtkw": { file_type: user }
+            - "testbench/tb_.o.sv"
+            - "waves/.o.do": { file_type: user }
+            - "waves/.o.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
@@ -32,21 +31,21 @@ targets:
     default: &default
         filesets:
             - rtl
-        toplevel: 8b_10b_dec
+        toplevel: .o
 
     sim: &sim
         <<: *default
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_8b_10b_dec
+        toplevel: tb_.o
         tools:
             modelsim:
                 vsim_options:
                     - -vopt
                     - -voptargs='+acc'
                     - -t ps
-                    - -do waves/8b_10b_dec.do
+                    - -do waves/.o.do
                     - -onfinish stop
                     - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
                     - -coverage
@@ -79,7 +78,7 @@ targets:
         filesets_append:
             - synfiles
         default_tool: design_compiler
-        toplevel: 8b_10b_dec
+        toplevel: .o
         tools:
             design_compiler:
                 script_dir: "src/socet_chiplet_synfiles_0"

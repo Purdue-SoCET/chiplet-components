@@ -1,8 +1,15 @@
 `timescale 1ns / 10ps
+/* verilator coverage_off */
 
-module tb_8b10b;
+module tb_8b_10b_dec ();
 
-    // Testbench signals
+    localparam CLK_PERIOD = 10  ;
+    
+    initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars;
+    end
+
     logic CLK;
     logic nRST;
     logic [7:0] data_in;
@@ -32,10 +39,8 @@ module tb_8b10b;
         #(CLK_PERIOD / 2.0);
     end
 
-
-
     initial begin
-      
+
         nRST = 0;
         @(posedge CLK); nRST = 1;
         for (int i = 0; i < 127; i = i + 1) begin
@@ -49,5 +54,7 @@ module tb_8b10b;
         end 
         $finish;
     end
-
 endmodule
+
+/* verilator coverage_on */
+

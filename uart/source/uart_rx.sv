@@ -1,16 +1,12 @@
 `timescale 1ns / 10ps
-
-
-module uart_rx # (parameter PORTCOUNT =5, parameter CLKDIV_W = 10,  parameter [(CLKDIV_W - 1):0]  CLKDIV_COUNT = 'd10)
+`include "uart_rx_if.sv"
+`include "chiplet_types_pkg.vh"
+`include "phy_types_pkg.vh"
+module uart_rx # (parameter PORTCOUNT =5, parameter CLKDIV_COUNT = 10)
                  (input logic CLK, nRST,
-                  input logic [(PORTCOUNT -1):0] uart_in,
-                  output logic [(PORTCOUNT * 10 -1):0] data,
-                  output logic [1:0] comma_sel,
-                  output logic done, rx_err);
+                  uart_rx_if.rx rx_if);
 
-parameter [1:0]SELECT_COMMA_1_FLIT = 2'b1;
-parameter [1:0]SELECT_COMMA_2_FLIT = 2'b10;
-parameter[1:0] SELECT_COMMA_DATA   = 2'b11;
+import phy_types_pkg::*;
 logic message_done, start,clk_en,sent_flag,shift_en, clk_flag;
 logic [(PORTCOUNT - 1):0] sync_out;
 logic [3:0]bit_sent_count;
@@ -24,7 +20,7 @@ generate for (i = 0; i < PORTCOUNT;i = i +1) begin : sync_block
 socetlib_synchronizer   sync
          (.CLK(CLK),
           .nRST(nRST),
-          .async_in(uart_in[i]),
+          .async_in(rx_if.uart_in[i]),
           .sync_out(sync_out[i])
         );
 end
@@ -41,18 +37,18 @@ generate for (i = 0; i < PORTCOUNT;i = i +1) begin : shift_reg
         .parallel_load(0),
         .parallel_in('1),
         .serial_out(),
-        .parallel_out({data[9 * PORTCOUNT + i],data[8 * PORTCOUNT + i],data[7 * PORTCOUNT + i],data[6 * PORTCOUNT + i],data[5 * PORTCOUNT + i],
-                      data[4 * PORTCOUNT + i],data[3 * PORTCOUNT + i],data[2 * PORTCOUNT + i],data[PORTCOUNT  + i],data[i]})
+        .parallel_out({rx_if.data[9 * PORTCOUNT + i],rx_if.data[8 * PORTCOUNT + i],rx_if.data[7 * PORTCOUNT + i],rx_if.data[6 * PORTCOUNT + i],rx_if.data[5 * PORTCOUNT + i],
+                      rx_if.data[4 * PORTCOUNT + i],rx_if.data[3 * PORTCOUNT + i],rx_if.data[2 * PORTCOUNT + i],rx_if.data[PORTCOUNT  + i],rx_if.data[i]})
 );
 end
 endgenerate
 
-rx_timer #(.NBITS(CLKDIV_W),.COUNT_TO(CLKDIV_COUNT))
+rx_timer #(.NBITS($clog2(CLKDIV_COUNT)),.COUNT_TO(CLKDIV_COUNT))
  clk_count
 (
     .CLK(CLK),
     .nRST(nRST),
-    .clear(rx_err),
+    .clear(rx_if.rx_err),
     .count_enable(clk_en),
     .overflow_flag(clk_flag)
 );
@@ -65,7 +61,7 @@ socetlib_counter  #(.NBITS(4)) bit_count
 (
     .CLK(CLK),
     .nRST(nRST),
-    .clear(rx_err || state == IDLE),
+    .clear(rx_if.rx_err || state == IDLE),
     .count_enable(clk_flag && state == RECIEVE),
     .overflow_val(4'd11),
     .count_out(bit_sent_count),
@@ -85,10 +81,6 @@ end
 
 always_comb begin
     n_state = state;
-    comma_sel = '0;
-    clk_en = '0;
-    shift_en ='0;
-    done = '0;
     case(state)
         IDLE:
         begin
@@ -98,7 +90,6 @@ always_comb begin
         end
         START:
         begin
-            clk_en = '1;
             if (clk_flag ) begin
                 n_state =RECIEVE;
             end
@@ -107,7 +98,6 @@ always_comb begin
             end
         end
         RECIEVE: begin
-            clk_en = 1'b1;
             if (clk_flag &&start) begin
                 n_state = ERROR;
             end
@@ -119,29 +109,64 @@ always_comb begin
                     n_state = ERROR;
                 end
             end
-            else if (clk_flag) begin
+        end
+        DONE:
+        begin
+            if (bit_sent_count != 'd3 || bit_sent_count != 'd5 || bit_sent_count != 'd11)
+            n_state = IDLE;
+        end
+        ERROR: begin
+            if(start) begin
+                n_state = START;
+            end
+        end
+        default begin
+        end
+    endcase
+
+end
+
+
+
+always_comb begin
+    rx_if.comma_sel = NADA;
+    clk_en = '0;
+    shift_en ='0;
+    rx_if.done = '0;
+    rx_if.rx_err = '0;
+    case(state)
+        START:
+        begin
+            clk_en = '1;
+        end
+        RECIEVE: begin
+            clk_en = 1'b1;
+            if (clk_flag && ~message_done && ~start) begin
                 shift_en = 1'b1;
             end
         end
         DONE:
         begin
-            done = '1;
+            rx_if.done = '1;
             clk_en = '1;
             case(bit_sent_count)
-            4'd3: comma_sel = SELECT_COMMA_1_FLIT;
-            4'd5: comma_sel = SELECT_COMMA_2_FLIT;
-            4'd11: comma_sel = SELECT_COMMA_1_FLIT;
-            default: n_state = ERROR;
+            4'd3: rx_if.comma_sel = SELECT_COMMA_1_FLIT;
+            4'd5: rx_if.comma_sel = SELECT_COMMA_2_FLIT;
+            4'd11: rx_if.comma_sel = SELECT_COMMA_1_FLIT;
+            default: begin
+            end
             endcase
-                n_state = IDLE;
         end
         ERROR: begin
-            rx_err = 1'b1;
-            if(start) begin
-                n_state = START;
-            end
+            rx_if.rx_err = 1'b1;
         end
-        default : begin end
+        default: begin 
+            rx_if.comma_sel = NADA;
+            clk_en = '0;
+            shift_en ='0;
+            rx_if.done = '0;
+            rx_if.rx_err = '0;
+        end
     endcase
 
 end
