@@ -79,6 +79,8 @@ module switch #(
 
     assign sa_if.requested = rc_if.out_sel;
     assign sa_if.allocate = rc_if.allocate;
+
+    //assign rc_if.buffer_sel = 
     
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
@@ -89,15 +91,22 @@ module switch #(
 
     assign vc_if.credit_granted = sw_if.credit_granted;
 
-    
+    int k;
+    pkt_id_t [NUM_BUFFERS-1:0] id1, next_id1;
+
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             buffs <= '0;
+            id1 <= '0;
         end else begin
             buffs <= next_buffs;
+            
+            id1 <= next_id1;
         end
     end
 
+    //TODO init virtual channels
+    //TODO flush packet from buffer after its sent
     always_comb begin
         next_buffs = buffs;
         for(int i = 0; i < NUM_BUFFERS, i++) begin
@@ -105,13 +114,23 @@ module switch #(
                 next_buffs[i] = sw_if.in[i];
             end
         end
-        
     end
-   
+    //TODO get head flit of each packet going into a buffer to route compute
+    always_comb begin
+        for(k = 0; k < NUM_BUFFERS; k++) begin
+                next_id1[k] = sw_if.in[k].id;
+        end
 
+        for(int j = 0; j < NUM_BUFFERS, j++) begin
+            if(sw_if.data_ready_in[i]) begin
+                if(id1 != sw_if.in.id) begin
+                    rc_if.in_flit[i] = sw_if.in[i];
+                end
+            end
+        end
+    end
 
-
-
-
+    //buffer select signal in route compute?
+    //checking data ready when checking id change?
 
 endmodule
