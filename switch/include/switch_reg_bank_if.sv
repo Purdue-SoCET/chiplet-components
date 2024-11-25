@@ -1,0 +1,28 @@
+`ifndef SWITCH_REG_BANK_VH
+`define SWITCH_REG_BANK_VH
+
+`include "chiplet_types_pkg.vh"
+
+interface switch_reg_bank_if #(
+    parameter NUM_BUFFERS,
+    parameter NUM_OUTPORTS,
+    parameter TOTAL_NODES
+);
+
+    import chiplet_types_pkg::*;
+
+    flit_t [NUM_BUFFERS-1:0] in_flit;
+    logic [NUM_OUTPORTS-1:0] dateline;
+    route_lut_t [TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS)] route_lut;
+    //
+
+
+    //TODO 
+    modport reg_bank(
+        input in_flit,
+        output dateline,
+        output route_sel
+    );
+endinterface
+
+`endif //SWITCH_REG_BANK_VH

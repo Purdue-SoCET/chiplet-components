@@ -17,12 +17,13 @@ interface switch_if #(
     logic [NUM_OUTPORTS-1:0] data_ready_out;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] buffer_available;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] credit_granted;
+    logic [NUM_OUTPORTS-1:0] packet_sent;
     //logic [NUM_BUFFERS-1:0] buffer_full;
 
     //TODO 
     modport switch(
-        input in_flit, credit_granted, data_ready_in,
-        output out_flit, buffer_available, data_ready_out
+        input in, credit_granted, data_ready_in, packet_sent, 
+        output out, buffer_available, data_ready_out
     );
 endinterface
 

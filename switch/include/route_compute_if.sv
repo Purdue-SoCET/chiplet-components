@@ -11,14 +11,15 @@ interface route_compute_if #(
     import chiplet_types_pkg::*;
 
     flit_t [NUM_BUFFERS-1:0] in_flit;
-    logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
+    route_lut_t [TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS)] route_lut;
+    // logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
     logic [NUM_OUTPORTS-1:0] [$clog2(NUM_BUFFERS)-1:0] out_sel;
     logic [NUM_BUFFERS-1:0] allocate;
 
     //TODO 
     modport route(
         input in_flit,
-        input buffer_sel,
+        input route_lut,
         output allocate,
         output out_sel
     );

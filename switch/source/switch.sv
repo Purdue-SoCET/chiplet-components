@@ -18,6 +18,7 @@ module switch #(
     parameter int NUM_OUTPORTS = NUM_LINKS + 1;
     parameter flit_t RESET_VAL = '0;
 
+    // Interface Declarations
     vc_allocator_if.allocator #(
         .NUM_BUFFERS(NUM_BUFFERS), 
         .NUM_OUTPORTS(NUM_OUTPORTS),
@@ -36,6 +37,13 @@ module switch #(
         .NUM_BUFFERS(NUM_BUFFERS), 
         .NUM_OUTPORTS(NUM_OUTPORTS)
     ) sa_if;
+    switch_reg_bank_if.reg_bank #(
+        .NUM_BUFFERS(NUM_BUFFERS), 
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES)
+    ) rb_if;
+
+    // Module Declarations
 
     vc_allocator #(
         .NUM_OUTPORTS(NUM_OUTPORTS),
@@ -73,6 +81,15 @@ module switch #(
         n_rst, 
         sa_if
     );
+    switch_reg_bank #(
+        .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES)
+    ) REGBANK(
+        clk, 
+        n_rst,
+        rb_if
+    );
 
     logic [BUFFER_BITS-1:0] buffs [NUM_BUFFERS-1:0];
     logic [BUFFER_BITS-1:0] next_buffs [NUM_BUFFERS-1:0];
@@ -81,27 +98,34 @@ module switch #(
     assign sa_if.allocate = rc_if.allocate;
 
     //assign rc_if.buffer_sel = 
+    assign rc_if.route_lut = rb_if.route_lut;
     
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
 
     assign sw_if.out = cb_if.out;
     assign sw_if.buffer_available = vc_if.buffer_available;
-    assign sw_if.data_ready_out = sa_if.enable;
 
     assign vc_if.credit_granted = sw_if.credit_granted;
+    assign vc_if.packet_sent = sw_if.packet_sent;
+    assign vc_if.dateline = rb_if.dateline;
 
     int k;
     pkt_id_t [NUM_BUFFERS-1:0] id1, next_id1;
+    node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
+    logic [NUM_BUFFERS-1:0] next_data_ready_out;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             buffs <= '0;
             id1 <= '0;
+            req1 <= '0;
+            sw_if.data_ready_out <= '0;
         end else begin
             buffs <= next_buffs;
-            
             id1 <= next_id1;
+            req1 <= next_req1;
+            sw_if.data_ready_out <= next_data_ready_out;
         end
     end
 
@@ -114,17 +138,20 @@ module switch #(
                 next_buffs[i] = sw_if.in[i];
             end
         end
+        next_data_ready_out = sa_if.enable;
     end
-    //TODO get head flit of each packet going into a buffer to route compute
+
     always_comb begin
         for(k = 0; k < NUM_BUFFERS; k++) begin
                 next_id1[k] = sw_if.in[k].id;
+                next_req1[k] = sw_if.in[k].req;
         end
 
         for(int j = 0; j < NUM_BUFFERS, j++) begin
-            if(sw_if.data_ready_in[i]) begin
-                if(id1 != sw_if.in.id) begin
-                    rc_if.in_flit[i] = sw_if.in[i];
+            if(sw_if.data_ready_in[j]) begin
+                if(id1[j] != sw_if.in[j].id || req1[j] != sw_if.in[k].req) begin
+                    rc_if.in_flit[j] = sw_if.in[j];
+                    rb_if.in_flit[j] = sw_if.in[j];
                 end
             end
         end
