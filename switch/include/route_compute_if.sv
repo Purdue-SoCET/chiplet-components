@@ -10,6 +10,12 @@ interface route_compute_if #(
 
     import chiplet_types_pkg::*;
 
+    typedef struct packed {
+        logic [$clog2(NUM_BUFFERS)-1:0] out_sel;
+        node_id_t                   req;
+        node_id_t                   dest;
+    } route_lut_t;
+
     flit_t [NUM_BUFFERS-1:0] in_flit;
     route_lut_t [TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS)] route_lut;
     // logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
@@ -19,7 +25,7 @@ interface route_compute_if #(
     //TODO 
     modport route(
         input in_flit,
-        input route_lut,
+        input route_lut, 
         output allocate,
         output out_sel
     );

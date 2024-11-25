@@ -68,11 +68,7 @@ package chiplet_types_pkg;
         word_t          payload;
     } flit_t;
 
-    typedef struct packed {
-        logic [$clog2(NUM_BUFFERS)-1:0] out_sel;
-        node_id_t                   req;
-        node_id_t                   dest;
-    } route_lut_t;
+    
 
     
 endpackage

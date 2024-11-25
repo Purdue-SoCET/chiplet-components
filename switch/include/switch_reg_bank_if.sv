@@ -11,6 +11,12 @@ interface switch_reg_bank_if #(
 
     import chiplet_types_pkg::*;
 
+    typedef struct packed {
+        logic [$clog2(NUM_BUFFERS)-1:0] out_sel;
+        node_id_t                   req;
+        node_id_t                   dest;
+    } route_lut_t;
+
     flit_t [NUM_BUFFERS-1:0] in_flit;
     logic [NUM_OUTPORTS-1:0] dateline;
     route_lut_t [TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS)] route_lut;
