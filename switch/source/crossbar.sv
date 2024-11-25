@@ -1,9 +1,12 @@
 // Creates a M input to N output crossbar switch of data type T.
 // This design updates synchronously updates output ports
+
+`include "crossbar_if.sv"
+
 module crossbar#(
     parameter type T,
     parameter T RESET_VAL,
-    parameter int M,
+    // parameter int M,
     parameter int N
 )(
     input logic clk, n_rst,
@@ -20,8 +23,13 @@ module crossbar#(
     end
 
     always_comb begin
-        for (int i = 0; i < N; i++) begin
-            next_out[i] = cb_if.in[cb_if.sel[i]];
+        if(!cb_if.enable) begin
+            next_out = '0;
+        end
+        else begin
+            for (int i = 0; i < N; i++) begin
+                next_out[i] = cb_if.in[cb_if.sel[i]];
+            end
         end
     end
 endmodule

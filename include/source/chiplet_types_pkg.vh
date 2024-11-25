@@ -56,7 +56,7 @@ package chiplet_types_pkg;
         format_e        format;
         node_id_t       dest;
         logic [7:0]     data_hi;
-        logic [8:0]     addr;
+        logic [7:0]     addr;
         logic [6:0]     data_lo;
     } switch_cfg_hdr_t;
 

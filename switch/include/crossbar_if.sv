@@ -1,4 +1,3 @@
-`ifndef CROSSBAR_IF_SV
 `define CROSSBAR_IF_SV
 
 interface crossbar_if #(
@@ -12,7 +11,7 @@ interface crossbar_if #(
     T [N-1:0] out;
 
     modport crossbar(
-        input in, sel,
+        input in, sel, enable,
         output out
     );
 

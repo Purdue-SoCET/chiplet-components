@@ -4,20 +4,22 @@
 `include "chiplet_types_pkg.vh"
 
 interface route_compute_if #(
-    parameter BUFFERS
+    parameter NUM_BUFFERS,
+    parameter NUM_OUTPORTS
 );
 
     import chiplet_types_pkg::*;
 
-    flit_t [BUFFERS-1:0] in_flit;
-    logic [$clog2(BUFFERS)-1:0] buffer_sel, out_sel;
-
+    flit_t [NUM_BUFFERS-1:0] in_flit;
+    logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
+    logic [NUM_OUTPORTS-1:0] [$clog2(NUM_BUFFERS)-1:0] out_sel;
+    logic [NUM_BUFFERS-1:0] allocate;
 
     //TODO 
     modport route(
         input in_flit,
         input buffer_sel,
-        output id,
+        output allocate,
         output out_sel
     );
 endinterface
