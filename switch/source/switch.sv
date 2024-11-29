@@ -3,45 +3,48 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 
+import chiplet_types_pkg::*;
+
 module switch #(
-    parameter int NUM_LINKS,
+    parameter int NUM_OUTPORTS,
+    parameter int NUM_BUFFERS,
     parameter int NUM_VCS,
     parameter int BUFFER_SIZE,
     parameter int TOTAL_NODES,
-    parameter node_id_t NODE,
+    parameter node_id_t NODE
 ) (
     input logic clk, n_rst,
     switch_if.switch sw_if
 );
-    parameter int BUFFER_BITS = BUFFER_SIZE * 8;
-    parameter int NUM_BUFFERS = NUM_LINKS + 1;
-    parameter int NUM_OUTPORTS = NUM_LINKS + 1;
+    parameter int BUFFER_BITS = BUFFER_SIZE * 32;
     parameter flit_t RESET_VAL = '0;
 
     // Interface Declarations
-    vc_allocator_if.allocator #(
+    vc_allocator_if #(
         .NUM_BUFFERS(NUM_BUFFERS), 
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS)
-    ) vc_if;
-    route_compute_if.route #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS)
-    ) rc_if;
-    crossbar_if.crossbar #(
-         .T(flit_t),
-         .M(NUM_BUFFERS),
-         .N(NUM_OUTPORTS)
-    ) cb_if;
-    switch_allocator_if.allocator #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS)
-    ) sa_if;
-    switch_reg_bank_if.reg_bank #(
+    ) vc_if();
+    route_compute_if #(
         .NUM_BUFFERS(NUM_BUFFERS), 
         .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TOTAL_NODES(TOTAL_NODES)
-    ) rb_if;
+        .TABLE_SIZE(32) // TODO: parameterize
+    ) rc_if();
+    crossbar_if #(
+         .T(flit_t),
+         .NUM_IN(NUM_BUFFERS),
+         .NUM_OUT(NUM_OUTPORTS)
+    ) cb_if();
+    switch_allocator_if #(
+        .NUM_BUFFERS(NUM_BUFFERS), 
+        .NUM_OUTPORTS(NUM_OUTPORTS)
+    ) sa_if();
+    switch_reg_bank_if #(
+        .NUM_BUFFERS(NUM_BUFFERS), 
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES),
+        .TABLE_SIZE(32) // TODO: parameterize
+    ) rb_if();
 
     // Module Declarations
 
@@ -58,6 +61,7 @@ module switch #(
     route_compute #(
         .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
         .TOTAL_NODES(TOTAL_NODES)
     ) ROUTECOMP(
         clk, 
@@ -67,7 +71,7 @@ module switch #(
     crossbar #(
         .T(flit_t),
         .RESET_VAL(RESET_VAL),
-        .N(NUM_OUTPORTS)
+        .NUM_OUT(NUM_OUTPORTS)
     ) CROSS(
         clk, 
         n_rst, 
@@ -82,8 +86,10 @@ module switch #(
         sa_if
     );
     switch_reg_bank #(
+        .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TABLE_SIZE(32),
         .TOTAL_NODES(TOTAL_NODES)
     ) REGBANK(
         clk, 
@@ -91,8 +97,8 @@ module switch #(
         rb_if
     );
 
-    logic [BUFFER_BITS-1:0] buffs [NUM_BUFFERS-1:0];
-    logic [BUFFER_BITS-1:0] next_buffs [NUM_BUFFERS-1:0];
+    logic [NUM_BUFFERS-1:0] [BUFFER_BITS-1:0] buffs, next_buffs;
+    flit_t [NUM_BUFFERS-1:0] next_in_flit;
 
     assign sa_if.requested = rc_if.out_sel;
     assign sa_if.allocate = rc_if.allocate;
@@ -113,7 +119,7 @@ module switch #(
     int k;
     pkt_id_t [NUM_BUFFERS-1:0] id1, next_id1;
     node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
-    logic [NUM_BUFFERS-1:0] next_data_ready_out;
+    logic [NUM_OUTPORTS-1:0] next_data_ready_out;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
@@ -133,7 +139,7 @@ module switch #(
     //TODO flush packet from buffer after its sent
     always_comb begin
         next_buffs = buffs;
-        for(int i = 0; i < NUM_BUFFERS, i++) begin
+        for(int i = 0; i < NUM_BUFFERS; i++) begin
             if(sw_if.data_ready_in[i]) begin
                 next_buffs[i] = sw_if.in[i];
             end
@@ -143,11 +149,15 @@ module switch #(
 
     always_comb begin
         for(k = 0; k < NUM_BUFFERS; k++) begin
-                next_id1[k] = sw_if.in[k].id;
-                next_req1[k] = sw_if.in[k].req;
+            next_id1[k] = sw_if.in[k].id;
+            next_req1[k] = sw_if.in[k].req;
         end
 
-        for(int j = 0; j < NUM_BUFFERS, j++) begin
+        // TODO: should make buffers FIFOs and just store head flits
+        // TODO: should also move this to separate module
+        rc_if.in_flit = '0;
+        rb_if.in_flit = '0;
+        for(int j = 0; j < NUM_BUFFERS; j++) begin
             if(sw_if.data_ready_in[j]) begin
                 if(id1[j] != sw_if.in[j].id || req1[j] != sw_if.in[k].req) begin
                     rc_if.in_flit[j] = sw_if.in[j];

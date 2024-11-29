@@ -7,8 +7,15 @@ filesets:
         files:
             - "source/switch.sv"
             - "source/crossbar.sv"
+            - "source/route_compute.sv"
             - "source/switch_allocator.sv"
+            - "source/switch_reg_bank.sv"
             - "source/vc_allocator.sv"
+            - "include/switch_pkg.sv" : {is_include_file: true}
+            - "include/crossbar_if.sv" : {is_include_file: true}
+            - "include/route_compute_if.sv" : {is_include_file: true}
+            - "include/switch_allocator_if.sv" : {is_include_file: true}
+            - "include/switch_reg_bank_if.sv" : {is_include_file: true}
             - "include/vc_allocator_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
@@ -23,9 +30,8 @@ filesets:
 
     tb:
         files:
-            - "testbench/tb_switch.sv"
-            - "waves/switch.do": { file_type: user }
-            - "waves/switch.gtkw": { file_type: user }
+            - "testbench/switch_wrapper.sv"
+            - "testbench/tb_switch.cc": {file_type: cppSource}
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
@@ -44,19 +50,9 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_switch
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
         tools:
-            modelsim:
-                vsim_options:
-                    - -vopt
-                    - -voptargs='+acc'
-                    - -t ps
-                    - -do waves/switch.do
-                    - -onfinish stop
-                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
-                    - -coverage
-                vlog_options:
-                    - +cover
             verilator:
                 verilator_options:
                     - --cc
@@ -64,6 +60,9 @@ targets:
                     - --main
                     - --timing
                     - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
                 make_options:
                     - -j
 

@@ -2,24 +2,22 @@
 `define ROUTE_COMPUTE_VH
 
 `include "chiplet_types_pkg.vh"
+`include "switch_pkg.sv"
 
 interface route_compute_if #(
     parameter NUM_BUFFERS,
-    parameter NUM_OUTPORTS
+    parameter NUM_OUTPORTS,
+    parameter TABLE_SIZE
 );
-
     import chiplet_types_pkg::*;
-
-    typedef struct packed {
-        logic [$clog2(NUM_BUFFERS)-1:0] out_sel;
-        node_id_t                   req;
-        node_id_t                   dest;
-    } route_lut_t;
+    import switch_pkg::*;
 
     flit_t [NUM_BUFFERS-1:0] in_flit;
-    route_lut_t [TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS)] route_lut;
+    route_lut_t [TABLE_SIZE-1:0] route_lut;
     // logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
-    logic [NUM_OUTPORTS-1:0] [$clog2(NUM_BUFFERS)-1:0] out_sel;
+    // The requested outport for each buffer. Buffers may have the same
+    // requested outport, but the switch allocator will arbitrate
+    logic [NUM_BUFFERS-1:0] [$clog2(NUM_OUTPORTS)-1:0] out_sel;
     logic [NUM_BUFFERS-1:0] allocate;
 
     //TODO 

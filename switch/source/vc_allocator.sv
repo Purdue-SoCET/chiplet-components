@@ -16,10 +16,19 @@ module vc_allocator#(
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] next_buffer_available;
 
+    // I have no idea how to clean this up
+    function logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] init_buffer_availability();
+        for (int i = 0; i < NUM_OUTPORTS; i++) begin
+            for (int j = 0; j < NUM_VCS; j++) begin
+                init_buffer_availability[i][j] = BUFFER_SIZE[0+:$clog2(BUFFER_SIZE+1)];
+            end
+        end
+    endfunction
+
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             vc_if.buffer_available <= '1;
-            buffer_availability <= '{default: BUFFER_SIZE};
+            buffer_availability <= init_buffer_availability();
         end else begin
             vc_if.buffer_available <= next_buffer_available;
             buffer_availability <= next_buffer_availability;

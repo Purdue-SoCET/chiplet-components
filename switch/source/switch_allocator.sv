@@ -11,8 +11,8 @@ module switch_allocator#(
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
-            sa_if.select <= {NUM_OUTPORTS{'0}};
-            sa_if.enable <= {NUM_OUTPORTS{'0}};
+            sa_if.select <= '0;
+            sa_if.enable <= '0;
         end else begin
             sa_if.select <= next_select;
             sa_if.enable <= next_enable;
@@ -28,7 +28,7 @@ module switch_allocator#(
         for (int buffer = 0; buffer < NUM_BUFFERS; buffer++) begin
              /* Buffer is requesting and  Enable isn't set for requested output */
             if (sa_if.allocate[buffer] && !next_enable[sa_if.requested[buffer]]) begin
-                next_select[sa_if.requested[buffer]] = buffer;
+                next_select[sa_if.requested[buffer]] = buffer[0+:$clog2(NUM_BUFFERS)];
                 next_enable[sa_if.requested[buffer]] = 1;
             end
         end
