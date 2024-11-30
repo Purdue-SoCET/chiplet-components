@@ -32,6 +32,8 @@ filesets:
         files:
             - "testbench/switch_wrapper.sv"
             - "testbench/tb_switch.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
@@ -57,6 +59,7 @@ targets:
                 verilator_options:
                     - --cc
                     - --trace
+                    - --trace-structs
                     - --main
                     - --timing
                     - --coverage
