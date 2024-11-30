@@ -3,27 +3,73 @@
 // NUM_VCS=2
 module switch_wrapper(
     input logic clk, nrst,
+    // Flit sent in from endpoint
     input flit_t [3:0] in_flit,
     input logic [3:0] data_ready_in,
     input logic [3:0] packet_sent,
+    // Flit received by endpoint
     output flit_t [3:0] out,
     output logic [3:0] data_ready_out,
-    output logic [3:0] [1:0] buffer_available,
-    output logic [3:0] [1:0] credit_granted
+    output logic [3:0] buffer_available,
+    output logic [3:0] credit_granted
 );
     switch_if #(
         .NUM_OUTPORTS(2),
-        .NUM_BUFFERS(8),
+        .NUM_BUFFERS(2),
         .NUM_VCS(2)
-    ) sw_if();
+    ) sw_if1 ();
 
-    assign sw_if.in = in_flit;
-    assign sw_if.credit_granted = credit_granted[0];
-    assign sw_if.data_ready_in = data_ready_in;
-    assign sw_if.packet_sent = packet_sent[0];
-    assign out = sw_if.out;
-    assign data_ready_out = sw_if.data_ready_out;
-    assign buffer_available = sw_if.buffer_available;
+    switch #(
+        .NUM_OUTPORTS(2),
+        .NUM_BUFFERS(2),
+        .NUM_VCS(2),
+        .BUFFER_SIZE(8),
+        .TOTAL_NODES(4),
+        .NODE(1) // TODO: This should be configurable
+    ) switch1 (
+        .clk(clk),
+        .n_rst(nrst),
+        .sw_if(sw_if1)
+    );
+
+    assign sw_if1.in = {sw_if4.out[1], in_flit[0]};
+    assign sw_if1.data_ready_in = {sw_if4.data_ready_out[1], data_ready_in[0]};
+    assign sw_if1.credit_granted = {sw_if3.buffer_available[1], {2{credit_granted[0]}}};
+    assign sw_if1.packet_sent = {sw_if3.data_ready_in[1], data_ready_out[0]};
+
+    // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
+
+    switch_if #(
+        .NUM_OUTPORTS(2),
+        .NUM_BUFFERS(2),
+        .NUM_VCS(2)
+    ) sw_if2 ();
+
+    switch #(
+        .NUM_OUTPORTS(2),
+        .NUM_BUFFERS(2),
+        .NUM_VCS(2),
+        .BUFFER_SIZE(8),
+        .TOTAL_NODES(4),
+        .NODE(2) // TODO: This should be configurable
+    ) switch2 (
+        .clk(clk),
+        .n_rst(nrst),
+        .sw_if(sw_if2)
+    );
+
+    assign sw_if2.in = {sw_if4.out[2], in_flit[1]};
+    assign sw_if2.data_ready_in = {sw_if4.data_ready_out[2], data_ready_in[1]};
+    assign sw_if2.credit_granted = {sw_if3.buffer_available[1], {2{credit_granted[1]}}};
+    assign sw_if2.packet_sent = {sw_if3.data_ready_in[1], data_ready_out[1]};
+
+    // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
+
+    switch_if #(
+        .NUM_OUTPORTS(2),
+        .NUM_BUFFERS(3),
+        .NUM_VCS(2)
+    ) sw_if3 ();
 
     switch #(
         .NUM_OUTPORTS(2),
@@ -31,11 +77,42 @@ module switch_wrapper(
         .NUM_VCS(2),
         .BUFFER_SIZE(8),
         .TOTAL_NODES(4),
-        .NODE(0) // TODO: This should be configurable
-    ) s(
+        .NODE(3) // TODO: This should be configurable
+    ) switch3 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if)
+        .sw_if(sw_if3)
     );
 
+    assign sw_if3.in = {sw_if2.out[1], sw_if1.out[1], in_flit[2]};
+    assign sw_if3.data_ready_in = {sw_if2.data_ready_out[1], sw_if1.data_ready_out[1], data_ready_in[2]};
+    assign sw_if3.credit_granted = {sw_if4.buffer_available[1], {2{credit_granted[2]}}};
+    assign sw_if3.packet_sent = {sw_if4.data_ready_in[1], data_ready_out[2]};
+
+    // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
+    switch_if #(
+        .NUM_OUTPORTS(3),
+        .NUM_BUFFERS(2),
+        .NUM_VCS(2)
+    ) sw_if4 ();
+
+    switch #(
+        .NUM_OUTPORTS(3),
+        .NUM_BUFFERS(2),
+        .NUM_VCS(2),
+        .BUFFER_SIZE(8),
+        .TOTAL_NODES(4),
+        .NODE(4) // TODO: This should be configurable
+    ) switch4 (
+        .clk(clk),
+        .n_rst(nrst),
+        .sw_if(sw_if4)
+    );
+
+    assign sw_if4.in = {sw_if3.out[1], in_flit[1]};
+    assign sw_if4.data_ready_in = {sw_if3.data_ready_out[1], data_ready_in[1]};
+    assign sw_if4.credit_granted = {sw_if2.buffer_available[1], sw_if1.buffer_available[1], {2{credit_granted[1]}}};
+    assign sw_if4.packet_sent = {sw_if2.data_ready_in[1], sw_if1.data_ready_in[1], data_ready_out[1]};
+
+    assign out = {sw_if4.out[0], sw_if3.out[0], sw_if2.out[0], sw_if1.out[0]};
 endmodule

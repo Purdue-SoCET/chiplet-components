@@ -99,6 +99,14 @@ int main(int argc, char **argv) {
     // │                                   │
     // └─────────────────┼─────────────────┘
     //
+    // In ports for 1: {endpoint, 4}
+    // Out ports for 1: {endpoint, 3}
+    // In ports for 2: {endpoint, 4}
+    // Out ports for 2: {endpoint, 3}
+    // In ports for 3: {endpoint, 1, 2}
+    // Out ports for 3: {endpoint, 4}
+    // In ports for 4: {endpoint, 3}
+    // Out ports for 4: {endpoint, 1, 2}
 
     // Set up routing table
     // For 1:

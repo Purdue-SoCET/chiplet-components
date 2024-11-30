@@ -11,7 +11,7 @@ module vc_allocator#(
     vc_allocator_if.allocator vc_if
 );
     // Static limit of 3/4 the total buffer capacity
-    localparam int FULL_LIMIT = BUFFER_SIZE/2 + BUFFER_SIZE/4;
+    localparam int FULL_LIMIT = 3*BUFFER_SIZE/4;
 
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] next_buffer_available;
