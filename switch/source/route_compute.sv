@@ -16,12 +16,13 @@ module route_compute #(
     import chiplet_types_pkg::*;
     import switch_pkg::*;
 
-    parameter N_BUFF = 5-$clog2(NUM_BUFFERS);
+    localparam N_BUFF = 5-$clog2(NUM_BUFFERS);
+    localparam SELECT_SIZE = $clog2(NUM_OUTPORTS) + (NUM_OUTPORTS == 1);
 
     node_id_t [NUM_BUFFERS-1:0] req, dest;
     format_e [NUM_BUFFERS-1:0] format;
     logic [NUM_BUFFERS-1:0] next_allocate;
-    logic [NUM_BUFFERS-1:0] [$clog2(NUM_OUTPORTS)-1:0] next_out_sel;
+    logic [NUM_BUFFERS-1:0] [SELECT_SIZE-1:0] next_out_sel;
     // pkt_id_t [NUM_BUFFERS-1:0] id;
     // logic [7:0] address[NUM_BUFFERS-1:0];
     // logic [14:0] cfg_data[NUM_BUFFERS-1:0];

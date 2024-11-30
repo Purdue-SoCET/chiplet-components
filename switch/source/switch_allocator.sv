@@ -1,3 +1,5 @@
+`include "switch_pkg.sv"
+
 module switch_allocator#(
     parameter int NUM_BUFFERS,
     parameter int NUM_OUTPORTS
@@ -6,7 +8,11 @@ module switch_allocator#(
     input logic n_rst,
     switch_allocator_if.allocator sa_if
 );
-    logic [NUM_OUTPORTS-1:0] [$clog2(NUM_BUFFERS)-1:0] next_select;
+    import switch_pkg::*;
+
+    localparam SELECT_SIZE = $clog2(NUM_BUFFERS) + (NUM_BUFFERS == 1);
+
+    logic [NUM_OUTPORTS-1:0] [SELECT_SIZE-1:0] next_select;
     logic [NUM_OUTPORTS-1:0] next_enable;
 
     always_ff @(posedge clk, negedge n_rst) begin
@@ -28,7 +34,7 @@ module switch_allocator#(
         for (int buffer = 0; buffer < NUM_BUFFERS; buffer++) begin
              /* Buffer is requesting and  Enable isn't set for requested output */
             if (sa_if.allocate[buffer] && !next_enable[sa_if.requested[buffer]]) begin
-                next_select[sa_if.requested[buffer]] = buffer[0+:$clog2(NUM_BUFFERS)];
+                next_select[sa_if.requested[buffer]] = buffer[0+:SELECT_SIZE];
                 next_enable[sa_if.requested[buffer]] = 1;
             end
         end

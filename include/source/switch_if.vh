@@ -8,7 +8,6 @@ interface switch_if #(
     parameter int NUM_BUFFERS, /* Assumed to be the same across links */
     parameter int NUM_VCS /* Assumed to be the same across links */
 );
-
     import chiplet_types_pkg::*;
 
     flit_t [NUM_BUFFERS-1:0] in; 
