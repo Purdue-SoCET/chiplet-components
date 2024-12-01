@@ -1,35 +1,29 @@
 CAPI=2:
-name: "socet:chiplet:uart:1.0.0"
+name: "socet:chiplet:endnode:1.0.0"
 description: ""
 
 filesets:
     rtl:
         files:
-            - "include/uart_rx_if.sv" : {is_include_file: true}
-            - "include/uart_tx_if.sv" : {is_include_file: true}
-            - "source/uart_rx.sv"
-            - "source/uart_tx.sv"
-            - "source/rx_timer.sv"
-            - "source/uart_baud.sv"
+            - "include/endnode_if.sv"
+            - "source/endnode.sv"
         file_type: systemVerilogSource
         depend:
-
             - "socet:chiplet:include:0.0.1"
-            - "socet:digital-lib:counter"
-            - "socet:digital-lib:edge_detector"
-            - "socet:digital-lib:shift_register"
-            - "socet:digital-lib:synchronizer"
-             
+            - "socet:chiplet:enc_8b_10b:1.0.0"
+            - "socet:chiplet:uart:1.0.0"
+
+
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
-            - "socet:chiplet:syn"
+            - "socet:chiplet:endnode_syn"
 
     tb:
         files:
-            - "testbench/tb_uart_rx.sv"
-            - "waves/uart_rx.do": { file_type: user }
-            - "waves/uart_rx.gtkw": { file_type: user }
+            - "testbench/tb_endnode.sv"
+            - "waves/endnode.do": { file_type: user }
+            - "waves/endnode.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
@@ -41,21 +35,21 @@ targets:
     default: &default
         filesets:
             - rtl
-        toplevel: uart_rx
+        toplevel: endnode
 
     sim: &sim
         <<: *default
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_uart_rx
+        toplevel: tb_endnode
         tools:
             modelsim:
                 vsim_options:
                     - -vopt
                     - -voptargs='+acc'
                     - -t ps
-                    - -do waves/uart_rx.do
+                    - -do waves/endnode.do
                     - -onfinish stop
                     - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
                     - -coverage
@@ -88,7 +82,7 @@ targets:
         filesets_append:
             - synfiles
         default_tool: design_compiler
-        toplevel: uart_rx
+        toplevel: endnode
         tools:
             design_compiler:
                 script_dir: "src/socet_chiplet_synfiles_0"
