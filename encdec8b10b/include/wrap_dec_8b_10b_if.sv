@@ -13,16 +13,11 @@ interface wrap_dec_8b_10b_if;
     flit_enc_t enc_flit;
     comma_sel_t comma_sel; 
     flit_t flit;
-
+    logic [7:0] curr_packet_size;
     //TODO 
     modport dec(
-        input  enc_flit, done, comma_length_sel, err,
-        output flit,comma_sel,done_out,err_out
-    );
-
-    modport switch(
-        output enc_flit, done, comma_length_sel, err,
-        input  flit,comma_sel,done_out,err_out
+        input enc_flit, done, comma_length_sel, err,
+        output flit,comma_sel,done_out,err_out, curr_packet_size
     );
 endinterface
 
