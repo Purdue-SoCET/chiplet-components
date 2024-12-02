@@ -28,6 +28,7 @@ module buffers #(
     logic [NUM_BUFFERS-1:0] [ADDR_BITS-1:0] write_ptr, write_ptr_next, read_ptr, read_ptr_next;
     logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count_next;
     flit_t [NUM_BUFFERS-1:0] [DEPTH-1:0] fifo, fifo_next;
+    int i, j;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
@@ -46,7 +47,6 @@ module buffers #(
             buf_if.count <= count_next;
         end
     end
-    int i, j;
 
     always_comb begin
         fifo_next = fifo;
@@ -68,6 +68,9 @@ module buffers #(
             end else begin
                 if(buf_if.REN[i] && !buf_if.empty[i] && !(buf_if.full[i] && buf_if.WEN[i])) begin
                     read_ptr_next[i] = read_ptr[i] + 1;
+                    // if(id1[i] != fifo[i][read_ptr_next].id || req1[i] != fifo[i][read_ptr_next].req) begin
+                    //     valid[i] = !valid[i];
+                    // end
                 end else if(buf_if.REN[i] && buf_if.empty[i]) begin
                     underrun_next[i] = 1'b1;
                 end
