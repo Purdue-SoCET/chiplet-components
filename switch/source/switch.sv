@@ -96,6 +96,11 @@ module switch #(
         n_rst,
         rb_if
     );
+    buffers #(
+
+    ) BUFFS(
+        clk, n_rst, 
+    );
 
     logic [NUM_BUFFERS-1:0] [BUFFER_BITS-1:0] buffs, next_buffs;
     flit_t [NUM_BUFFERS-1:0] next_in_flit;
@@ -138,12 +143,12 @@ module switch #(
     //TODO init virtual channels
     //TODO flush packet from buffer after its sent
     always_comb begin
-        next_buffs = buffs;
-        for(int i = 0; i < NUM_BUFFERS; i++) begin
-            if(sw_if.data_ready_in[i]) begin
-                next_buffs[i] = sw_if.in[i];
-            end
-        end
+        // next_buffs = buffs;
+        // for(int i = 0; i < NUM_BUFFERS; i++) begin
+        //     if(sw_if.data_ready_in[i]) begin
+        //         next_buffs[i] = sw_if.in[i];
+        //     end
+        // end
         next_data_ready_out = sa_if.enable;
     end
 
@@ -166,8 +171,4 @@ module switch #(
             end
         end
     end
-
-    //buffer select signal in route compute?
-    //checking data ready when checking id change?
-
 endmodule

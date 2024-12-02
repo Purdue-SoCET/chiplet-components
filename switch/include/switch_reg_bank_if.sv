@@ -18,8 +18,6 @@ interface switch_reg_bank_if #(
     route_lut_t [TABLE_SIZE-1:0] route_lut;
     //
 
-
-    //TODO 
     modport reg_bank(
         input in_flit,
         output dateline, route_lut
