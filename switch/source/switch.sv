@@ -45,6 +45,10 @@ module switch #(
         .TOTAL_NODES(TOTAL_NODES),
         .TABLE_SIZE(32) // TODO: parameterize
     ) rb_if();
+    buffers_if #(
+        .NUM_BUFFERS(NUM_BUFFERS),
+        .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
+    ) buf_if;
 
     // Module Declarations
 
@@ -97,9 +101,12 @@ module switch #(
         rb_if
     );
     buffers #(
-
+        .NUM_BUFFERS(NUM_BUFFERS),
+        .DEPTH(BUFFER_SIZE)
     ) BUFFS(
-        clk, n_rst, 
+        clk,
+        n_rst, 
+        buf_if
     );
 
     logic [NUM_BUFFERS-1:0] [BUFFER_BITS-1:0] buffs, next_buffs;
