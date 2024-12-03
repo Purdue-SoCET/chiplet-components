@@ -1,0 +1,6 @@
+[book]
+authors = ["Devin Singh", "Michael Dick", "Luca Simoni"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Chiplet Protocol"
