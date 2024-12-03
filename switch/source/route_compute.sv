@@ -48,30 +48,27 @@ module route_compute #(
     always_comb begin
         next_allocate = route_if.allocate;
         next_out_sel = route_if.out_sel;
-        //next_route_lut = route_lut;
-        for(int j = 0; j < NUM_BUFFERS; j++) begin
-            assign head_flit[j].req = route_if.in_flit[j].req;
-            assign head_flit[j].dest = route_if.in_flit[j].payload[27:23];
-            assign format[j] = format_e'(route_if.in_flit[j].payload[31:28]);
-            //assign id[j] = route_if.in_flit[j].id;
-            // assign address[j] = route_if.in_flit[j].payload[14:7];
-            // assign cfg_data[j] = {route_if.in_flit[j].payload[22:15], route_if.in_flit[j].payload[6:0]};
+
+        for(int i = 0; i < NUM_BUFFERS; i++) begin
+            head_flit[i].req = route_if.in_flit[i].req;
+            head_flit[i].dest = route_if.in_flit[i].payload[27:23];
+            format[i] = format_e'(route_if.in_flit[i].payload[31:28]);
         end
 
-        for(int k = 0; k < NUM_BUFFERS; k++) begin
-            if(format[k] == FMT_SWITCH_CFG && head_flit[k].dest == NODE) begin
+        for(int i = 0; i < NUM_BUFFERS; i++) begin
+            if(format[i] == FMT_SWITCH_CFG && head_flit[i].dest == NODE) begin
                 //next_route_lut[address[k]] = cfg_data[k][14-N_BUFF:0];
-                next_allocate[k] = 1'b0;
+                next_allocate[i] = 1'b0;
             end
-            else if(head_flit[k].dest == NODE) begin
-                next_out_sel[k] = '0;
-                next_allocate[k] = 1'b1;
+            else if(head_flit[i].dest == NODE) begin
+                next_out_sel[i] = '0;
+                next_allocate[i] = 1'b1;
             end
             else begin
-                for(int i = 0; i < TOTAL_NODES*TOTAL_NODES*$clog2(NUM_BUFFERS); i++) begin
-                    if(route_if.route_lut[i].req == head_flit[k].req && route_if.route_lut[i].dest == head_flit[k].dest)begin
-                        next_out_sel[k] = route_if.route_lut[i].out_sel;
-                        next_allocate[k] = 1'b1;
+                for(int j = 0; j < 32; j++) begin
+                    if(route_if.route_lut[j].req == head_flit[i].req && route_if.route_lut[j].dest == head_flit[i].dest)begin
+                        next_out_sel[i] = route_if.route_lut[j].out_sel;
+                        next_allocate[i] = 1'b1;
                     end
                 end
             end

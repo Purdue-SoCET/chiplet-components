@@ -10,8 +10,8 @@ module vc_allocator#(
     input logic n_rst,
     vc_allocator_if.allocator vc_if
 );
-    // Static limit of 3/4 the total buffer capacity
-    localparam int FULL_LIMIT = 3*BUFFER_SIZE/4;
+    // Static limit to send up to 3/4 the total buffer capacity
+    localparam int LOW_LIMIT = 1*BUFFER_SIZE/4;
 
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] next_buffer_available;
@@ -40,7 +40,7 @@ module vc_allocator#(
         next_buffer_availability = buffer_availability;
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
-            vc_if.assigned_vc[i] = vc_if.incoming_vc[i] + vc_if.dateline[i];
+            vc_if.assigned_vc[i] = vc_if.incoming_vc[i] || vc_if.dateline[i];
         end
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
@@ -52,7 +52,7 @@ module vc_allocator#(
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             for (int j = 0; j < NUM_VCS; j++) begin
-                next_buffer_available[i][j] = buffer_availability[i][j] < FULL_LIMIT;
+                next_buffer_available[i][j] = next_buffer_availability[i][j] > LOW_LIMIT;
             end
         end
     end

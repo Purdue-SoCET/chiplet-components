@@ -11,92 +11,74 @@ module buffers #(
     input nRST,
     buffers_if.buffs buf_if
 );
+    import chiplet_types_pkg::*;
 
-    // Parameter checking
-    //
-    // Width can be any number of bits > 1, but depth must be a power-of-2 to accomodate addressing scheme
-    // TODO: 
+    logic [NUM_BUFFERS-1:0] next_valid;
+    logic [NUM_BUFFERS-1:0] overflow;
+    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val;
+
+    always_ff @(posedge CLK, negedge nRST) begin
+        if (!nRST) begin
+            buf_if.valid <= '0;
+            overflow_val <= '0;
+        end else begin
+            buf_if.valid <= next_valid;
+            overflow_val <= next_overflow_val;
+        end
+    end
+
+    genvar i;
     generate
-        if(DEPTH == 0 || (DEPTH & (DEPTH - 1)) != 0) begin
-            $error("%m: DEPTH must be a power of 2 >= 1!");
+        for (i = 0; i < NUM_BUFFERS; i++) begin
+            socetlib_fifo #(
+                .T(flit_t),
+                .DEPTH(DEPTH)
+            ) FIFO (
+                .CLK(CLK),
+                .nRST(nRST),
+                .WEN(buf_if.WEN[i]),
+                .REN(buf_if.REN[i]),
+                .clear(buf_if.clear[i]),
+                .wdata(buf_if.wdata[i]),
+                .full(buf_if.full[i]),
+                .empty(buf_if.empty[i]),
+                .overrun(buf_if.overrun[i]),
+                .underrun(buf_if.underrun[i]),
+                .count(buf_if.count[i]),
+                .rdata(buf_if.rdata[i])
+            );
+
+            socetlib_counter #(
+                .NBITS(PKT_LENGTH_WIDTH)
+            ) PACKET_COUNTER (
+                .CLK(CLK),
+                .nRST(nRST),
+                .clear(overflow[i]),
+                .count_enable(buf_if.WEN[i]),
+                .overflow_val(overflow_val[i]),
+                .count_out(),
+                .overflow_flag(overflow[i])
+            );
         end
     endgenerate
 
-    localparam int ADDR_BITS = $clog2(DEPTH);
-
-    logic [NUM_BUFFERS-1:0] overrun_next, underrun_next;
-    logic [NUM_BUFFERS-1:0] [ADDR_BITS-1:0] write_ptr, write_ptr_next, read_ptr, read_ptr_next;
-    logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count_next;
-    flit_t [NUM_BUFFERS-1:0] [DEPTH-1:0] fifo, fifo_next;
-    int i;
-    genvar j;
-
-    always_ff @(posedge CLK, negedge nRST) begin
-        if(!nRST) begin
-            fifo <= '{default: '0};
-            write_ptr <= '0;
-            read_ptr <= '0;
-            buf_if.overrun <= 1'b0;
-            buf_if.underrun <= 1'b0;
-            buf_if.count <= '0;
-        end else begin
-            fifo <= fifo_next;
-            write_ptr <= write_ptr_next;
-            read_ptr <= read_ptr_next;
-            buf_if.overrun <= overrun_next;
-            buf_if.underrun <= underrun_next;
-            buf_if.count <= count_next;
-        end
-    end
-
     always_comb begin
-        fifo_next = fifo;
-        write_ptr_next = write_ptr;
-        read_ptr_next = read_ptr;
-        overrun_next = buf_if.overrun;
-        underrun_next = buf_if.underrun;
-        count_next = buf_if.count;
+        next_valid = buf_if.valid;
+        next_overflow_val = overflow_val;
 
-        for(i = 0; i < NUM_BUFFERS; i++) begin
-            if(buf_if.clear[i]) begin
-                // No need to actually reset FIFO data,
-                // changing pointers/flags to "empty" state is OK
-                write_ptr_next[i] = '0;
-                read_ptr_next[i] = '0;
-                overrun_next[i] = 1'b0;
-                underrun_next[i] = 1'b0;
-                count_next[i] = '0;
-            end else begin
-                if(buf_if.REN[i] && !buf_if.empty[i] && !(buf_if.full[i] && buf_if.WEN[i])) begin
-                    read_ptr_next[i] = read_ptr[i] + 1;
-                    // if(id1[i] != fifo[i][read_ptr_next].id || req1[i] != fifo[i][read_ptr_next].req) begin
-                    //     valid[i] = !valid[i];
-                    // end
-                end else if(buf_if.REN[i] && buf_if.empty[i]) begin
-                    underrun_next[i] = 1'b1;
-                end
+        for (int j = 0; j < NUM_BUFFERS; j++) begin
+            if (!overflow[j]) begin
+                next_valid[j] = 0;
+            end if (buf_if.WEN[j] || buf_if.count[j] > 0) begin
+                next_valid[j] = 1;
+            end
 
-                if(buf_if.WEN[i] && !buf_if.full[i] && !(buf_if.empty[i] && buf_if.REN[i])) begin
-                    write_ptr_next[i] = write_ptr[i] + 1;
-                    fifo_next[i][write_ptr[i]] = buf_if.wdata[i];
-                end else if(buf_if.WEN[i] && buf_if.full[i]) begin
-                    overrun_next[i] = 1'b1;
-                end
-
-                if (buf_if.count[i] == DEPTH) begin
-                    count_next[i] = buf_if.count[i] - buf_if.REN[i] + (buf_if.REN[i] && buf_if.WEN[i]);
-                end else if (buf_if.count[i] == 0) begin
-                    count_next[i] = buf_if.count[i] + buf_if.WEN[i] - (buf_if.REN[i] && buf_if.WEN[i]);
-                end else begin
-                    count_next[i] = buf_if.count[i] + buf_if.WEN[i] - buf_if.REN[i];
-                end
+            // Head flit condition
+            if (buf_if.WEN[j] && buf_if.count[j] == 0) begin
+                next_overflow_val[j] = expected_num_flits(buf_if.wdata[j].payload);
+            end else if (buf_if.count > 0) begin
+                next_overflow_val[j] = expected_num_flits(buf_if.rdata[j].payload);
             end
         end
-    end
-
-    for(j = 0; j < NUM_BUFFERS; j++) begin
-        assign buf_if.full[j] = buf_if.count[j] == DEPTH;
-        assign buf_if.empty[j] = buf_if.count[j] == 0;
-        assign buf_if.rdata[j] = fifo[j][read_ptr];
     end
 endmodule

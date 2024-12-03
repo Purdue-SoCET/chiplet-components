@@ -122,18 +122,8 @@ module switch #(
     );
     
 
-    logic [NUM_BUFFERS-1:0] [BUFFER_BITS-1:0] buffs, next_buffs;
-    flit_t [NUM_BUFFERS-1:0] next_in_flit, last_cb_in, last_rdata, last_vc_rdata;
-
-    int i, j, k;
-    pkt_id_t [NUM_BUFFERS-1:0] id1, next_id1;
-    node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
     logic [NUM_OUTPORTS-1:0] next_data_ready_out;
-    logic [NUM_BUFFERS-1:0] buf_sel, next_buf_sel; //size could be parameterized in the future
-    //logic [NUM_BUFFERS-1:0] [6:0] len, len_count, next_len_count;
-    
-
-    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] len, len_count;
+    logic [NUM_BUFFERS-1:0] vc_sel, next_vc_sel; //size could be parameterized in the future
 
     assign sa_if.requested = rc_if.out_sel;
     assign sa_if.allocate = rc_if.allocate;
@@ -157,25 +147,11 @@ module switch #(
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
-            buffs <= '0;
-            id1 <= '0;
-            req1 <= '0;
             sw_if.data_ready_out <= '0;
-            buf_sel <= '0;
-            last_cb_in <= '0;
-            //len_count <= '0;
-            last_rdata <= '0;
-            last_vc_rdata <= '0;
+            vc_sel <= '0;
         end else begin
-            buffs <= next_buffs;
-            id1 <= next_id1;
-            req1 <= next_req1;
             sw_if.data_ready_out <= next_data_ready_out;
-            buf_sel <= next_buf_sel;
-            last_cb_in <= cb_if.in;
-            last_rdata <= buf_if.rdata;
-            last_vc_rdata <= vc_buf_if.rdata;
-            //len_count <= next_len_count;
+            vc_sel <= next_vc_sel;
         end
     end
 
@@ -184,104 +160,29 @@ module switch #(
         buf_if.REN = '0;
         vc_buf_if.WEN = '0;
         vc_buf_if.REN = '0;
-        next_buf_sel = buf_sel;
-        
-        //next_len_count = len_count;
-
-        //TODO next buffer sel logic
-        for(i = 0; i < NUM_BUFFERS; i++) begin
-            if(!buf_sel[i]) begin
-                buf_if.REN[i] = sa_if.enable[i];
-                cb_if.in[i] = buf_if.rdata[i];
-                if(last_rdata[i].id != buf_if.rdata[i].id || last_rdata[i].req != buf_if.rdata[i].req) begin
-                    next_buf_sel[i] = buf_sel[i];
-                    case(buf_if.rdata[i].payload[31:28]) 
-                        FMT_SHORT_READ, FMT_SHORT_WRITE: begin 
-                            len[i] = {3'd0, buf_if.rdata[i].payload[3:0]};
-                            len_count[i] = 0;
-                        end
-                        FMT_LONG_READ, FMT_LONG_WRITE: begin
-                            len[i] = (buf_if.rdata[i].payload[6:0]);
-                            len_count[i] = -1;
-                        end
-                        default: begin
-                            len[i] = (buf_if.rdata[i].payload[6:0]);
-                            len_count[i] = 0;
-                        end
-                    endcase
-                end
-                else if(len[i] != len_count[i]) begin
-                    next_buf_sel[i] = buf_sel[i];
-                    len_count++;
-                    len = len;
-                end
-                else begin
-                    len_count = 0;
-                    len = 1;
-                    next_buf_sel[i] = !buf_sel[i];
-                end
-                if(len[i] == len_count[i]) next_buf_sel[i] = !buf_sel[i]; //end of the packet
-            end 
-            else begin
-                vc_buf_if.REN[i] = sa_if.enable[i];
-                cb_if.in[i] = vc_buf_if.rdata[i];
-                if(last_vc_rdata[i].id != vc_buf_if.rdata[i].id || last_vc_rdata[i].req != vc_buf_if.rdata[i].req) begin
-                    next_buf_sel[i] = buf_sel[i];
-                    case(vc_buf_if.rdata[i].payload[31:28]) 
-                        FMT_SHORT_READ, FMT_SHORT_WRITE: begin 
-                            len[i] = {3'd0, vc_buf_if.rdata[i].payload[3:0]};
-                            len_count[i] = 0;
-                        end
-                        FMT_LONG_READ, FMT_LONG_WRITE: begin
-                            len[i] = (vc_buf_if.rdata[i].payload[6:0]);
-                            len_count[i] = -1;
-                        end
-                        default: begin
-                            len[i] = (vc_buf_if.rdata[i].payload[6:0]);
-                            len_count[i] = 0;
-                        end
-                    endcase
-                end
-                else if(len[i] != len_count[i]) begin
-                    next_buf_sel[i] = buf_sel[i];
-                    len_count++;
-                    len = len;
-                end
-                else begin
-                    len_count = 0;
-                    len = 1;
-                    next_buf_sel[i] = !buf_sel[i];
-                end
-                if(len[i] == len_count[i]) next_buf_sel[i] = !buf_sel[i]; //end of the packet
-            end
-
-            if(sw_if.in[i].vc) begin
-                vc_buf_if.WEN[i] = sw_if.data_ready_in[i];
-            end
-            else begin
-                buf_if.WEN[i] = sw_if.data_ready_in[i];
-            end
-        end
-    end
-
-    //TODO add valid signal to buffer so end of packet is defined
-
-    always_comb begin
-        for(k = 0; k < NUM_BUFFERS; k++) begin
-            next_id1[k] = sw_if.in[k].id;
-            next_req1[k] = sw_if.in[k].req;
-        end
+        next_vc_sel = vc_sel;
         rc_if.in_flit = '0;
         rb_if.in_flit = '0;
         vc_if.incoming_vc = '0;
-        for(j = 0; j < NUM_BUFFERS; j++) begin
-            if(sw_if.data_ready_in[j]) begin
-                if(id1[j] != sw_if.in[j].id || req1[j] != sw_if.in[j].req) begin
-                    rc_if.in_flit[j] = sw_if.in[j];
-                    rb_if.in_flit[j] = sw_if.in[j];
-                    vc_if.incoming_vc[j] = sw_if.in[j].vc;
-                end
+
+        for (int i = 0; i < NUM_BUFFERS; i++) begin
+            if (!vc_sel[i] && !buf_if.valid[i]) begin
+                next_vc_sel[i] = vc_buf_if.valid[i];
+            end else if (!vc_sel[i] && !buf_if.valid[i]) begin
+                next_vc_sel[i] = buf_if.valid[i];
             end
+
+            buf_if.WEN[i] = sw_if.data_ready_in[i] && !sw_if.in[i].vc;
+            buf_if.wdata[i] = sw_if.in[i];
+            buf_if.REN[i] = sa_if.enable[i] && !sw_if.in[i].vc;
+            vc_buf_if.WEN[i] = sw_if.data_ready_in[i] && sw_if.in[i].vc;
+            vc_buf_if.wdata[i] = sw_if.in[i];
+            vc_buf_if.REN[i] = sa_if.enable[i] && sw_if.in[i].vc;
+
+            cb_if.in[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
+            rc_if.in_flit[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
+            rb_if.in_flit[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
+            vc_if.incoming_vc[i] = vc_sel[i] ? vc_buf_if.rdata[i].vc : buf_if.rdata[i].vc;
         end
     end
 endmodule
