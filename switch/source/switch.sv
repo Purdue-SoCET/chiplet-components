@@ -18,8 +18,6 @@ module switch #(
 );
     parameter int BUFFER_BITS = BUFFER_SIZE * 32;
     parameter flit_t RESET_VAL = '0;
-    localparam PKT_MAX_LENGTH = 130;
-    localparam LENGTH_WIDTH = $clog2(PKT_MAX_LENGTH);
 
     // Interface Declarations
     vc_allocator_if #(
@@ -135,7 +133,7 @@ module switch #(
     //logic [NUM_BUFFERS-1:0] [6:0] len, len_count, next_len_count;
     
 
-    logic [NUM_BUFFERS-1:0] [LENGTH_WIDTH-1:0] len, len_count;
+    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] len, len_count;
 
     assign sa_if.requested = rc_if.out_sel;
     assign sa_if.allocate = rc_if.allocate;
