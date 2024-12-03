@@ -1,7 +1,7 @@
 `timescale 1ns / 10ps
 
 `include "chiplet_types_pkg.vh"
-`include "buffers_if.vh"
+`include "buffers_if.sv"
 
 module buffers #(
     parameter NUM_BUFFERS,
@@ -77,8 +77,8 @@ module buffers #(
 
                 if(buf_if.WEN[i] && !buf_if.full[i] && !(buf_if.empty[i] && buf_if.REN[i])) begin
                     write_ptr_next[i] = write_ptr[i] + 1;
-                    fifo_next[i][write_ptr[i]] = wdata[i];
-                end else if(WEN[i] && full[i]) begin
+                    fifo_next[i][write_ptr[i]] = buf_if.wdata[i];
+                end else if(buf_if.WEN[i] && buf_if.full[i]) begin
                     overrun_next[i] = 1'b1;
                 end
 

@@ -132,7 +132,7 @@ module switch #(
     node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
     logic [NUM_OUTPORTS-1:0] next_data_ready_out;
     logic [NUM_BUFFERS-1:0] [1:0] buf_sel, next_buf_sel; //size could be parameterized in the future
-    logic [NUM_BUFFERS-1:0] [6:0] len, len_count, next_len_count;
+    //logic [NUM_BUFFERS-1:0] [6:0] len, len_count, next_len_count;
     
 
     logic [NUM_BUFFERS-1:0] [LENGTH_WIDTH-1:0] len, len_count;
@@ -165,7 +165,7 @@ module switch #(
             sw_if.data_ready_out <= '0;
             buf_sel <= '0;
             last_cb_in <= '0;
-            len_count <= '0;
+            //len_count <= '0;
             last_rdata <= '0;
             last_vc_rdata <= '0;
         end else begin
@@ -177,7 +177,7 @@ module switch #(
             last_cb_in <= cb_if.in;
             last_rdata <= buf_if.rdata;
             last_vc_rdata <= vc_buf_if.rdata;
-            len_count <= next_len_count;
+            //len_count <= next_len_count;
         end
     end
 
@@ -187,7 +187,7 @@ module switch #(
         vc_buf_if.WEN = '0;
         vc_buf_if.REN = '0;
         next_buf_sel = buf_sel;
-        next_len_count = len_count;
+        //next_len_count = len_count;
 
         //TODO next buffer sel logic
         for(i = 0; i < NUM_BUFFERS; i++) begin
@@ -202,18 +202,18 @@ module switch #(
                         end
                         FMT_SHORT_WRITE: begin 
                             len[i] = int'{3'd0, buf_if.rdata[i].payload[3:0]};
-                            next_len_count[i] = 0;
+                            len_count[i] = 0;
                         end
                         FMT_LONG_READ: begin
 
                         end
                         FMT_LONG_WRITE: begin
                             len[i] = int'(buf_if.rdata[i].payload[6:0]);
-                            next_len_count[i] = -1;
+                            len_count[i] = -1;
                         end
                         default: begin
                             len[i] = int'(buf_if.rdata[i].payload[6:0]);
-                            next_len_count[i] = 0;
+                            len_count[i] = 0;
                         end
                     endcase
                 end
