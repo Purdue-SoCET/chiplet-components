@@ -131,7 +131,7 @@ module switch #(
     pkt_id_t [NUM_BUFFERS-1:0] id1, next_id1;
     node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
     logic [NUM_OUTPORTS-1:0] next_data_ready_out;
-    logic [NUM_BUFFERS-1:0] [1:0] buf_sel, next_buf_sel; //size could be parameterized in the future
+    logic [NUM_BUFFERS-1:0] buf_sel, next_buf_sel; //size could be parameterized in the future
     //logic [NUM_BUFFERS-1:0] [6:0] len, len_count, next_len_count;
     
 
@@ -187,6 +187,7 @@ module switch #(
         vc_buf_if.WEN = '0;
         vc_buf_if.REN = '0;
         next_buf_sel = buf_sel;
+        
         //next_len_count = len_count;
 
         //TODO next buffer sel logic
@@ -197,22 +198,16 @@ module switch #(
                 if(last_rdata[i].id != buf_if.rdata[i].id || last_rdata[i].req != buf_if.rdata[i].req) begin
                     next_buf_sel[i] = buf_sel[i];
                     case(buf_if.rdata[i].payload[31:28]) 
-                        FMT_SHORT_READ: begin
-
-                        end
-                        FMT_SHORT_WRITE: begin 
-                            len[i] = int'{3'd0, buf_if.rdata[i].payload[3:0]};
+                        FMT_SHORT_READ, FMT_SHORT_WRITE: begin 
+                            len[i] = {3'd0, buf_if.rdata[i].payload[3:0]};
                             len_count[i] = 0;
                         end
-                        FMT_LONG_READ: begin
-
-                        end
-                        FMT_LONG_WRITE: begin
-                            len[i] = int'(buf_if.rdata[i].payload[6:0]);
+                        FMT_LONG_READ, FMT_LONG_WRITE: begin
+                            len[i] = (buf_if.rdata[i].payload[6:0]);
                             len_count[i] = -1;
                         end
                         default: begin
-                            len[i] = int'(buf_if.rdata[i].payload[6:0]);
+                            len[i] = (buf_if.rdata[i].payload[6:0]);
                             len_count[i] = 0;
                         end
                     endcase
@@ -220,6 +215,12 @@ module switch #(
                 else if(len[i] != len_count[i]) begin
                     next_buf_sel[i] = buf_sel[i];
                     len_count++;
+                    len = len;
+                end
+                else begin
+                    len_count = 0;
+                    len = 1;
+                    next_buf_sel[i] = !buf_sel[i];
                 end
                 if(len[i] == len_count[i]) next_buf_sel[i] = !buf_sel[i]; //end of the packet
             end 
@@ -230,15 +231,15 @@ module switch #(
                     next_buf_sel[i] = buf_sel[i];
                     case(vc_buf_if.rdata[i].payload[31:28]) 
                         FMT_SHORT_READ, FMT_SHORT_WRITE: begin 
-                            len[i] = int'{3'd0, vc_buf_if.rdata[i].payload[3:0]};
+                            len[i] = {3'd0, vc_buf_if.rdata[i].payload[3:0]};
                             len_count[i] = 0;
                         end
                         FMT_LONG_READ, FMT_LONG_WRITE: begin
-                            len[i] = int'(vc_buf_if.rdata[i].payload[6:0]);
+                            len[i] = (vc_buf_if.rdata[i].payload[6:0]);
                             len_count[i] = -1;
                         end
                         default: begin
-                            len[i] = int'(vc_buf_if.rdata[i].payload[6:0]);
+                            len[i] = (vc_buf_if.rdata[i].payload[6:0]);
                             len_count[i] = 0;
                         end
                     endcase
@@ -246,8 +247,13 @@ module switch #(
                 else if(len[i] != len_count[i]) begin
                     next_buf_sel[i] = buf_sel[i];
                     len_count++;
+                    len = len;
                 end
-                else next_buf_sel[i] = !buf_sel[i];
+                else begin
+                    len_count = 0;
+                    len = 1;
+                    next_buf_sel[i] = !buf_sel[i];
+                end
                 if(len[i] == len_count[i]) next_buf_sel[i] = !buf_sel[i]; //end of the packet
             end
 
@@ -269,6 +275,7 @@ module switch #(
         end
         rc_if.in_flit = '0;
         rb_if.in_flit = '0;
+        vc_if.incoming_vc = '0;
         for(j = 0; j < NUM_BUFFERS; j++) begin
             if(sw_if.data_ready_in[j]) begin
                 if(id1[j] != sw_if.in[j].id || req1[j] != sw_if.in[j].req) begin

@@ -28,7 +28,8 @@ module buffers #(
     logic [NUM_BUFFERS-1:0] [ADDR_BITS-1:0] write_ptr, write_ptr_next, read_ptr, read_ptr_next;
     logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count_next;
     flit_t [NUM_BUFFERS-1:0] [DEPTH-1:0] fifo, fifo_next;
-    int i, j;
+    int i;
+    genvar j;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
