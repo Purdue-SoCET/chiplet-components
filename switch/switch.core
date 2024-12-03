@@ -12,6 +12,7 @@ filesets:
             - "source/switch_reg_bank.sv"
             - "source/vc_allocator.sv"
             - "include/switch_pkg.sv" : {is_include_file: true}
+            - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
             - "include/route_compute_if.sv" : {is_include_file: true}
             - "include/switch_allocator_if.sv" : {is_include_file: true}

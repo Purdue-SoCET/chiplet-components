@@ -21,7 +21,7 @@ module buffers #(
             $error("%m: DEPTH must be a power of 2 >= 1!");
         end
     endgenerate
-    
+
     localparam int ADDR_BITS = $clog2(DEPTH);
 
     logic [NUM_BUFFERS-1:0] overrun_next, underrun_next;

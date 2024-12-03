@@ -18,6 +18,8 @@ module switch #(
 );
     parameter int BUFFER_BITS = BUFFER_SIZE * 32;
     parameter flit_t RESET_VAL = '0;
+    localparam PKT_MAX_LENGTH = 130;
+    localparam LENGTH_WIDTH = $clog2(PKT_MAX_LENGTH);
 
     // Interface Declarations
     vc_allocator_if #(
@@ -48,11 +50,11 @@ module switch #(
     buffers_if #(
         .NUM_BUFFERS(NUM_BUFFERS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
-    ) buf_if;
+    ) buf_if();
     buffers_if #(
         .NUM_BUFFERS(NUM_BUFFERS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
-    ) vc_buf_if;
+    ) vc_buf_if();
 
     // Module Declarations
 
@@ -130,8 +132,7 @@ module switch #(
     node_id_t [NUM_BUFFERS-1:0] req1, next_req1;
     logic [NUM_OUTPORTS-1:0] next_data_ready_out;
     logic [NUM_BUFFERS-1:0] [1:0] buf_sel, next_buf_sel; //size could be parameterized in the future
-    int [NUM_BUFFERS-1:0] len, len_count;
-
+    logic [NUM_BUFFERS-1:0] [LENGTH_WIDTH-1:0] len, len_count;
 
     assign sa_if.requested = rc_if.out_sel;
     assign sa_if.allocate = rc_if.allocate;
@@ -157,7 +158,7 @@ module switch #(
         buf_if.WEN = '0;
         buf_if.REN = '0;
         vc_buf_if.WEN = '0;
-        vc_buf_in.REN = '0;
+        vc_buf_if.REN = '0;
         next_buf_sel = buf_sel;
 
         //TODO next buffer sel logic
