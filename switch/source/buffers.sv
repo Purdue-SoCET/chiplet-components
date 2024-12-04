@@ -16,6 +16,7 @@ module buffers #(
     logic [NUM_BUFFERS-1:0] next_valid;
     logic [NUM_BUFFERS-1:0] overflow;
     logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val;
+    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] count;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if (!nRST) begin
@@ -38,13 +39,13 @@ module buffers #(
                 .nRST(nRST),
                 .WEN(buf_if.WEN[i]),
                 .REN(buf_if.REN[i]),
-                .clear(buf_if.clear[i]),
+                .clear(1'b0),
                 .wdata(buf_if.wdata[i]),
-                .full(buf_if.full[i]),
-                .empty(buf_if.empty[i]),
-                .overrun(buf_if.overrun[i]),
-                .underrun(buf_if.underrun[i]),
-                .count(buf_if.count[i]),
+                .full(),
+                .empty(),
+                .overrun(),
+                .underrun(),
+                .count(),
                 .rdata(buf_if.rdata[i])
             );
 
@@ -53,10 +54,10 @@ module buffers #(
             ) PACKET_COUNTER (
                 .CLK(CLK),
                 .nRST(nRST),
-                .clear(overflow[i]),
+                .clear(!buf_if.valid[i]),
                 .count_enable(buf_if.WEN[i]),
                 .overflow_val(overflow_val[i]),
-                .count_out(),
+                .count_out(count[i]),
                 .overflow_flag(overflow[i])
             );
         end
@@ -67,17 +68,19 @@ module buffers #(
         next_overflow_val = overflow_val;
 
         for (int j = 0; j < NUM_BUFFERS; j++) begin
-            if (!overflow[j]) begin
+            if (buf_if.REN[j] && (overflow[j] || overflow_val[j] == 0)) begin
                 next_valid[j] = 0;
-            end if (buf_if.WEN[j] || buf_if.count[j] > 0) begin
+            end else if (buf_if.WEN[j] || count[j] > 0) begin
                 next_valid[j] = 1;
             end
 
             // Head flit condition
-            if (buf_if.WEN[j] && buf_if.count[j] == 0) begin
-                next_overflow_val[j] = expected_num_flits(buf_if.wdata[j].payload);
-            end else if (buf_if.count > 0) begin
-                next_overflow_val[j] = expected_num_flits(buf_if.rdata[j].payload);
+            // TODO: weird hack to get overflows working properly, any better
+            // solutions?
+            if (buf_if.WEN[j] && count[j] == 0) begin
+                next_overflow_val[j] = expected_num_flits(buf_if.wdata[j].payload) - 1;
+            end else if (count > 0) begin
+                next_overflow_val[j] = expected_num_flits(buf_if.rdata[j].payload) - 1;
             end
         end
     end

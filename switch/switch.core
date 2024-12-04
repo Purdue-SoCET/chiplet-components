@@ -79,6 +79,8 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
         tools:
             verilator:
                 mode: lint-only

@@ -4,6 +4,8 @@
 package switch_pkg;
     parameter NUM_OUTPORTS = 2;
 
+    // TODO: make a version with static out_sel size since the routing table
+    // depends on this
     typedef struct packed {
         logic [$clog2(NUM_OUTPORTS)-1:0] out_sel;
         node_id_t                   req;

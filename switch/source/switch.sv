@@ -121,15 +121,16 @@ module switch #(
         vc_buf_if
     );
     
-
     logic [NUM_OUTPORTS-1:0] next_data_ready_out;
     logic [NUM_BUFFERS-1:0] vc_sel, next_vc_sel; //size could be parameterized in the future
+    logic reg_bank_claim, next_reg_bank_claim;
 
     assign sa_if.requested = rc_if.out_sel;
-    assign sa_if.allocate = rc_if.allocate;
+    assign sa_if.allocate = rc_if.allocate & buf_if.valid;
 
     assign rc_if.route_lut = rb_if.route_lut;
-    
+    assign rc_if.valid = buf_if.valid;
+
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
 
@@ -143,15 +144,17 @@ module switch #(
     assign buf_if.wdata = sw_if.in;
     assign vc_buf_if.wdata = sw_if.in;
 
-    assign next_data_ready_out = sa_if.enable;
+    assign next_data_ready_out = {sa_if.enable[NUM_OUTPORTS-1:1], sa_if.enable[0] & !(next_reg_bank_claim || reg_bank_claim)};
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             sw_if.data_ready_out <= '0;
             vc_sel <= '0;
+            reg_bank_claim <= 0;
         end else begin
             sw_if.data_ready_out <= next_data_ready_out;
             vc_sel <= next_vc_sel;
+            reg_bank_claim <= next_reg_bank_claim;
         end
     end
 
@@ -164,6 +167,7 @@ module switch #(
         rc_if.in_flit = '0;
         rb_if.in_flit = '0;
         vc_if.incoming_vc = '0;
+        next_reg_bank_claim = 0;
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             if (!vc_sel[i] && !buf_if.valid[i]) begin
@@ -172,17 +176,33 @@ module switch #(
                 next_vc_sel[i] = buf_if.valid[i];
             end
 
-            buf_if.WEN[i] = sw_if.data_ready_in[i] && !sw_if.in[i].vc;
-            buf_if.wdata[i] = sw_if.in[i];
-            buf_if.REN[i] = sa_if.enable[i] && !sw_if.in[i].vc;
-            vc_buf_if.WEN[i] = sw_if.data_ready_in[i] && sw_if.in[i].vc;
-            vc_buf_if.wdata[i] = sw_if.in[i];
-            vc_buf_if.REN[i] = sa_if.enable[i] && sw_if.in[i].vc;
+            if (!sw_if.in[i].vc) begin
+                buf_if.WEN[i] = sw_if.data_ready_in[i];
+                buf_if.wdata[i] = sw_if.in[i];
+                buf_if.REN[i] = sa_if.enable[i] && buf_if.valid[i] && (sw_if.packet_sent[i] || (i == 0 && reg_bank_claim));
+            end else begin
+                vc_buf_if.WEN[i] = sw_if.data_ready_in[i];
+                vc_buf_if.wdata[i] = sw_if.in[i];
+                vc_buf_if.REN[i] = sa_if.enable[i] && buf_if.valid[i] && (sw_if.packet_sent[i] || (i == 0 && reg_bank_claim));
+            end
 
-            cb_if.in[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
-            rc_if.in_flit[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
-            rb_if.in_flit[i] = vc_sel[i] ? vc_buf_if.rdata[i] : buf_if.rdata[i];
-            vc_if.incoming_vc[i] = vc_sel[i] ? vc_buf_if.rdata[i].vc : buf_if.rdata[i].vc;
+            if (vc_sel[i]) begin
+                cb_if.in[i] = vc_buf_if.rdata[i];
+                rc_if.in_flit[i] = vc_buf_if.valid[i] ? vc_buf_if.rdata[i] : '0;
+                vc_if.incoming_vc[i] = vc_buf_if.rdata[i].vc;
+            end else begin
+                cb_if.in[i] = buf_if.rdata[i];
+                rc_if.in_flit[i] = buf_if.valid[i] ? buf_if.rdata[i] : '0;
+                vc_if.incoming_vc[i] = buf_if.rdata[i].vc;
+            end
         end
+
+        next_reg_bank_claim = sa_if.enable[0] && cb_if.in[0].payload[31:28] == FMT_SWITCH_CFG;
+
+        // Send switch config packets to register bank
+        rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
+        // Send everything else outside
+        sw_if.out = cb_if.out;
+        sw_if.out[0] = reg_bank_claim ? '0 : cb_if.out[0];
     end
 endmodule

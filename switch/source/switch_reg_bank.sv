@@ -17,10 +17,8 @@ module switch_reg_bank #(
     import chiplet_types_pkg::*;
     import switch_pkg::*;
 
-    logic [NUM_BUFFERS-1:0] [7:0] address;
-    logic [NUM_BUFFERS-1:0] [14:0] cfg_data;
-    format_e [NUM_BUFFERS-1:0] format;
-    node_id_t [NUM_BUFFERS-1:0] dest;
+    switch_cfg_hdr_t switch_cfg;
+    logic [14:0] cfg_data;
 
     route_lut_t [TABLE_SIZE-1:0] next_route_lut;
     logic [NUM_OUTPORTS-1:0] next_dateline;
@@ -39,19 +37,17 @@ module switch_reg_bank #(
         next_dateline = rb_if.dateline;
         next_route_lut = rb_if.route_lut;
 
-        for (int i = 0; i < NUM_BUFFERS; i++) begin
-            format[i] = format_e'(rb_if.in_flit[i].payload[31:28]);
-            address[i] = rb_if.in_flit[i].payload[14:7];
-            dest[i] = rb_if.in_flit[i].payload[27:23];
-            cfg_data[i] = {rb_if.in_flit[i].payload[22:15], rb_if.in_flit[i].payload[6:0]};
+        switch_cfg = switch_cfg_hdr_t'(rb_if.in_flit.payload);
+        cfg_data = {switch_cfg.data_hi, switch_cfg.data_lo};
 
-            if(format[i] == FMT_SWITCH_CFG && dest[i] == NODE) begin
-                if(address[i] <= 8'h10) begin
-                    next_route_lut[address[i]] = route_lut_t'(cfg_data[i]);
-                end
-                else if(address[i] == 8'h15) begin
-                    next_dateline = cfg_data[i][NUM_OUTPORTS-1:0];
-                end
+        if(switch_cfg.format == FMT_SWITCH_CFG) begin
+            // TODO: claiming here will likely make the vc allocator on
+            // the other side of the link become unsynchronized
+            if(switch_cfg.addr <= 8'h10) begin
+                next_route_lut[switch_cfg.addr] = route_lut_t'(cfg_data);
+            end
+            else if(switch_cfg.addr == 8'h15) begin
+                next_dateline = cfg_data[NUM_OUTPORTS-1:0];
             end
         end
     end
