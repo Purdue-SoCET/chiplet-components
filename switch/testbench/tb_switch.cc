@@ -76,41 +76,62 @@ void sendSmallData(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
     // TODO
 }
 
+class ConfigPkt {
+    public:
+    uint64_t data_lo : 7;
+    uint8_t addr;
+    uint8_t data_hi;
+    uint64_t dest : 5;
+    uint64_t fmt : 4;
+    uint64_t req : 5;
+    uint64_t id : 2;
+    bool vc;
+    uint64_t reserved : 24;
+
+  public:
+    ConfigPkt(uint8_t req, uint8_t dest, uint8_t addr, uint16_t data)
+        : fmt(0x2 /* TODO: ?? */), dest(dest), data_hi(data >> 7), addr(addr), data_lo(data & 0x7F), req(req),
+          id(0), vc(0), reserved(0) {}
+
+    operator uint64_t() {
+        return *(uint64_t *)this;
+    }
+} __attribute__((packed)) __attribute__((aligned(8)));
+
 // Send all config packets out of switch 1, we can't check these since they will be consumed by the
 // switch.
 void sendConfig(uint8_t switch_num, uint8_t addr, uint16_t data) {
-    uint32_t flit =
-        0x4 << 28 | switch_num << 23 | (data >> 7) << 15 | (addr & 0xFF) << 8 | (data & 0x7F);
-    std::array<uint32_t, 1> flits = {flit};
-    manager->queuePacketSend(0, flits);
+    ConfigPkt pkt(1, switch_num, addr, data);
+    std::array<uint64_t, 1> flits = {pkt};
+    manager->queuePacketSend(1, flits);
 }
 
 void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint8_t dest,
                         uint8_t port) {
-    sendConfig(switch_num, tbl_entry, src << 9 | dest << 4 | port); // TODO: num bits for port?
+    sendConfig(switch_num, tbl_entry, src << 10 | dest << 5 | port); // TODO: num bits for port?
 }
 
 void resetAndInit() {
     reset();
     // Set up routing table
     // For 1:
-    // {*, *, 0}
-    sendRouteTableInit(0, 0, 0, 0, 0);
+    // {*, *, 1}
+    sendRouteTableInit(1, 0, 0, 0, 1);
     // For 2:
-    // {*, *, 0}
-    sendRouteTableInit(1, 0, 0, 0, 0);
+    // {*, *, 1}
+    sendRouteTableInit(2, 0, 0, 0, 1);
     // For 3:
-    // {*, *, 0}
-    sendRouteTableInit(2, 0, 0, 0, 0);
+    // {*, *, 1}
+    sendRouteTableInit(3, 0, 0, 0, 1);
     // For 4:
-    // {*, 1, 0}
-    sendRouteTableInit(3, 0, 0, 1, 0);
-    // {*, 2, 1}
-    sendRouteTableInit(3, 1, 0, 2, 1);
+    // {*, 1, 1}
+    sendRouteTableInit(4, 0, 0, 1, 1);
+    // {*, 2, 2}
+    sendRouteTableInit(4, 1, 0, 2, 2);
     // Set dateline for going out of either port
-    sendConfig(3, 0x15, 0x3);
-    // {*, *, 0}
-    sendRouteTableInit(3, 2, 0, 0, 0);
+    sendConfig(4, 0x15, 0x3);
+    // {*, *, 1}
+    sendRouteTableInit(4, 2, 0, 0, 1);
     while (!manager->isComplete()) {
         tick();
     }
@@ -163,26 +184,13 @@ int main(int argc, char **argv) {
     // In ports for 3: {endpoint, 2}
     // Out ports for 3: {endpoint, 0, 1}
 
-    // Set up routing table
-    // For 1:
-    // {*, *, 0}
-    sendRouteTableInit(1, 0, 0, 0, 0);
-    // For 2:
-    // {*, *, 0}
-    sendRouteTableInit(2, 0, 0, 0, 0);
-    // For 3:
-    // {*, *, 0}
-    sendRouteTableInit(3, 0, 0, 0, 0);
-    // For 4:
-    // {*, 1, 0}
-    sendRouteTableInit(4, 0, 0, 1, 0);
-    // {*, 2, 1}
-    sendRouteTableInit(4, 1, 0, 2, 1);
-    // Set dateline for going out of either port
-    sendConfig(4, 0x15, 0x3);
-    // {*, *, 0}
-    sendRouteTableInit(4, 2, 0, 0, 0);
+    resetAndInit();
 
+    while (!manager->isComplete()) {
+        tick();
+    }
+
+    /*
     // Test single packet routing
     // Send packet from 0 to 1
     {
@@ -252,13 +260,12 @@ int main(int argc, char **argv) {
         resetAndInit();
         // TODO
     }
+    */
 
     // Test error checking
-    // 8b10b error
-    // TODO:
-
     // CRC error
-    // TODO:
+    // TODO: long packet sent with wrong crc, should be killed in forward path and asked to be
+    // resent
 
     if (fails != 0) {
         std::cout << "Total failures: " << fails << std::endl;

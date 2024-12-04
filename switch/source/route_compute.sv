@@ -55,8 +55,9 @@ module route_compute #(
                 end
                 else begin
                     for(int j = 0; j < 32; j++) begin
-                        if(route_if.route_lut[j].req == head_flit[i].req && route_if.route_lut[j].dest == head_flit[i].dest)begin
-                            next_out_sel[i] = route_if.route_lut[j].out_sel;
+                        if((route_if.route_lut[j].req == 0 || route_if.route_lut[j].req == head_flit[i].req) &&
+                            (route_if.route_lut[j].dest == 0 || route_if.route_lut[j].dest == head_flit[i].dest)) begin
+                            next_out_sel[i] = route_if.route_lut[j].out_sel[0+:$clog2(NUM_OUTPORTS)];
                             next_allocate[i] = 1'b1;
                         end
                     end

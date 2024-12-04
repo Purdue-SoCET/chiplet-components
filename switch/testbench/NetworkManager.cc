@@ -5,15 +5,17 @@
 extern Vswitch_wrapper *dut;
 extern void ensure(uint32_t actual, uint32_t expected, const char *test_name);
 
-void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint32_t> &flit) {
+// `from` is 1-indexed
+void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint64_t> &flit) {
     for (auto f : flit) {
-        this->to_be_sent[from].push(f);
+        this->to_be_sent[from - 1].push(f);
     }
 }
 
-void NetworkManager::queuePacketCheck(uint8_t from, const std::span<uint32_t> &flit) {
+// `from` is 1-indexed
+void NetworkManager::queuePacketCheck(uint8_t from, const std::span<uint64_t> &flit) {
     for (auto f : flit) {
-        this->to_be_sent[from].push(f);
+        this->to_be_sent[from - 1].push(f);
     }
 }
 
@@ -37,9 +39,9 @@ void NetworkManager::tick() {
         dut->in_flit[i] = 0;
         dut->data_ready_in[i] = 0;
         if (this->to_be_sent[i].size()) {
-            std::cout << "Putting data on switch " << i << std::endl;
             auto to_be_sent = this->to_be_sent[i].front();
             this->to_be_sent[i].pop();
+            std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch " << i << std::endl;
             dut->in_flit[i] = to_be_sent;
             dut->data_ready_in[i] = 1;
         }
