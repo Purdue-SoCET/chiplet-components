@@ -15,8 +15,8 @@ to tiles since memory maps can be consistent across the generations.
 
 The general format of packets is shown below. The 7 bit length is reduced to
 4 bits in the short formats. Any words after the header are dependent on the
-type and length given in the header. All packets except the switch
-configuration packet are followed by a CRC word for error detection. For memory
+type and length given in the header. There is no error detection integrated
+into the protocol layer; it is handled by the data link layer. For memory
 read/write packets, a length of 0 is translated to transfer the maximum number
 of words for that packet type. This ensures that it is impossible to request no
 bytes be transferred across the network.
@@ -80,11 +80,10 @@ have no following data words.
 
 The switch configuration packet is used for initializing the configurable
 aspects of each switch such as routing tables, datelines, and node IDs. The
-switch configuration packet is special in that it is only a single word and has
-no following CRC. No response packets are sent following initialization. The
-switch configuration space consists of a 256 15-bit entries. The switch
-configuration address space is described in more depth in
-[switch](data_link_layer.md).
+switch configuration packet is special in that it is only a single word. No
+response packets are sent following initialization. The switch configuration
+space consists of a 256 15-bit entries. The switch configuration address space
+is described in more depth in [switch](data_link_layer.md).
 
 ![Switch Config Format](images/switch_config_packet.svg)
 
