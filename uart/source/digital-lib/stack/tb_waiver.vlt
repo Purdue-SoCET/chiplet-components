@@ -1,0 +1,11 @@
+// DESCRIPTION: Verilator output: Waivers generated with --waiver-output
+
+`verilator_config
+
+lint_off -rule WIDTHEXPAND -file "*src/socetlib_stack.sv" -match "Operator ADD expects 4 bits on the RHS, but RHS's VARREF 'push' generates 1 bits."
+lint_off -rule WIDTHEXPAND -file "*src/socetlib_stack.sv" -match "Operator SUB expects 4 bits on the RHS, but RHS's VARREF 'pop' generates 1 bits."
+lint_off -rule WIDTHEXPAND -file "*tb/tb_socetlib_stack.sv" -match "Operator EQ expects 32 bits on the RHS, but RHS's VARREF 'count' generates 4 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_stack.sv" -match "Operator TASKREF 'stack_push' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_stack.sv" -match "Operator TASKREF 'stack_pop' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_stack.sv" -match "Operator TASKREF 'stack_push' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+

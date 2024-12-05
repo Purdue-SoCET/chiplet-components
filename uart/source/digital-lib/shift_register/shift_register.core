@@ -1,0 +1,61 @@
+CAPI=2:
+name: socet:digital-lib:shift_register:0.0.4
+description: Parameterizable shift register 
+
+filesets:
+    rtl:
+        files:
+            - src/socetlib_shift_reg.sv
+        file_type: systemVerilogSource
+
+    tb:
+        files:
+            - tb/tb_socetlib_shift_reg.sv
+        file_type: systemVerilogSource
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: socetlib_shift_reg
+    
+    sim:
+        <<: *default
+        description: Simulate w/TB
+        default_tool: verilator
+        filesets_append:
+            - tb
+        toplevel: tb_socetlib_shift_reg
+        tools:
+            verilator:
+                verilator_options:
+                    - --binary
+                    - --trace-fst
+                    - --trace-structs
+                    - --coverage
+                make_options:
+                    - -j
+
+    gui:
+        <<: *default
+        description: Simulate TB with GUI
+        default_tool: xcelium
+        filesets_append:
+            - tb
+        toplevel: tb_socetlib_shift_reg
+        tools:
+            xcelium:
+                xrun_options:
+                    - -gui
+                    - -access +rwc
+    lint:
+        <<: *default
+        description: Linting
+        default_tool: veriblelint
+
+parameters:
+    coverage_file:
+        datatype: file
+        default: "coverage.dat"
+        description: "Name of coverage file for Verilator coverage reporting"
+        paramtype: plusarg

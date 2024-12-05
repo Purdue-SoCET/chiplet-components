@@ -1,0 +1,9 @@
+// DESCRIPTION: Verilator output: Waivers generated with --waiver-output
+
+`verilator_config
+
+lint_off -rule WIDTHEXPAND -file "*tb/tb_socetlib_fifo.sv" -match "Operator EQ expects 32 bits on the RHS, but RHS's VARREF 'count' generates 3 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_fifo.sv" -match "Operator TASKREF 'write_fifo' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_fifo.sv" -match "Operator TASKREF 'read_fifo' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_fifo.sv" -match "Operator TASKREF 'write_fifo' expects 8 bits on the Function Argument, but Function Argument's VARREF 'i' generates 32 bits."
+

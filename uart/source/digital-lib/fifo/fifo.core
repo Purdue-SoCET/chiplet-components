@@ -1,0 +1,125 @@
+CAPI=2:
+name: socet:digital-lib:fifo:0.0.3
+description: Simple FIFO buffer 
+
+filesets:
+    rtl:
+        files:
+            - src/socetlib_fifo.sv
+        file_type: systemVerilogSource
+
+    tb:
+        files:
+            - tb/tb_socetlib_fifo.sv
+        file_type: systemVerilogSource
+
+    verilator_tb:
+        files:
+            - tb/fifo_wrapper.sv
+            - tb/tb_socetlib_fifo.cc : { file_type: cppSource }
+        file_type: systemVerilogSource
+    
+    waiver:
+        files:
+            - tb_waiver.vlt
+        file_type: systemVerilogSource
+
+    fpga:
+        files:
+            - fpga/fpga_socetlib_fifo.sv
+        file_type: systemVerilogSource
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: socetlib_fifo
+        # No parameters?
+    
+    sim:
+        <<: *default
+        description: Simulate w/TB
+        default_tool: verilator
+        filesets_append:
+            - tb
+            - tool_verilator ? (waiver)
+        toplevel: tb_socetlib_fifo
+        tools:
+            verilator:
+                verilator_options:
+                    - --binary
+                    - --trace-fst
+                    - --trace-structs
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                make_options:
+                    - -j
+
+            vcs:
+                vcs_options:
+                    - -assert svaext
+                    - -debug_access+pp
+                    - -debug_access+all
+                    - -debug_pp +vcd+vcdpluson
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+
+    sim_cpp:
+        <<: *default
+        description: Simulate w/TB
+        default_tool: verilator
+        filesets_append:
+            - "tool_verilator? (verilator_tb)"
+        toplevel:
+            - "tool_verilator? (fifo_wrapper)"
+        tools:
+            verilator:
+                verilator_options:
+                    - --trace-fst
+                    - --trace-structs
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                make_options:
+                    - -j
+
+    gui:
+        <<: *default
+        description: Simulate TB with GUI
+        default_tool: xcelium
+        filesets_append:
+            - tb
+        toplevel: tb_socetlib_fifo
+        tools:
+            xcelium:
+                xrun_options:
+                    - -gui
+                    - -access +rwc
+    fpga:
+        <<: *default
+        filesets_append:
+            - fpga
+        description: FPGA Wrapper
+        default_tool: quartus
+        toplevel: fpga_socetlib_fifo
+        tools:
+            quartus:
+                family: Cyclone 10 GX
+                device: 10CX220YF672E5G
+
+    lint:
+        <<: *default
+        filesets_append:
+            - fpga
+            - tb
+        description: Linting
+        default_tool: veriblelint
+
+parameters:
+    coverage_file:
+        datatype: file
+        default: "coverage.dat"
+        description: "Name of coverage file for Verilator coverage reporting"
+        paramtype: plusarg
