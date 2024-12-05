@@ -41,3 +41,5 @@ of the normal buffer.
 
 
 #### Switch Memory Map
+
+![General Format](images/switch_map.svg)
