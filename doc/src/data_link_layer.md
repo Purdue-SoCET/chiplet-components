@@ -17,4 +17,27 @@ crc values of the packets are also checked for potential errors.
 
 ### Switch Architecture
 
+The switch module consists of input buffers that store incoming flits from the phy layer. 
+There is one buffer for each node connected to a particular switch and one buffer for packets
+being sent by the endpoint at the same node as the switch. Each buffer has one virtual channel
+connected to it. The virtual channel is an alternate route through the network that will
+prevent the network from deadlocking a packet will go into a virtual channel instead of the 
+normal buffer when the normal buffer is full or the packet has crossed the dateline. Once the 
+head flit of each packet is stored in the input buffer or the virtual channel. the head flit
+is sent to the route compute and the switch's register bank. If the packet is a switch
+configuration packet and its destination is the node that it is currently at then the register
+bank can configure either the dateline or the routing look up table. If the packet is not a 
+configuration packet then the route compute module will search through the lookup table based
+on the requestor and the destination of the packet and send the output port that the packet
+should go through to the switch allocator. The switch allocator module then takes the information
+from the route compute module and check if the buffer is ready to send the packet to the crossbar 
+switch and the switch allocator will enable the correct outport of the corssbar switch so the 
+packet can go from the input buffer to the crossbar switch to the phy layer. Another component 
+of the switch is the virtual channel allocator that sends and recieves virtual channel information
+to other switchs in the network so they know when to send a packet to a virtual channel instead 
+of the normal buffer. 
+
+![General Format](images/switch.svg)
+
+
 #### Switch Memory Map
