@@ -13,7 +13,7 @@ phy layer. The switch only deals with decoded flits and the phy layer only sends
 recieves encoded flits. When flits are decoded before entering the switch input buffers the
 crc values of the packets are also checked for potential errors.
 
-![General Format](images/Chiplet Protocol-8b10b (for presentation).drawio.svg)
+![General Format](images/8b10b.svg)
 
 ### Switch Architecture
 
