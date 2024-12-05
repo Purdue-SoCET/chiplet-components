@@ -12,6 +12,7 @@ interface crossbar_if #(
 
     localparam SELECT_SIZE = $clog2(NUM_IN) + (NUM_IN == 1);
 
+    logic [NUM_OUT-1:0] packet_sent;
     // Values to be muxed in
     T [NUM_IN-1:0] in;
     // Select lines for each output
@@ -20,10 +21,12 @@ interface crossbar_if #(
     T [NUM_OUT-1:0] out;
     // Enables the output
     logic [NUM_OUT-1:0] enable;
+    // Tells each input when the packet has been sent
+    logic [NUM_IN-1:0] in_pop;
 
     modport crossbar(
-        input in, sel, enable,
-        output out
+        input in, sel, enable, packet_sent,
+        output out, in_pop
     );
 
     modport switch(

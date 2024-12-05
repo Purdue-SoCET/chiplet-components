@@ -14,6 +14,7 @@ interface switch_allocator_if #(
 
     // Request from each input buffer to allocate them to an output port
     logic [NUM_BUFFERS-1:0] allocate;
+    logic [NUM_BUFFERS-1:0] valid;
     // The requested output port from each input buffer
     logic [NUM_BUFFERS-1:0] [REQUEST_SIZE-1:0] requested;
     // Input buffer select lines for each output port

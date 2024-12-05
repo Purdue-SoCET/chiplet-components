@@ -79,6 +79,7 @@ module switch #(
     crossbar #(
         .T(flit_t),
         .RESET_VAL(RESET_VAL),
+        .NUM_IN(NUM_BUFFERS),
         .NUM_OUT(NUM_OUTPORTS)
     ) CROSS(
         clk, 
@@ -133,6 +134,8 @@ module switch #(
 
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
+    assign cb_if.packet_sent = sw_if.packet_sent;
+    assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
 
     assign sw_if.out = cb_if.out;
     assign sw_if.buffer_available = vc_if.buffer_available;
@@ -176,28 +179,30 @@ module switch #(
                 next_vc_sel[i] = buf_if.valid[i];
             end
 
+            // TODO: read enable needs to come from outport select and packet
+            // sent
             if (!sw_if.in[i].vc) begin
                 buf_if.WEN[i] = sw_if.data_ready_in[i];
                 buf_if.wdata[i] = sw_if.in[i];
-                buf_if.REN[i] = sa_if.enable[i] && buf_if.valid[i] && (sw_if.packet_sent[i] || (i == 0 && reg_bank_claim));
             end else begin
                 vc_buf_if.WEN[i] = sw_if.data_ready_in[i];
                 vc_buf_if.wdata[i] = sw_if.in[i];
-                vc_buf_if.REN[i] = sa_if.enable[i] && buf_if.valid[i] && (sw_if.packet_sent[i] || (i == 0 && reg_bank_claim));
             end
 
             if (vc_sel[i]) begin
                 cb_if.in[i] = vc_buf_if.rdata[i];
                 rc_if.in_flit[i] = vc_buf_if.valid[i] ? vc_buf_if.rdata[i] : '0;
                 vc_if.incoming_vc[i] = vc_buf_if.rdata[i].vc;
+                vc_buf_if.REN[i] = vc_buf_if.valid[i] && cb_if.in_pop[i];
             end else begin
                 cb_if.in[i] = buf_if.rdata[i];
                 rc_if.in_flit[i] = buf_if.valid[i] ? buf_if.rdata[i] : '0;
                 vc_if.incoming_vc[i] = buf_if.rdata[i].vc;
+                buf_if.REN[i] = buf_if.valid[i] && cb_if.in_pop[i];
             end
         end
 
-        next_reg_bank_claim = sa_if.enable[0] && cb_if.in[0].payload[31:28] == FMT_SWITCH_CFG;
+        next_reg_bank_claim = sa_if.enable[0] && cb_if.in[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.in[0].payload[27:23] == NODE;
 
         // Send switch config packets to register bank
         rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;

@@ -90,11 +90,18 @@ class ConfigPkt {
 
   public:
     ConfigPkt(uint8_t req, uint8_t dest, uint8_t addr, uint16_t data)
-        : fmt(0x2 /* TODO: ?? */), dest(dest), data_hi(data >> 7), addr(addr), data_lo(data & 0x7F), req(req),
+        : fmt(0x4 /* TODO: ?? */), dest(dest), data_hi(data >> 7), addr(addr), data_lo(data & 0x7F), req(req),
           id(0), vc(0), reserved(0) {}
 
     operator uint64_t() {
-        return *(uint64_t *)this;
+        return ((uint64_t)this->vc << 39) |
+               ((uint64_t)this->id << 37) |
+               ((uint64_t)this->req << 32) |
+               ((uint64_t)this->fmt << 28) |
+               ((uint64_t)this->dest << 23) |
+               ((uint64_t)this->data_hi << 15) |
+               ((uint64_t)this->addr << 7) |
+               ((uint64_t)this->data_lo);
     }
 } __attribute__((packed)) __attribute__((aligned(8)));
 
@@ -122,16 +129,16 @@ void resetAndInit() {
     sendRouteTableInit(2, 0, 0, 0, 1);
     // For 3:
     // {*, *, 1}
-    sendRouteTableInit(3, 0, 0, 0, 1);
+    // sendRouteTableInit(3, 0, 0, 0, 1);
     // For 4:
     // {*, 1, 1}
-    sendRouteTableInit(4, 0, 0, 1, 1);
+    // sendRouteTableInit(4, 0, 0, 1, 1);
     // {*, 2, 2}
-    sendRouteTableInit(4, 1, 0, 2, 2);
+    // sendRouteTableInit(4, 1, 0, 2, 2);
     // Set dateline for going out of either port
-    sendConfig(4, 0x15, 0x3);
+    // sendConfig(4, 0x15, 0x3);
     // {*, *, 1}
-    sendRouteTableInit(4, 2, 0, 0, 1);
+    // sendRouteTableInit(4, 2, 0, 0, 1);
     while (!manager->isComplete()) {
         tick();
     }
