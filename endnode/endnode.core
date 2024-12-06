@@ -11,7 +11,7 @@ filesets:
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include:0.0.1"
-            - "socet:chiplet:enc_8b_10b:1.0.0"
+            - "socet:chiplet:encdec8b10b:1.0.0"
             - "socet:chiplet:uart:1.0.0"
 
 
