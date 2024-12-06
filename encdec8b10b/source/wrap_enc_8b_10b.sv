@@ -11,6 +11,7 @@
 // } flit_enc_t;
 `timescale 1ns / 10ps
 `include "chiplet_types_pkg.vh"
+`include "wrap_enc_8b_10b_if.sv"
 `include "phy_types_pkg.vh"
 module wrap_enc_8b_10b #(parameter PORTCOUNT = 5) 
             (input logic CLK, nRST, wrap_enc_8b_10b_if.enc enc_if);
@@ -40,7 +41,7 @@ end
 
 genvar i;
 for (i = 0; i < PORTCOUNT; i= i +1) begin : enc_8b10b_block
-    enc_8b10b enc (.CLK(CLK),.nRST(nRST),.data_in(enc_if.flit[((i + 1) * 8 - 1):(i * 8)]),.data_out(flit_norm[((i + 1) * 10 - 1):(i * 10)]));
+    enc_8b10b enc (.data_in(enc_if.flit[((i + 1) * 8 - 1):(i * 8)]),.data_out(flit_norm[((i + 1) * 10 - 1):(i * 10)]));
 end
 
 //comma selection
