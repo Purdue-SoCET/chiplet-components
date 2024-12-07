@@ -2,8 +2,7 @@ name: Deploy
 on:
   push:
     branches:
-      # TODO: should be main in the future
-      - docs
+      - main
 
 jobs:
   deploy:
