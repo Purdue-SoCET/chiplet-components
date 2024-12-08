@@ -38,7 +38,7 @@ of the switch is the virtual channel allocator that sends and recieves virtual c
 to other switchs in the network so they know when to send a packet to a virtual channel instead 
 of the normal buffer. 
 
-
+![General Format](images/switch_new.svg)
 
 
 #### Switch Memory Map
