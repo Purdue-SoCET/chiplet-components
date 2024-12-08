@@ -23,6 +23,7 @@ being sent by the endpoint at the same node as the switch. Each buffer has one v
 connected to it. The virtual channel is an alternate route through the network that will
 prevent the network from deadlocking a packet will go into a virtual channel instead of the 
 normal buffer when the normal buffer is full or the packet has crossed the dateline. 
+
  Once the head flit of each packet is stored in the input buffer or the virtual channel. The head 
 flit is sent to the route compute and the switch's register bank. If the packet is a switch
 configuration packet and its destination is the node that it is currently at then the register
