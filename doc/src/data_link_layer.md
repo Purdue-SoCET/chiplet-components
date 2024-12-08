@@ -17,14 +17,14 @@ crc values of the packets are also checked for potential errors.
 
 ### Switch Architecture
 
-The switch module consists of input buffers that store incoming flits from the phy layer. 
+  The switch module consists of input buffers that store incoming flits from the phy layer. 
 There is one buffer for each node connected to a particular switch and one buffer for packets
 being sent by the endpoint at the same node as the switch. Each buffer has one virtual channel
 connected to it. The virtual channel is an alternate route through the network that will
 prevent the network from deadlocking a packet will go into a virtual channel instead of the 
-normal buffer when the normal buffer is full or the packet has crossed the dateline. Once the 
-head flit of each packet is stored in the input buffer or the virtual channel. the head flit
-is sent to the route compute and the switch's register bank. If the packet is a switch
+normal buffer when the normal buffer is full or the packet has crossed the dateline. 
+ Once the head flit of each packet is stored in the input buffer or the virtual channel. The head 
+flit is sent to the route compute and the switch's register bank. If the packet is a switch
 configuration packet and its destination is the node that it is currently at then the register
 bank can configure either the dateline or the routing look up table. If the packet is not a 
 configuration packet then the route compute module will search through the lookup table based
