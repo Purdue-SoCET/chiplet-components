@@ -9,7 +9,7 @@ module arbiter#(
     logic [WIDTH-1:0] left, right;
     logic found;
 
-    always_ff @(posedge CLK, nRST) begin
+    always_ff @(posedge CLK, negedge nRST) begin
         if (!nRST) begin
             a_if.select <= 0;
             a_if.valid <= 0;
