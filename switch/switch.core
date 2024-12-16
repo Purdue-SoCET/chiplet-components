@@ -12,6 +12,7 @@ filesets:
             - "source/switch_reg_bank.sv"
             - "source/vc_allocator.sv"
             - "source/buffers.sv"
+            - "source/arbiter.sv"
             - "include/switch_pkg.sv" : {is_include_file: true}
             - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
@@ -19,6 +20,7 @@ filesets:
             - "include/switch_allocator_if.sv" : {is_include_file: true}
             - "include/switch_reg_bank_if.sv" : {is_include_file: true}
             - "include/vc_allocator_if.sv" : {is_include_file: true}
+            - "include/arbiter_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:

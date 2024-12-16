@@ -60,6 +60,7 @@ module switch #(
 
     // Module Declarations
 
+    // TODO: arbiter for vc_allocator
     vc_allocator #(
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_BUFFERS(NUM_BUFFERS),
@@ -70,6 +71,7 @@ module switch #(
         n_rst, 
         vc_if
     );
+    // TODO: arbiter for route_compute
     route_compute #(
         .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),
