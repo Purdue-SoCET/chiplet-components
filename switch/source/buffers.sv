@@ -5,6 +5,7 @@
 
 module buffers #(
     parameter NUM_BUFFERS,
+    parameter NUM_OUTPORTS,
     parameter DEPTH// # of FIFO entries
 )(
     input CLK,
@@ -13,18 +14,37 @@ module buffers #(
 );
     import chiplet_types_pkg::*;
 
-    logic [NUM_BUFFERS-1:0] next_valid;
+    typedef enum logic [1:0] {
+        IDLE,
+        ROUTING,
+        VC_ALLOCATION,
+        ACTIVE
+    } state_t;
+
+    typedef struct packed {
+        state_t state;
+        logic [$clog2(NUM_OUTPORTS)-1:0] outport_sel;
+        logic vc;
+    } state_table_t;
+
+    localparam state_table_t DEFAULT_TABLE = '{
+        state: IDLE,
+        outport_sel: 0,
+        vc: 0
+    };
+
     logic [NUM_BUFFERS-1:0] overflow;
     logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val;
-    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] count;
+    logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count;
+    state_table_t [NUM_BUFFERS-1:0] state_table, next_state_table;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if (!nRST) begin
-            buf_if.valid <= '0;
             overflow_val <= '0;
+            state_table <= {NUM_BUFFERS{DEFAULT_TABLE}};
         end else begin
-            buf_if.valid <= next_valid;
             overflow_val <= next_overflow_val;
+            state_table <= next_state_table;
         end
     end
 
@@ -45,7 +65,7 @@ module buffers #(
                 .empty(),
                 .overrun(),
                 .underrun(),
-                .count(),
+                .count(count[i]),
                 .rdata(buf_if.rdata[i])
             );
 
@@ -54,34 +74,59 @@ module buffers #(
             ) PACKET_COUNTER (
                 .CLK(CLK),
                 .nRST(nRST),
-                .clear(!buf_if.valid[i]),
-                .count_enable(buf_if.WEN[i]),
+                .clear(0),
+                .count_enable(buf_if.REN[i]),
                 .overflow_val(overflow_val[i]),
-                .count_out(count[i]),
+                .count_out(),
                 .overflow_flag(overflow[i])
             );
         end
     endgenerate
 
     always_comb begin
-        next_valid = buf_if.valid;
+        buf_if.req_routing = '0;
+        buf_if.req_vc = '0;
+        buf_if.req_switch = '0;
         next_overflow_val = overflow_val;
+        next_state_table = state_table;
 
-        for (int j = 0; j < NUM_BUFFERS; j++) begin
-            if (buf_if.REN[j] && (overflow[j] || overflow_val[j] == 0)) begin
-                next_valid[j] = 0;
-            end else if (buf_if.WEN[j] || count[j] > 0) begin
-                next_valid[j] = 1;
-            end
+        for (int i = 0; i < NUM_BUFFERS; i++) begin
+            case (state_table[i].state)
+                IDLE : begin
+                    // Head flit condition
+                    if (buf_if.WEN[i] || count[i] > 0) begin
+                        next_state_table[i].state = ROUTING;
+                        if (buf_if.WEN[i] && count[i] == 0) begin
+                            next_overflow_val[i] = expected_num_flits(buf_if.wdata[i].payload);
+                        end else if (count[i] > 0) begin
+                            next_overflow_val[i] = expected_num_flits(buf_if.rdata[i].payload);
+                        end
+                    end
+                end
+                ROUTING : begin
+                    if (buf_if.routing_granted[i]) begin
+                        next_state_table[i].outport_sel = buf_if.routing_outport;
+                        next_state_table[i].state = VC_ALLOCATION;
+                    end
+                end
+                VC_ALLOCATION : begin
+                    if (buf_if.vc_granted[i]) begin
+                        next_state_table[i].vc = buf_if.vc_selection;
+                        next_state_table[i].state = ACTIVE;
+                    end
+                end
+                ACTIVE : begin
+                    if (overflow[i]) begin
+                        next_state_table[i].outport_sel = 0;
+                        next_state_table[i].vc = 0;
+                        next_state_table[i].state = IDLE;
+                    end
+                end
+            endcase
 
-            // Head flit condition
-            // TODO: weird hack to get overflows working properly, any better
-            // solutions?
-            if (buf_if.WEN[j] && count[j] == 0) begin
-                next_overflow_val[j] = expected_num_flits(buf_if.wdata[j].payload) - 1;
-            end else if (count > 0) begin
-                next_overflow_val[j] = expected_num_flits(buf_if.rdata[j].payload) - 1;
-            end
+            buf_if.req_routing[i] = state_table[i].state == ROUTING;
+            buf_if.req_vc[i] = state_table[i].state == VC_ALLOCATION;
+            buf_if.req_switch[i] = state_table[i].state == ACTIVE;
         end
     end
 endmodule

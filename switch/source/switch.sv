@@ -47,10 +47,14 @@ module switch #(
     ) rb_if();
     buffers_if #(
         .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
     ) buf_if();
     buffers_if #(
         .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
     ) vc_buf_if();
 
@@ -107,6 +111,7 @@ module switch #(
     );
     buffers #(
         .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
         .DEPTH(BUFFER_SIZE)
     ) BUFF1(
         clk,
@@ -115,6 +120,7 @@ module switch #(
     );
     buffers #(
         .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
         .DEPTH(BUFFER_SIZE)
     ) VC1(
         clk,
@@ -127,10 +133,10 @@ module switch #(
     logic reg_bank_claim, next_reg_bank_claim;
 
     assign sa_if.requested = rc_if.out_sel;
-    assign sa_if.allocate = rc_if.allocate & buf_if.valid;
+    assign sa_if.allocate = rc_if.allocate;
 
     assign rc_if.route_lut = rb_if.route_lut;
-    assign rc_if.valid = buf_if.valid;
+    assign rc_if.valid = '1;
 
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
@@ -173,10 +179,12 @@ module switch #(
         next_reg_bank_claim = 0;
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
-            if (!vc_sel[i] && !buf_if.valid[i]) begin
-                next_vc_sel[i] = vc_buf_if.valid[i];
-            end else if (!vc_sel[i] && !buf_if.valid[i]) begin
-                next_vc_sel[i] = buf_if.valid[i];
+            // TODO: It's actually safe to switch between sending packets on
+            // different vcs as long as output vc is different
+            if (!vc_sel[i]) begin
+                // next_vc_sel[i] = vc_buf_if.valid[i];
+            end else if (!vc_sel[i]) begin
+                // next_vc_sel[i] = buf_if.valid[i];
             end
 
             // TODO: read enable needs to come from outport select and packet
@@ -191,14 +199,14 @@ module switch #(
 
             if (vc_sel[i]) begin
                 cb_if.in[i] = vc_buf_if.rdata[i];
-                rc_if.in_flit[i] = vc_buf_if.valid[i] ? vc_buf_if.rdata[i] : '0;
+                rc_if.in_flit[i] = vc_buf_if.rdata[i];
                 vc_if.incoming_vc[i] = vc_buf_if.rdata[i].vc;
-                vc_buf_if.REN[i] = vc_buf_if.valid[i] && cb_if.in_pop[i];
+                // vc_buf_if.REN[i] = vc_buf_if.valid[i] && cb_if.in_pop[i];
             end else begin
                 cb_if.in[i] = buf_if.rdata[i];
-                rc_if.in_flit[i] = buf_if.valid[i] ? buf_if.rdata[i] : '0;
+                rc_if.in_flit[i] = buf_if.rdata[i];
                 vc_if.incoming_vc[i] = buf_if.rdata[i].vc;
-                buf_if.REN[i] = buf_if.valid[i] && cb_if.in_pop[i];
+                buf_if.REN[i] = cb_if.in_pop[i];
             end
         end
 
