@@ -27,8 +27,10 @@ module arbiter#(
 
         for (int i = 0; i < WIDTH; i++) begin
             left[i] = i <= a_if.select;
-            right[i] = i > a_if.select;
         end
+        right = ~left;
+        left &= bid;
+        right &= bid;
         
         // Current winner has finished request
         if (!found) begin
