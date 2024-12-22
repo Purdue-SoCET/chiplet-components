@@ -142,7 +142,7 @@ module switch #(
 
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
-    assign cb_if.packet_sent = sw_if.packet_sent;
+    //assign cb_if.packet_sent = sw_if.packet_sent;
     assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
 
     assign sw_if.out = cb_if.out;
