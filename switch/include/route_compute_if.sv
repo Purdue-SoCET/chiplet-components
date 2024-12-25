@@ -5,7 +5,6 @@
 `include "switch_pkg.sv"
 
 interface route_compute_if #(
-    parameter NUM_BUFFERS,
     parameter NUM_OUTPORTS,
     parameter TABLE_SIZE
 );
@@ -14,19 +13,15 @@ interface route_compute_if #(
 
     localparam SELECT_SIZE = $clog2(NUM_OUTPORTS) + (NUM_OUTPORTS == 1);
 
-    logic [NUM_BUFFERS-1:0] valid;
-    flit_t [NUM_BUFFERS-1:0] in_flit;
+    logic valid;
+    flit_t head_flit;
     route_lut_t [TABLE_SIZE-1:0] route_lut;
-    // logic [$clog2(NUM_BUFFERS)-1:0] buffer_sel;
-    // The requested outport for each buffer. Buffers may have the same
-    // requested outport, but the switch allocator will arbitrate
-    logic [NUM_BUFFERS-1:0] [SELECT_SIZE-1:0] out_sel;
-    logic [NUM_BUFFERS-1:0] allocate;
+    logic [SELECT_SIZE-1:0] out_sel;
 
     //TODO 
     modport route(
-        input in_flit, valid, route_lut,
-        output allocate, out_sel
+        input valid, head_flit, route_lut,
+        output out_sel
     );
 endinterface
 
