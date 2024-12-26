@@ -12,22 +12,21 @@ interface switch_allocator_if #(
     localparam REQUEST_SIZE = $clog2(NUM_OUTPORTS) + (NUM_OUTPORTS == 1);
     localparam SELECT_SIZE = $clog2(NUM_BUFFERS) + (NUM_BUFFERS == 1);
 
-    // Request from each input buffer to allocate them to an output port
-    logic [NUM_BUFFERS-1:0] allocate;
+    // Used to tell when an outport can be deallocated
     logic [NUM_BUFFERS-1:0] valid;
+    // Request from the input buffer to allocate them to an output port
+    logic allocate;
+    logic [SELECT_SIZE-1:0] requestor;
     // The requested output port from each input buffer
-    logic [NUM_BUFFERS-1:0] [REQUEST_SIZE-1:0] requested;
+    logic [REQUEST_SIZE-1:0] requested;
+    logic granted;
     // Input buffer select lines for each output port
     logic [NUM_OUTPORTS-1:0] [SELECT_SIZE-1:0] select;
     logic [NUM_OUTPORTS-1:0] enable;
 
-    modport route_compute(
-        output allocate, requested
-    );
-
     modport allocator(
-        input allocate, requested,
-        output select, enable
+        input valid, allocate, requestor, requested,
+        output granted, select, enable
     );
 
     modport crossbar(
