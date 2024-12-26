@@ -5,7 +5,7 @@ module arbiter#(
     input logic CLK, nRST,
     arbiter_if.arbiter a_if
 );
-    logic [$clog2(WIDTH-1):0] next_select;
+    logic [$clog2(WIDTH)-1:0] next_select;
     logic [WIDTH-1:0] left, right;
     logic found;
 
@@ -29,8 +29,8 @@ module arbiter#(
             left[i] = i <= a_if.select;
         end
         right = ~left;
-        left &= bid;
-        right &= bid;
+        left &= a_if.bid;
+        right &= a_if.bid;
         
         // Current winner has finished request
         if (!found) begin
@@ -38,7 +38,9 @@ module arbiter#(
             // first set 
             for (int i = 0; i < WIDTH; i++) begin
                 if (!found && right[i]) begin
+                    /* verilator lint_off WIDTHTRUNC */
                     next_select = i;
+                    /* verilator lint_on WIDTHTRUNC */
                     found = 1;
                 end
             end
@@ -47,7 +49,9 @@ module arbiter#(
             // selection)
             for (int i = 0; i < WIDTH; i++) begin
                 if (!found && left[i]) begin
+                    /* verilator lint_off WIDTHTRUNC */
                     next_select = i;
+                    /* verilator lint_on WIDTHTRUNC */
                     found = 1;
                 end
             end
