@@ -39,9 +39,7 @@ module vc_allocator#(
         next_buffer_available = vc_if.buffer_available;
         next_buffer_availability = buffer_availability;
 
-        for (int i = 0; i < NUM_BUFFERS; i++) begin
-            vc_if.assigned_vc[i] = vc_if.incoming_vc[i] || vc_if.dateline[i];
-        end
+        vc_if.assigned_vc = vc_if.incoming_vc || vc_if.dateline[vc_if.outport];
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             for (int j = 0; j < NUM_VCS; j++) begin
