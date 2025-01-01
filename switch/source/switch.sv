@@ -19,305 +19,209 @@ module switch #(
     parameter int BUFFER_BITS = BUFFER_SIZE * 32;
     parameter flit_t RESET_VAL = '0;
 
-    //*********************************************************
-    // Interface Declarations
-    //*********************************************************
+    logic [NUM_OUTPORTS-1:0] next_data_ready_out;
+    logic reg_bank_claim;
 
-    arbiter_if #(
-        .WIDTH(NUM_BUFFERS)
-    ) a_if
-    vc_allocator_if #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .NUM_VCS(NUM_VCS)
-    ) vc_if();
-    route_compute_if #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TABLE_SIZE(32) // TODO: parameterize
-    ) rc_if();
-    crossbar_if #(
-         .T(flit_t),
-         .NUM_IN(NUM_BUFFERS),
-         .NUM_OUT(NUM_OUTPORTS)
-    ) cb_if();
-    switch_allocator_if #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS)
-    ) sa_if();
-    switch_reg_bank_if #(
-        .NUM_BUFFERS(NUM_BUFFERS), 
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TOTAL_NODES(TOTAL_NODES),
-        .TABLE_SIZE(32) // TODO: parameterize
-    ) rb_if();
+    // Buffers
     buffers_if #(
-        .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
     ) buf_if();
-    buffers_if #(
-        .NUM_BUFFERS(NUM_BUFFERS),
+
+    // Use single buffer to make signal routing easier, internally is split
+    // into {vc1, vc0}
+    buffers #(
+        .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
-        .NUM_VCS(NUM_VCS),
-        .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
-    ) vc_buf_if();
+        .DEPTH(BUFFER_SIZE)
+    ) BUFF (
+        .CLK(clk),
+        .nRST(n_rst),
+        .buf_if(buf_if)
+    );
 
-    //*********************************************************
-    // Module Declarations
-    //*********************************************************
+    // Connect buffers to IO
+    always_comb begin
+        buf_if.wdata = sw_if.in;
+        for (int i = 0; i < NUM_BUFFERS; i++) begin
+            if (!sw_if.in[i].vc) begin
+                buf_if.WEN[i] = sw_if.data_ready_in[i];
+                buf_if.wdata[i] = sw_if.in[i];
+            end else begin
+                buf_if.WEN[i + NUM_BUFFERS] = sw_if.data_ready_in[i];
+                buf_if.wdata[i + NUM_BUFFERS] = sw_if.in[i];
+            end
+        end
+    end
 
-    // TODO: arbiter for vc_allocator
+    // Stage 1: Route compute
+    arbiter_if #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) rc_a_if();
+    route_compute_if #(
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TABLE_SIZE(32) // TODO: parameterize
+    ) rc_if();
+
     arbiter #(
-        .WIDTH(NUM_BUFFERS)
-    ) ARB (
-        clk,
-        n_rst,
-        a_if
-    )
+        .WIDTH(2*NUM_BUFFERS)
+    ) RC_ARBITER (
+        .CLK(clk),
+        .nRST(n_rst),
+        .a_if(rc_a_if)
+    );
+    route_compute #(
+        .NODE(NODE),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES)
+    ) RC (
+        .clk(clk),
+        .n_rst(n_rst),
+        .route_if(rc_if)
+    );
+
+    // Connect buffers to arbiter
+    assign rc_a_if.bid = buf_if.req_routing;
+    // Connect arbiter to route compute
+    assign rc_if.valid = rc_a_if.valid;
+    assign rc_if.head_flit = buf_if.rdata[rc_a_if.select];
+    assign rc_if.route_lut = rb_if.route_lut;
+    assign buf_if.routing_outport = rc_if.out_sel;
+    assign buf_if.routing_granted = rc_a_if.valid << rc_a_if.select;
+
+    // Stage 2: VC allocation
+    arbiter_if #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) vc_a_if();
+    vc_allocator_if #(
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS)
+    ) vc_if();
+
+    arbiter #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) VCALLOC_ARBITER (
+        .CLK(clk),
+        .nRST(n_rst),
+        .a_if(vc_a_if)
+    );
     vc_allocator #(
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_BUFFERS(NUM_BUFFERS),
         .NUM_VCS(NUM_VCS),
         .BUFFER_SIZE(BUFFER_SIZE)
-    ) VCALLOC(
-        clk, 
-        n_rst, 
-        vc_if
+    ) VCALLOC (
+        .clk(clk),
+        .n_rst(n_rst),
+        .vc_if(vc_if)
     );
-    // TODO: arbiter for route_compute
-    route_compute #(
-        .NODE(NODE),
-        .NUM_BUFFERS(NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TOTAL_NODES(TOTAL_NODES)
-    ) ROUTECOMP(
-        clk, 
-        n_rst, 
-        rc_if
+
+    // Connect buffers to arbiter
+    assign vc_a_if.bid = buf_if.req_vc;
+    // Connect buffers to VC allocator
+    assign vc_if.incoming_vc = buf_if.rdata[vc_a_if.select].vc;
+    assign vc_if.outport = buf_if.switch_outport[vc_a_if.select];
+    assign buf_if.vc_selection = vc_if.assigned_vc;
+    assign buf_if.vc_granted = vc_a_if.valid << vc_a_if.select;
+    // Connect VC allocator to IO
+    assign vc_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
+    assign vc_if.credit_granted = {sw_if.credit_granted[NUM_OUTPORTS-1:1], sw_if.credit_granted[0] | {NUM_VCS-1{reg_bank_claim}}};
+    assign sw_if.buffer_available = vc_if.buffer_available;
+    // Connect VC allocator to register bank
+    assign vc_if.dateline = rb_if.dateline;
+
+    // Stage 3: Switch allocation
+    arbiter_if #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) sa_a_if();
+    switch_allocator_if #(
+        .NUM_BUFFERS(2*NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS)
+    ) sa_if();
+
+    arbiter #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) SWALLOC_ARBITER (
+        .CLK(clk),
+        .nRST(n_rst),
+        .a_if(sa_a_if)
     );
+    switch_allocator #(
+        .NUM_BUFFERS(2*NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS)
+    ) SWALLOC (
+        clk,
+        n_rst,
+        sa_if
+    );
+
+    // Connect buffers to arbiter
+    assign sa_a_if.bid = buf_if.req_switch;
+    // Connect buffers and arbiter to switch allocator
+    assign sa_if.valid = buf_if.valid;
+    assign sa_if.allocate = sa_a_if.valid;
+    assign sa_if.requestor = sa_a_if.select;
+    assign sa_if.requested = buf_if.switch_outport[sa_a_if.select];
+    assign buf_if.switch_granted = sa_a_if.valid << sa_a_if.select;
+
+    // Stage 4: Crossbar traversal
+    crossbar_if #(
+         .T(flit_t),
+         .NUM_IN(2*NUM_BUFFERS),
+         .NUM_OUT(NUM_OUTPORTS)
+    ) cb_if();
     crossbar #(
         .T(flit_t),
         .RESET_VAL(RESET_VAL),
-        .NUM_IN(NUM_BUFFERS),
+        .NUM_IN(2*NUM_BUFFERS),
         .NUM_OUT(NUM_OUTPORTS)
-    ) CROSS(
-        clk, 
-        n_rst, 
-        cb_if
+    ) CB (
+        .clk(clk),
+        .n_rst(n_rst),
+        .cb_if(cb_if)
     );
-    switch_allocator #(
+
+    // Connect buffers and switch allocator to crossbar
+    assign cb_if.in = buf_if.rdata;
+    assign cb_if.sel = sa_if.select;
+    assign cb_if.enable = sa_if.enable;
+    assign buf_if.REN = cb_if.in_pop;
+    // Connect crossbar to IO
+    assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
+    assign sw_if.out = cb_if.out;
+
+    // Stage 5: Claim things going to this node and forward things to reg bank
+    // as necessary
+    switch_reg_bank_if #(
         .NUM_BUFFERS(NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS)
-    ) SWALLOC(
-        clk, 
-        n_rst, 
-        sa_if
-    );
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES),
+        .TABLE_SIZE(32) // TODO: parameterize
+    ) rb_if();
+
     switch_reg_bank #(
         .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .TABLE_SIZE(32),
         .TOTAL_NODES(TOTAL_NODES)
-    ) REGBANK(
-        clk, 
-        n_rst,
-        rb_if
+    ) REGBANK (
+        .clk(clk),
+        .n_rst(n_rst),
+        .rb_if(rb_if)
     );
-    buffers #(
-        .NUM_BUFFERS(NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .DEPTH(BUFFER_SIZE)
-    ) BUFF1(
-        clk,
-        n_rst, 
-        buf_if
-    );
-    buffers #(
-        .NUM_BUFFERS(NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .DEPTH(BUFFER_SIZE)
-    ) VC1(
-        clk,
-        n_rst, 
-        vc_buf_if
-    );
-    
-    logic [NUM_OUTPORTS-1:0] next_data_ready_out;
-    logic [NUM_BUFFERS-1:0] vc_sel, next_vc_sel; //size could be parameterized in the future
-    logic reg_bank_claim, next_reg_bank_claim;
 
-    assign sa_if.requested = rc_if.out_sel;
-    assign sa_if.allocate = rc_if.allocate;
+    assign reg_bank_claim = sa_if.enable[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
+    assign rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
 
-    assign rc_if.route_lut = rb_if.route_lut;
-    assign rc_if.valid = '1;
-
-    assign cb_if.sel = sa_if.select;
-    assign cb_if.enable = sa_if.enable;
-    //assign cb_if.packet_sent = sw_if.packet_sent;
-    assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
-
-    assign sw_if.out = cb_if.out;
-    assign sw_if.buffer_available = vc_if.buffer_available;
-
-    assign vc_if.credit_granted = sw_if.credit_granted;
-    assign vc_if.packet_sent = sw_if.packet_sent;
-    assign vc_if.dateline = rb_if.dateline;
-
-    assign buf_if.wdata = sw_if.in;
-    assign vc_buf_if.wdata = sw_if.in;
-
-    assign next_data_ready_out = {sa_if.enable[NUM_OUTPORTS-1:1], sa_if.enable[0] & !(next_reg_bank_claim || reg_bank_claim)};
-
-    assign a_if.bid = buf_if.req_routing;
-    assign buf_if.routing_granted[a_if.select] = a_if.valid;
-
-    //*********************************************************
-    // Latch Signals
-    //*********************************************************
-
-    logic arb_rc_stall, rc_va_stall, va_sa_stall;
-    logic [$clog2(NUM_BUFFERS)-1:0] arb_rc_buffer_sel, rc_va_buffer_sel, va_sa_buffer_sel;
-    logic [$clog2(NUM_OUTPORTS)-1:0] rc_va_out_sel, va_sa_out_sel;
-    flit_t arb_rc_flit, rc_va_flit, va_sa_flit;
-    logic [NUM_OUTPORTS-1:0] sa_cb_enable;
-
-    //*********************************************************
-    // Latches
-    //*********************************************************
-
-    //ARB RC Latch
-
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            arb_rc_flit <= '0;
-            arb_rc_buffer_sel <= '0;
-        end else if (arb_rc_stall)begin
-            arb_rc_flit <= arb_rc_flit;
-            arb_rc_buffer_sel <= arb_rc_buffer_sel;
-        end else begin
-            arb_rc_flit <= rdata[a_if.select];
-            arb_rc_buffer_sel <= a_if.select;
-        end
-    end
-
-    //RC VA Latch
-
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            rc_va_flit <= '0;
-            rc_va_buffer_sel <= '0;
-            rc_va_out_sel <= '0;
-        end else if (rc_va_stall)begin
-            rc_va_flit <= rc_va_flit;
-            rc_va_buffer_sel <= rc_va_buffer_sel;
-            rc_va_out_sel <= rc_va_out_sel;
-        end else begin
-            rc_va_flit <= arb_rc_flit;
-            rc_va_buffer_sel <= arb_rc_buffer_sel;
-            rc_va_out_sel <= rc_if.out_sel;
-        end
-    end
-
-    //VA SA Latch
-
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            va_sa_flit <= '0;
-            va_sa_buffer_sel <= '0;
-            va_sa_out_sel <= '0;
-        end else if (va_sa_stall)begin
-            va_sa_flit <= va_sa_flit;
-            va_sa_buffer_sel <= va_sa_buffer_sel;
-            va_sa_out_sel <= va_sa_out_sel;
-        end else begin
-            va_sa_flit <= rc_va_flit;
-            va_sa_buffer_sel <= rc_va_buffer_sel;
-            va_sa_out_sel <= rc_va_out_sel;
-        end
-    end
-
-    //SA CB Latch
-
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            sa_cb_flit <= '0;
-            sa_cb_buffer_sel <= '0;
-            sa_cb_out_sel <= '0;
-        end else begin
-            sa_cb_flit <= va_sa_flit;
-            sa_cb_buffer_sel <= va_sa_buffer_sel;
-            sa_cb_enable <= sa_if.enable;
-        end
-    end
-
-    //*********************************************************
-    //
-    //*********************************************************
-
+    assign next_data_ready_out = {cb_if.enable[NUM_OUTPORTS-1:1], cb_if.enable[0] && !reg_bank_claim};
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             sw_if.data_ready_out <= '0;
-            vc_sel <= '0;
-            reg_bank_claim <= 0;
         end else begin
             sw_if.data_ready_out <= next_data_ready_out;
-            vc_sel <= next_vc_sel;
-            reg_bank_claim <= next_reg_bank_claim;
         end
-    end
-
-    always_comb begin //Buffer vs VC arbitration
-        buf_if.WEN = '0;
-        buf_if.REN = '0;
-        vc_buf_if.WEN = '0;
-        vc_buf_if.REN = '0;
-        next_vc_sel = vc_sel;
-        rc_if.in_flit = '0;
-        rb_if.in_flit = '0;
-        vc_if.incoming_vc = '0;
-        next_reg_bank_claim = 0;
-
-        
-        // TODO: It's actually safe to switch between sending packets on
-        // different vcs as long as output vc is different
-        if (!vc_sel[i]) begin
-            // next_vc_sel[i] = vc_buf_if.valid[i];
-        end else if (!vc_sel[i]) begin
-            // next_vc_sel[i] = buf_if.valid[i];
-        end
-
-        // TODO: read enable needs to come from outport select and packet
-        // sent
-        if (!sw_if.in[i].vc) begin
-            buf_if.WEN[i] = sw_if.data_ready_in[i];
-            buf_if.wdata[i] = sw_if.in[i];
-        end else begin
-            vc_buf_if.WEN[i] = sw_if.data_ready_in[i];
-            vc_buf_if.wdata[i] = sw_if.in[i];
-        end
-
-        if (vc_sel[i]) begin
-            cb_if.in[i] = vc_buf_if.rdata[i];
-            rc_if.in_flit[i] = vc_buf_if.rdata[i];
-            vc_if.incoming_vc[i] = vc_buf_if.rdata[i].vc;
-            // vc_buf_if.REN[i] = vc_buf_if.valid[i] && cb_if.in_pop[i];
-        end else begin
-            cb_if.in[i] = buf_if.rdata[i];
-            rc_if.in_flit[i] = buf_if.rdata[i];
-            vc_if.incoming_vc[i] = buf_if.rdata[i].vc;
-            buf_if.REN[i] = cb_if.in_pop[i];
-        end
-
-        next_reg_bank_claim = sa_if.enable[0] && cb_if.in[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.in[0].payload[27:23] == NODE;
-
-        // Send switch config packets to register bank
-        rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
-        // Send everything else outside
-        sw_if.out = cb_if.out;
-        sw_if.out[0] = reg_bank_claim ? '0 : cb_if.out[0];
     end
 endmodule

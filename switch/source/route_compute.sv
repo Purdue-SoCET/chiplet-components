@@ -20,7 +20,6 @@ module route_compute #(
     node_id_t req, dest;
     logic [SELECT_SIZE-1:0] next_out_sel;
 
-    //TODO Serialize route compute, right now all in parallel
     always_ff @(posedge clk, negedge n_rst) begin
         if(!n_rst) begin
             route_if.out_sel <= '0;

@@ -14,10 +14,11 @@ module buffers #(
 );
     import chiplet_types_pkg::*;
 
-    typedef enum logic [1:0] {
+    typedef enum logic [2:0] {
         IDLE,
         ROUTING,
         VC_ALLOCATION,
+        SWITCH_ALLOCATION,
         ACTIVE
     } state_t;
 
@@ -40,7 +41,7 @@ module buffers #(
 
     always_ff @(posedge CLK, negedge nRST) begin
         if (!nRST) begin
-            overflow_val <= '0;
+            overflow_val <= '1;
             state_table <= {NUM_BUFFERS{DEFAULT_TABLE}};
         end else begin
             overflow_val <= next_overflow_val;
@@ -91,7 +92,7 @@ module buffers #(
         next_state_table = state_table;
 
         for (int i = 0; i < NUM_BUFFERS; i++) begin
-            case (state_table[i].state)
+            casez (state_table[i].state)
                 IDLE : begin
                     // Head flit condition
                     if (buf_if.WEN[i] || count[i] > 0) begin
@@ -112,21 +113,30 @@ module buffers #(
                 VC_ALLOCATION : begin
                     if (buf_if.vc_granted[i]) begin
                         next_state_table[i].vc = buf_if.vc_selection;
+                        next_state_table[i].state = SWITCH_ALLOCATION;
+                    end
+                end
+                SWITCH_ALLOCATION : begin
+                    if (buf_if.switch_granted[i]) begin
                         next_state_table[i].state = ACTIVE;
                     end
                 end
                 ACTIVE : begin
-                    if (overflow[i]) begin
+                    if (buf_if.REN[i] && overflow[i]) begin
                         next_state_table[i].outport_sel = 0;
                         next_state_table[i].vc = 0;
                         next_state_table[i].state = IDLE;
+                        next_overflow_val[i] = '1;
                     end
                 end
+                default : begin end
             endcase
 
             buf_if.req_routing[i] = state_table[i].state == ROUTING;
             buf_if.req_vc[i] = state_table[i].state == VC_ALLOCATION;
-            buf_if.req_switch[i] = state_table[i].state == ACTIVE;
+            buf_if.req_switch[i] = state_table[i].state == SWITCH_ALLOCATION;
+            buf_if.valid[i] = state_table[i].state != IDLE;
+            buf_if.switch_outport[i] = state_table[i].outport_sel;
         end
     end
 endmodule

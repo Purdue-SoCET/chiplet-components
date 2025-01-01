@@ -38,7 +38,7 @@ module switch_allocator#(
 
         // If any input buffer drops `valid`, deallocate it.
         for (int outport = 0; outport < NUM_OUTPORTS; outport++) begin
-            next_enable[outport] = sa_if.valid[sa_if.select[outport]];
+            next_enable[outport] &= sa_if.valid[sa_if.select[outport]];
         end
     end
 endmodule
