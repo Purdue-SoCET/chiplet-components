@@ -13,7 +13,7 @@ interface route_compute_if #(
 
     localparam SELECT_SIZE = $clog2(NUM_OUTPORTS) + (NUM_OUTPORTS == 1);
 
-    logic valid;
+    logic valid, sel_valid;
     flit_t head_flit;
     route_lut_t [TABLE_SIZE-1:0] route_lut;
     logic [SELECT_SIZE-1:0] out_sel;
@@ -21,7 +21,7 @@ interface route_compute_if #(
     //TODO 
     modport route(
         input valid, head_flit, route_lut,
-        output out_sel
+        output sel_valid, out_sel
     );
 endinterface
 

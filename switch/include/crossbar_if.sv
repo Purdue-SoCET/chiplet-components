@@ -19,6 +19,7 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] [SELECT_SIZE-1:0] sel;
     // Output lines
     T [NUM_OUT-1:0] out;
+    logic [NUM_OUT-1:0] valid;
     // Enables the output
     logic [NUM_OUT-1:0] enable;
     // Tells each input when the packet has been sent
@@ -26,7 +27,7 @@ interface crossbar_if #(
 
     modport crossbar(
         input in, sel, enable, packet_sent,
-        output out, in_pop
+        output out, in_pop, valid
     );
 
     modport switch(

@@ -44,7 +44,7 @@ module switch #(
 
     // Connect buffers to IO
     always_comb begin
-        buf_if.wdata = sw_if.in;
+        buf_if.wdata = '0;
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             if (!sw_if.in[i].vc) begin
                 buf_if.WEN[i] = sw_if.data_ready_in[i];
@@ -89,7 +89,7 @@ module switch #(
     assign rc_if.head_flit = buf_if.rdata[rc_a_if.select];
     assign rc_if.route_lut = rb_if.route_lut;
     assign buf_if.routing_outport = rc_if.out_sel;
-    assign buf_if.routing_granted = rc_a_if.valid << rc_a_if.select;
+    assign buf_if.routing_granted = rc_if.sel_valid << rc_a_if.select;
 
     // Stage 2: VC allocation
     arbiter_if #(
@@ -160,7 +160,7 @@ module switch #(
     // Connect buffers to arbiter
     assign sa_a_if.bid = buf_if.req_switch;
     // Connect buffers and arbiter to switch allocator
-    assign sa_if.valid = buf_if.valid;
+    assign sa_if.valid = buf_if.req_crossbar;
     assign sa_if.allocate = sa_a_if.valid;
     assign sa_if.requestor = sa_a_if.select;
     assign sa_if.requested = buf_if.switch_outport[sa_a_if.select];
@@ -184,7 +184,12 @@ module switch #(
     );
 
     // Connect buffers and switch allocator to crossbar
-    assign cb_if.in = buf_if.rdata;
+    always_comb begin
+        cb_if.in = buf_if.rdata;
+        for (int i = 0; i < NUM_BUFFERS; i++) begin
+            cb_if.in[i].vc = buf_if.final_vc[i];
+        end
+    end
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
     assign buf_if.REN = cb_if.in_pop;
@@ -216,12 +221,5 @@ module switch #(
     assign reg_bank_claim = sa_if.enable[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
     assign rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
 
-    assign next_data_ready_out = {cb_if.enable[NUM_OUTPORTS-1:1], cb_if.enable[0] && !reg_bank_claim};
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            sw_if.data_ready_out <= '0;
-        end else begin
-            sw_if.data_ready_out <= next_data_ready_out;
-        end
-    end
+    assign sw_if.data_ready_out = {cb_if.valid[NUM_OUTPORTS-1:1], cb_if.valid[0] && !reg_bank_claim};
 endmodule

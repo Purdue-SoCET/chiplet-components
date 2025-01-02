@@ -35,7 +35,7 @@ module buffers #(
     };
 
     logic [NUM_BUFFERS-1:0] overflow;
-    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val;
+    logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val, count_out;
     logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count;
     state_table_t [NUM_BUFFERS-1:0] state_table, next_state_table;
 
@@ -59,7 +59,7 @@ module buffers #(
                 .CLK(CLK),
                 .nRST(nRST),
                 .WEN(buf_if.WEN[i]),
-                .REN(buf_if.REN[i]),
+                .REN(buf_if.REN[i] && buf_if.req_crossbar[i] && !overflow[i]),
                 .clear(1'b0),
                 .wdata(buf_if.wdata[i]),
                 .full(),
@@ -75,10 +75,10 @@ module buffers #(
             ) PACKET_COUNTER (
                 .CLK(CLK),
                 .nRST(nRST),
-                .clear(0),
+                .clear(state_table[i].state == SWITCH_ALLOCATION),
                 .count_enable(buf_if.REN[i]),
                 .overflow_val(overflow_val[i]),
-                .count_out(),
+                .count_out(count_out[i]),
                 .overflow_flag(overflow[i])
             );
         end
@@ -97,11 +97,6 @@ module buffers #(
                     // Head flit condition
                     if (buf_if.WEN[i] || count[i] > 0) begin
                         next_state_table[i].state = ROUTING;
-                        if (buf_if.WEN[i] && count[i] == 0) begin
-                            next_overflow_val[i] = expected_num_flits(buf_if.wdata[i].payload);
-                        end else if (count[i] > 0) begin
-                            next_overflow_val[i] = expected_num_flits(buf_if.rdata[i].payload);
-                        end
                     end
                 end
                 ROUTING : begin
@@ -119,10 +114,11 @@ module buffers #(
                 SWITCH_ALLOCATION : begin
                     if (buf_if.switch_granted[i]) begin
                         next_state_table[i].state = ACTIVE;
+                        next_overflow_val[i] = expected_num_flits(buf_if.rdata[i].payload);
                     end
                 end
                 ACTIVE : begin
-                    if (buf_if.REN[i] && overflow[i]) begin
+                    if (buf_if.REN[i] && count_out[i] + 1 == overflow_val[i]) begin
                         next_state_table[i].outport_sel = 0;
                         next_state_table[i].vc = 0;
                         next_state_table[i].state = IDLE;
@@ -135,8 +131,9 @@ module buffers #(
             buf_if.req_routing[i] = state_table[i].state == ROUTING;
             buf_if.req_vc[i] = state_table[i].state == VC_ALLOCATION;
             buf_if.req_switch[i] = state_table[i].state == SWITCH_ALLOCATION;
-            buf_if.valid[i] = state_table[i].state != IDLE;
+            buf_if.req_crossbar[i] = state_table[i].state == ACTIVE;
             buf_if.switch_outport[i] = state_table[i].outport_sel;
+            buf_if.final_vc[i] = state_table[i].vc;
         end
     end
 endmodule

@@ -44,7 +44,7 @@ module vc_allocator#(
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             for (int j = 0; j < NUM_VCS; j++) begin
                 next_buffer_availability[i][j] = buffer_availability[i][j] -
-                    vc_if.packet_sent[i][j] + vc_if.credit_granted[i][j];
+                    vc_if.packet_sent[i][j] + vc_if.credit_granted[i][j]; /* TODO: how much should `credit_granted` grant */
             end
         end
 

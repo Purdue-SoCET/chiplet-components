@@ -23,8 +23,10 @@ module route_compute #(
     always_ff @(posedge clk, negedge n_rst) begin
         if(!n_rst) begin
             route_if.out_sel <= '0;
+            route_if.sel_valid <= 0;
         end else begin
             route_if.out_sel <= next_out_sel;
+            route_if.sel_valid <= route_if.valid;
         end
     end
 
