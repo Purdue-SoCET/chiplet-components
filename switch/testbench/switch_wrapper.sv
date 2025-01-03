@@ -32,7 +32,7 @@ module switch_wrapper(
     assign sw_if1.in = {sw_if4.out[1], in_flit[0]};
     assign sw_if1.data_ready_in = {sw_if4.data_ready_out[1], data_ready_in[0]};
     assign sw_if1.credit_granted = sw_if1.packet_sent;
-    assign sw_if1.packet_sent = {sw_if3.data_ready_in[1] & sw_if1.data_ready_out[1], data_ready_out[0] & data_ready_in[0]};
+    assign sw_if1.packet_sent = {sw_if3.data_ready_in[1] & sw_if1.data_ready_out[1], data_ready_out[0] & packet_sent[0]};
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -58,7 +58,7 @@ module switch_wrapper(
     assign sw_if2.in = {sw_if4.out[2], in_flit[1]};
     assign sw_if2.data_ready_in = {sw_if4.data_ready_out[2], data_ready_in[1]};
     assign sw_if2.credit_granted = sw_if2.packet_sent;
-    assign sw_if2.packet_sent = {sw_if3.data_ready_in[1] & sw_if2.data_ready_out[1], data_ready_out[1] & data_ready_in[1]};
+    assign sw_if2.packet_sent = {sw_if3.data_ready_in[2] & sw_if2.data_ready_out[1], data_ready_out[1] & packet_sent[1]};
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -84,7 +84,7 @@ module switch_wrapper(
     assign sw_if3.in = {sw_if2.out[1], sw_if1.out[1], in_flit[2]};
     assign sw_if3.data_ready_in = {sw_if2.data_ready_out[1], sw_if1.data_ready_out[1], data_ready_in[2]};
     assign sw_if3.credit_granted = sw_if3.packet_sent;
-    assign sw_if3.packet_sent = {sw_if4.data_ready_in[1] & sw_if3.data_ready_out[1], data_ready_out[2] & data_ready_in[2]};
+    assign sw_if3.packet_sent = {sw_if4.data_ready_in[1] & sw_if3.data_ready_out[1], data_ready_out[2] & packet_sent[2]};
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -110,7 +110,7 @@ module switch_wrapper(
     assign sw_if4.in = {sw_if3.out[1], in_flit[3]};
     assign sw_if4.data_ready_in = {sw_if3.data_ready_out[1], data_ready_in[3]};
     assign sw_if4.credit_granted = sw_if4.packet_sent;
-    assign sw_if4.packet_sent = {sw_if2.data_ready_in[1] & sw_if4.data_ready_out[2], sw_if1.data_ready_in[1] & sw_if4.data_ready_out[1], data_ready_out[3] & data_ready_in[3]};
+    assign sw_if4.packet_sent = {sw_if2.data_ready_in[1] & sw_if4.data_ready_out[2], sw_if1.data_ready_in[1] & sw_if4.data_ready_out[1], data_ready_out[3] & packet_sent[3]};
 
     assign out = {sw_if4.out[0], sw_if3.out[0], sw_if2.out[0], sw_if1.out[0]};
     assign data_ready_out = {sw_if4.data_ready_out[0], sw_if3.data_ready_out[0], sw_if2.data_ready_out[0], sw_if1.data_ready_out[0]};

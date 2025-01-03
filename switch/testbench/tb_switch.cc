@@ -23,10 +23,6 @@ void tick() {
     dut->clk = 1;
     dut->eval();
     trace->dump(sim_time++);
-
-    if (sim_time > 100000) {
-        signalHandler(0);
-    }
 }
 
 void reset() {
@@ -66,16 +62,43 @@ void ensure(uint32_t actual, uint32_t expected, const char *test_name) {
     }
 }
 
-void sendPacket(uint8_t from, uint8_t to, const std::span<uint32_t> &flits) {
-    // TODO
-}
+class SmallWrite {
+    public:
+    uint64_t len : 4;
+    uint64_t addr : 19;
+    uint64_t dest : 5;
+    uint64_t fmt : 4;
+    uint64_t req : 5;
+    uint64_t id : 2;
+    bool vc;
 
-void sendSmallDataNonblocking(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
-    // TODO
-}
+  public:
+    SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr)
+        : fmt(0x9), dest(dest), addr(addr >> 2), len(len), req(req),
+          id(0), vc(0) {}
 
-void sendSmallData(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
-    // TODO
+    operator uint64_t() {
+        return (((uint64_t)this->vc) << 39) |
+               (((uint64_t)this->id) << 37) |
+               (((uint64_t)this->req) << 32) |
+               (((uint64_t)this->fmt) << 28) |
+               (((uint64_t)this->dest) << 23) |
+               (((uint64_t)this->addr) << 4) |
+               (((uint64_t)this->len));
+    }
+} __attribute__((packed)) __attribute__((aligned(8)));
+
+void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
+    SmallWrite hdr(from, to, data.size(), 0xCAFECAFE);
+    std::vector<uint64_t> flits = {hdr};
+    for (auto d : data) {
+        flits.push_back((((uint64_t)hdr.vc) << 39) |
+                        (((uint64_t)hdr.id) << 37) |
+                        (((uint64_t)hdr.req) << 32) |
+                        d);
+    }
+    manager->queuePacketSend(from, flits);
+    manager->queuePacketCheck(to, flits);
 }
 
 class ConfigPkt {
@@ -110,8 +133,8 @@ class ConfigPkt {
 // Send all config packets out of switch 1, we can't check these since they will be consumed by the
 // switch.
 void sendConfig(uint8_t switch_num, uint8_t addr, uint16_t data) {
-    ConfigPkt pkt(1, switch_num, addr, data);
-    std::array<uint64_t, 1> flits = {pkt};
+    ConfigPkt hdr(1, switch_num, addr, data);
+    std::array<uint64_t, 1> flits = {hdr};
     manager->queuePacketSend(1, flits);
 }
 
@@ -144,9 +167,9 @@ void resetAndInit() {
     // For 2:
     // {*, *, 1}
     sendRouteTableInit(2, 0, 0, 0, 1);
-    while (!manager->isComplete()) {
-        tick();
-    }
+
+    // Give some time for the packets to flow through the network
+    wait_for_propagate(125);
 }
 
 void signalHandler(int signum) {
@@ -196,75 +219,91 @@ int main(int argc, char **argv) {
     // In ports for 4: {endpoint, 3}
     // Out ports for 4: {endpoint, 1, 2}
 
-    resetAndInit();
-
-    while (!manager->isComplete()) {
-        tick();
-    }
-
-    /*
     // Test single packet routing
-    // Send packet from 0 to 1
-    {
-        resetAndInit();
-        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
-        sendSmallData(0, 1, data);
-    }
-
-    // Send packet from 0 to 2
-    {
-        resetAndInit();
-        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345679};
-        sendSmallData(0, 2, data);
-    }
-
-    // Send packet from 1 to 0
-    {
-        resetAndInit();
-        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567A};
-        sendSmallData(1, 0, data);
-    }
-
     // Send packet from 1 to 2
     {
         resetAndInit();
-        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
-        sendSmallData(1, 2, data);
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
+        sendSmallWrite(1, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
     }
 
-    // Send packet from 2 to 0
+    // Send packet from 1 to 3
     {
         resetAndInit();
-        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567C};
-        sendSmallData(2, 0, data);
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345679};
+        sendSmallWrite(1, 3, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
     }
 
     // Send packet from 2 to 1
     {
         resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567A};
+        sendSmallWrite(2, 1, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 2 to 3
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
+        sendSmallWrite(2, 3, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 3 to 1
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567C};
+        sendSmallWrite(3, 1, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 3 to 2
+    {
+        resetAndInit();
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567D};
-        sendSmallData(2, 1, data);
+        sendSmallWrite(3, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
     }
 
+    /*
     // Test multiple packet routing
-    // Send packet from 0 to 1 and 0 to 2
+    // Send packet from 1 to 2 and 1 to 3
     {
         resetAndInit();
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567E};
-        sendSmallDataNonblocking(0, 1, data);
+        sendSmallWrite(1, 2, data);
         data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567F};
-        sendSmallDataNonblocking(0, 2, data);
-        // TODO: check data
+        sendSmallWrite(1, 3, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
     }
 
-    // Send packet from 1 to 2 and 1 to 0
+    // Send packet from 2 to 3 and 2 to 1
     {
         resetAndInit();
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567E};
-        sendSmallDataNonblocking(1, 2, data);
+        sendSmallWrite(2, 3, data);
         data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567F};
-        sendSmallDataNonblocking(1, 0, data);
-        // TODO: check data
+        sendSmallWrite(2, 1, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
     }
 
     // Test dateline crossing
@@ -278,9 +317,13 @@ int main(int argc, char **argv) {
     // CRC error
     // TODO: long packet sent with wrong crc, should be killed in forward path and asked to be
     // resent
+    // TODO: try to put 4 packets on each switch
+    // TODO: randomize
 
     if (fails != 0) {
         std::cout << "Total failures: " << fails << std::endl;
+    } else {
+        std::cout << "ALL TESTS PASSED" << std::endl;
     }
 
     trace->close();
