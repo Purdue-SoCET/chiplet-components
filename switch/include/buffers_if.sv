@@ -21,10 +21,11 @@ interface buffers_if #(
     logic [$clog2(NUM_VCS)-1:0] vc_selection;
     logic [NUM_BUFFERS-1:0] final_vc;
     logic [NUM_BUFFERS-1:0] available;
+    logic [NUM_BUFFERS-1:0] empty;
 
     modport buffs(
         input wdata, WEN, REN, routing_granted, routing_outport, vc_granted, vc_selection, switch_granted,
-        output rdata, req_routing, req_vc, switch_outport, req_switch, req_crossbar, final_vc, available
+        output rdata, req_routing, req_vc, switch_outport, req_switch, req_crossbar, final_vc, available, empty
     );
 endinterface
 

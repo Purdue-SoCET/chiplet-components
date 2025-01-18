@@ -16,6 +16,7 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] packet_sent;
     // Values to be muxed in
     T [NUM_IN-1:0] in;
+    logic [NUM_IN-1:0] empty;
     // Select lines for each output
     logic [NUM_OUT-1:0] [SELECT_SIZE-1:0] sel;
     // Output lines
@@ -29,7 +30,7 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] credit_granted;
 
     modport crossbar(
-        input in, sel, enable, packet_sent, credit_granted,
+        input in, empty, sel, enable, packet_sent, credit_granted,
         output out, in_pop, valid
     );
 

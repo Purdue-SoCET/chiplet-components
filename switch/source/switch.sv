@@ -193,6 +193,7 @@ module switch #(
     end
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
+    assign cb_if.empty = buf_if.empty;
     assign buf_if.REN = cb_if.in_pop;
     // Connect crossbar to IO
     assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};

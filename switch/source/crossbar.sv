@@ -46,7 +46,7 @@ module crossbar#(
 
         for (int i = 0; i < NUM_OUT; i++) begin
             next_out[i] = cb_if.in[cb_if.sel[i]];
-            if (!cb_if.enable[i] || buffer_availability[i][next_out[i].vc] <= BUFFER_SIZE/4) begin
+            if (!cb_if.enable[i] || cb_if.empty[cb_if.sel[i]] || buffer_availability[i][next_out[i].vc] <= BUFFER_SIZE/4) begin
                 next_out[i] = '0;
                 next_valid[i] = 0;
             end else begin

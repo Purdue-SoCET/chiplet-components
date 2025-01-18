@@ -63,7 +63,7 @@ module buffers #(
                 .clear(1'b0),
                 .wdata(buf_if.wdata[i]),
                 .full(),
-                .empty(),
+                .empty(buf_if.empty[i]),
                 .overrun(overrun[i]),
                 .underrun(underrun[i]),
                 .count(count[i]),
