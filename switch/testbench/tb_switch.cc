@@ -5,6 +5,7 @@
 #include <queue>
 #include <span>
 #include <vector>
+#include "crc.h"
 
 uint64_t sim_time = 0;
 uint64_t fails = 0;
@@ -23,6 +24,10 @@ void tick() {
     dut->clk = 1;
     dut->eval();
     trace->dump(sim_time++);
+
+    if (sim_time > 10000) {
+        signalHandler(0);
+    }
 }
 
 void reset() {
@@ -91,12 +96,18 @@ class SmallWrite {
 void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE);
     std::vector<uint64_t> flits = {hdr};
+    crc_t crc = crc_init();
     for (auto d : data) {
         flits.push_back((((uint64_t)hdr.vc) << 39) |
                         (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) |
                         d);
+        crc = crc_update(crc, &d, 4);
     }
+    flits.push_back((((uint64_t)hdr.vc) << 39) |
+                        (((uint64_t)hdr.id) << 37) |
+                        (((uint64_t)hdr.req) << 32) |
+                        crc_finalize(crc));
     manager->queuePacketSend(from, flits);
     manager->queuePacketCheck(to, flits);
 }
@@ -145,6 +156,7 @@ void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint
 
 void resetAndInit() {
     reset();
+    manager->reset();
     // Set up routing table
     // For 1:
     // {*, *, 1}
@@ -280,7 +292,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    /*
     // Test multiple packet routing
     // Send packet from 1 to 2 and 1 to 3
     {
@@ -306,6 +317,24 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Put 3 packets on each switch and send them all
+    {
+        resetAndInit();
+        for (int from = 1; from <= 3; from++) {
+            for (int to = 1; to <= 3; to++) {
+                if (from != to) {
+                    std::vector<uint32_t> data = {0xCAFECAFE};
+                    sendSmallWrite(from, to, data);
+                }
+            }
+        }
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    wait_for_propagate(100);
+    /*
     // Test dateline crossing
     {
         resetAndInit();
@@ -321,9 +350,9 @@ int main(int argc, char **argv) {
     // TODO: randomize
 
     if (fails != 0) {
-        std::cout << "Total failures: " << fails << std::endl;
+        std::cout << "\x1b[31mTotal failures\x1b[0m: " << fails << std::endl;
     } else {
-        std::cout << "ALL TESTS PASSED" << std::endl;
+        std::cout << "\x1b[32mALL TESTS PASSED\x1b[0m" << std::endl;
     }
 
     trace->close();

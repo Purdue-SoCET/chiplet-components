@@ -40,8 +40,12 @@ filesets:
             - "testbench/tb_switch.cc": {file_type: cppSource}
             - "testbench/NetworkManager.cc": {file_type: cppSource}
             - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/crc.c": {file_type: cppSource}
+            - "testbench/crc.h": {file_type: cppSource, is_include_file : true}
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
+        depend:
+            - "socet:digital-lib:edge_detector"
 
     synfiles:
         depend:
