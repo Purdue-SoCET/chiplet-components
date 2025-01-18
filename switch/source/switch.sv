@@ -168,7 +168,7 @@ module switch #(
     assign sa_if.allocate = sa_a_if.valid;
     assign sa_if.requestor = sa_a_if.select;
     assign sa_if.requested = buf_if.switch_outport[sa_a_if.select];
-    assign buf_if.switch_granted = sa_a_if.valid << sa_a_if.select;
+    assign buf_if.switch_granted = sa_if.switch_valid << sa_a_if.select;
 
     // Stage 4: Crossbar traversal
     crossbar_if #(

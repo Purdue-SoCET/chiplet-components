@@ -28,12 +28,14 @@ module switch_allocator#(
     always_comb begin
         next_select = sa_if.select;
         next_enable = sa_if.enable;
+        sa_if.switch_valid = 0;
 
         // If a buffer requests allocation and the outport hasn't been
         // allocated yet, allow the allocation
         if (sa_if.allocate && !sa_if.enable[sa_if.requested]) begin
             next_select[sa_if.requested] = sa_if.requestor;
             next_enable[sa_if.requested] = 1;
+            sa_if.switch_valid = 1;
         end
 
         // If any input buffer drops `valid`, deallocate it.

@@ -19,13 +19,15 @@ interface switch_allocator_if #(
     logic [SELECT_SIZE-1:0] requestor;
     // The requested output port from each input buffer
     logic [REQUEST_SIZE-1:0] requested;
+    // Whether the switch was able to be allocated
+    logic [SELECT_SIZE-1:0] switch_valid;
     // Input buffer select lines for each output port
     logic [NUM_OUTPORTS-1:0] [SELECT_SIZE-1:0] select;
     logic [NUM_OUTPORTS-1:0] enable;
 
     modport allocator(
         input valid, allocate, requestor, requested,
-        output select, enable
+        output switch_valid, select, enable
     );
 
     modport crossbar(
