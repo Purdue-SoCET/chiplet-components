@@ -129,10 +129,6 @@ module switch #(
     assign vc_if.outport = buf_if.switch_outport[vc_a_if.select];
     assign buf_if.vc_selection = vc_if.assigned_vc;
     assign buf_if.vc_granted = vc_a_if.valid << vc_a_if.select;
-    // Connect VC allocator to IO
-    assign vc_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
-    assign vc_if.credit_granted = {sw_if.credit_granted[NUM_OUTPORTS-1:1], sw_if.credit_granted[0] | {NUM_VCS-1{reg_bank_claim}}};
-    assign sw_if.buffer_available = vc_if.buffer_available;
     // Connect VC allocator to register bank
     assign vc_if.dateline = rb_if.dateline;
 
@@ -174,13 +170,14 @@ module switch #(
     crossbar_if #(
          .T(flit_t),
          .NUM_IN(2*NUM_BUFFERS),
-         .NUM_OUT(NUM_OUTPORTS)
+         .NUM_OUT(NUM_OUTPORTS),
+         .NUM_VCS(NUM_VCS)
     ) cb_if();
     crossbar #(
-        .T(flit_t),
-        .RESET_VAL(RESET_VAL),
         .NUM_IN(2*NUM_BUFFERS),
-        .NUM_OUT(NUM_OUTPORTS)
+        .NUM_OUT(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS),
+        .BUFFER_SIZE(BUFFER_SIZE)
     ) CB (
         .clk(clk),
         .n_rst(n_rst),
@@ -199,6 +196,7 @@ module switch #(
     assign buf_if.REN = cb_if.in_pop;
     // Connect crossbar to IO
     assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
+    assign cb_if.credit_granted = {sw_if.credit_granted[NUM_OUTPORTS-1:1], sw_if.credit_granted[0] | {NUM_VCS-1{reg_bank_claim}}};
     assign sw_if.out = cb_if.out;
 
     // Stage 5: Claim things going to this node and forward things to reg bank

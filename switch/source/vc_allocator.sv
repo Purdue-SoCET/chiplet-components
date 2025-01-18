@@ -1,5 +1,7 @@
 `include "vc_allocator_if.sv"
 
+// TODO: Really stupid VC allocator, can probably track vc_taken's to improve
+// performance
 module vc_allocator#(
     parameter int NUM_OUTPORTS,
     parameter int NUM_BUFFERS,
@@ -10,48 +12,8 @@ module vc_allocator#(
     input logic n_rst,
     vc_allocator_if.allocator vc_if
 );
-    // Static limit to send up to 3/4 the total buffer capacity
-    localparam int LOW_LIMIT = 1*BUFFER_SIZE/4;
-
-    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
-    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] next_buffer_available;
-
-    // I have no idea how to clean this up
-    function logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] init_buffer_availability();
-        for (int i = 0; i < NUM_OUTPORTS; i++) begin
-            for (int j = 0; j < NUM_VCS; j++) begin
-                init_buffer_availability[i][j] = BUFFER_SIZE[0+:$clog2(BUFFER_SIZE+1)];
-            end
-        end
-    endfunction
-
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            vc_if.buffer_available <= '1;
-            buffer_availability <= init_buffer_availability();
-        end else begin
-            vc_if.buffer_available <= next_buffer_available;
-            buffer_availability <= next_buffer_availability;
-        end
-    end
-
     always_comb begin
-        next_buffer_available = vc_if.buffer_available;
-        next_buffer_availability = buffer_availability;
-
+        // Only upgrade VC if we cross a dateline
         vc_if.assigned_vc = vc_if.incoming_vc || vc_if.dateline[vc_if.outport];
-
-        for (int i = 0; i < NUM_BUFFERS; i++) begin
-            for (int j = 0; j < NUM_VCS; j++) begin
-                next_buffer_availability[i][j] = buffer_availability[i][j] -
-                    vc_if.packet_sent[i][j] + vc_if.credit_granted[i][j]; /* TODO: how much should `credit_granted` grant */
-            end
-        end
-
-        for (int i = 0; i < NUM_BUFFERS; i++) begin
-            for (int j = 0; j < NUM_VCS; j++) begin
-                next_buffer_available[i][j] = next_buffer_availability[i][j] > LOW_LIMIT;
-            end
-        end
     end
 endmodule

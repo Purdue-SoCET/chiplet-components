@@ -6,7 +6,8 @@
 interface crossbar_if #(
     parameter type T,
     parameter int NUM_IN,
-    parameter int NUM_OUT
+    parameter int NUM_OUT,
+    parameter int NUM_VCS
 );
     import switch_pkg::*;
 
@@ -24,9 +25,11 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] enable;
     // Tells each input when the packet has been sent
     logic [NUM_IN-1:0] in_pop;
+    // Grant credit to each outport
+    logic [NUM_OUT-1:0] [NUM_VCS-1:0] credit_granted;
 
     modport crossbar(
-        input in, sel, enable, packet_sent,
+        input in, sel, enable, packet_sent, credit_granted,
         output out, in_pop, valid
     );
 

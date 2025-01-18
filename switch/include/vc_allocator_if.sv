@@ -11,18 +11,12 @@ interface vc_allocator_if #(
     logic [$clog2(NUM_OUTPORTS)-1:0] outport;
     // Final VC of the packet
     logic [$clog2(NUM_VCS)-1:0] assigned_vc;
-    // Whether there is an available buffer across the link
-    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] buffer_available;
-    // Packet sent across the link
-    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] packet_sent;
-    // Credit granted across the link
-    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] credit_granted;
     // Dateline configuration
     logic [NUM_OUTPORTS-1:0] dateline;
 
     modport allocator(
-        input incoming_vc, outport, packet_sent, credit_granted, dateline,
-        output assigned_vc, buffer_available
+        input incoming_vc, outport, dateline,
+        output assigned_vc
     );
 endinterface
 

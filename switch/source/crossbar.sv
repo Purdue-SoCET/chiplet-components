@@ -1,27 +1,39 @@
-// Creates a M input to N output crossbar switch of data type T.
-// This design updates synchronously updates output ports
+// Creates a M input to N output crossbar switch
+// This design synchronously updates output ports
 
 `include "crossbar_if.sv"
 
 module crossbar#(
-    parameter type T,
-    parameter T RESET_VAL,
     parameter int NUM_IN,
-    parameter int NUM_OUT
+    parameter int NUM_OUT,
+    parameter int NUM_VCS,
+    parameter int BUFFER_SIZE
 )(
     input logic clk, n_rst,
     crossbar_if.crossbar cb_if
 );
-    T [NUM_OUT-1:0] next_out;
+    flit_t [NUM_OUT-1:0] next_out;
     logic [NUM_OUT-1:0] valid, next_valid;
+    logic [NUM_OUT-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
+
+    // I have no idea how to clean this up
+    function logic [NUM_OUT-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] init_buffer_availability();
+        for (int i = 0; i < NUM_OUT; i++) begin
+            for (int j = 0; j < NUM_VCS; j++) begin
+                init_buffer_availability[i][j] = BUFFER_SIZE[0+:$clog2(BUFFER_SIZE+1)];
+            end
+        end
+    endfunction
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
-            cb_if.out <= {NUM_OUT{RESET_VAL}};
+            cb_if.out <= '0;
             valid <= '0;
+            buffer_availability <= init_buffer_availability();
         end else begin
             cb_if.out <= next_out;
             valid <= next_valid;
+            buffer_availability <= next_buffer_availability;
         end
     end
 
@@ -30,14 +42,28 @@ module crossbar#(
     always_comb begin
         cb_if.in_pop = '0;
         next_valid = cb_if.valid;
+        next_buffer_availability = buffer_availability;
+
         for (int i = 0; i < NUM_OUT; i++) begin
-            if (!cb_if.enable[i]) begin
+            next_out[i] = cb_if.in[cb_if.sel[i]];
+            if (!cb_if.enable[i] || buffer_availability[i][next_out[i].vc] <= BUFFER_SIZE/4) begin
                 next_out[i] = '0;
+                next_valid[i] = 0;
             end else begin
-                next_out[i] = cb_if.in[cb_if.sel[i]];
                 next_valid[i] = 1;
                 if (cb_if.packet_sent[i]) next_valid[i] = 0;
+                next_buffer_availability[i][next_out[i].vc] -= cb_if.packet_sent[i];
                 cb_if.in_pop[cb_if.sel[i]] = cb_if.packet_sent[i];
+            end
+
+            for (int j = 0; j < NUM_VCS; j++) begin
+                /* verilator lint_off WIDTHTRUNC */
+                if (i == 0) begin
+                    next_buffer_availability[i][j] += cb_if.credit_granted[i][j];
+                end else begin
+                    next_buffer_availability[i][j] += cb_if.credit_granted[i][j] * 3*BUFFER_SIZE/4;
+                end
+                /* verilator lint_on WIDTHTRUNC */
             end
         end
     end
