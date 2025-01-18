@@ -53,6 +53,10 @@ module switch #(
                 buf_if.WEN[i + NUM_BUFFERS] = sw_if.data_ready_in[i];
                 buf_if.wdata[i + NUM_BUFFERS] = sw_if.in[i];
             end
+
+            for (int j = 0; j < NUM_VCS; j++) begin
+                sw_if.buffer_available[i][j] = buf_if.available[NUM_BUFFERS*j+i];
+            end
         end
     end
 

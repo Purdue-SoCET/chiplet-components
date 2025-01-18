@@ -6,7 +6,7 @@
 module buffers #(
     parameter NUM_BUFFERS,
     parameter NUM_OUTPORTS,
-    parameter DEPTH// # of FIFO entries
+    parameter DEPTH // # of FIFO entries
 )(
     input CLK,
     input nRST,
@@ -34,7 +34,7 @@ module buffers #(
         vc: 0
     };
 
-    logic [NUM_BUFFERS-1:0] overflow;
+    logic [NUM_BUFFERS-1:0] overrun, underrun, overflow, waterfall_overflow;
     logic [NUM_BUFFERS-1:0] [PKT_LENGTH_WIDTH-1:0] overflow_val, next_overflow_val, count_out;
     logic [NUM_BUFFERS-1:0] [$clog2(DEPTH+1)-1:0] count;
     state_table_t [NUM_BUFFERS-1:0] state_table, next_state_table;
@@ -64,11 +64,13 @@ module buffers #(
                 .wdata(buf_if.wdata[i]),
                 .full(),
                 .empty(),
-                .overrun(),
-                .underrun(),
+                .overrun(overrun[i]),
+                .underrun(underrun[i]),
                 .count(count[i]),
                 .rdata(buf_if.rdata[i])
             );
+
+            assign buf_if.available[i] = waterfall_overflow[i];
 
             socetlib_counter #(
                 .NBITS(PKT_LENGTH_WIDTH)
@@ -81,8 +83,30 @@ module buffers #(
                 .count_out(count_out[i]),
                 .overflow_flag(overflow[i])
             );
+
+            socetlib_counter #(
+                .NBITS(PKT_LENGTH_WIDTH)
+            ) WATERFALL_COUNTER (
+                .CLK(CLK),
+                .nRST(nRST),
+                .clear(waterfall_overflow[i]),
+                .count_enable(buf_if.REN[i]),
+                .overflow_val(3*DEPTH/4),
+                .count_out(),
+                .overflow_flag(waterfall_overflow[i])
+            );
         end
     endgenerate
+
+    always_ff @(posedge CLK) begin
+        for (int i = 0; i < NUM_BUFFERS; i++) begin
+            if (overrun[i]) begin
+                $warning("WARNING: buffer %d is overrun!", i);
+            end else if (underrun[i]) begin
+                $warning("WARNING: buffer %d is underrun!", i);
+            end
+        end
+    end
 
     always_comb begin
         buf_if.req_routing = '0;
