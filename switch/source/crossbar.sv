@@ -14,6 +14,7 @@ module crossbar#(
 );
     flit_t [NUM_OUT-1:0] next_out;
     logic [NUM_OUT-1:0] valid, next_valid;
+    logic [NUM_OUT-1:0] [$clog2(NUM_VCS)-1:0] outport_vc, next_outport_vc;
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
 
     // I have no idea how to clean this up
@@ -30,30 +31,36 @@ module crossbar#(
             cb_if.out <= '0;
             valid <= '0;
             buffer_availability <= init_buffer_availability();
+            outport_vc <= '0;
         end else begin
             cb_if.out <= next_out;
             valid <= next_valid;
             buffer_availability <= next_buffer_availability;
+            outport_vc <= next_outport_vc;
         end
     end
 
-    assign cb_if.valid = valid & cb_if.enable;
-
     always_comb begin
         cb_if.in_pop = '0;
-        next_valid = cb_if.valid;
+        next_valid = valid;
         next_buffer_availability = buffer_availability;
+        next_outport_vc = outport_vc;
 
         for (int i = 0; i < NUM_OUT; i++) begin
-            next_out[i] = cb_if.in[cb_if.sel[i]];
-            if (!cb_if.enable[i] || cb_if.empty[cb_if.sel[i]] || buffer_availability[i][next_out[i].vc] <= BUFFER_SIZE/4) begin
+            next_out[i] = cb_if.in[cb_if.sel[i][outport_vc[i]]];
+
+            if (cb_if.enable[i][outport_vc[i]] && !cb_if.empty[cb_if.sel[i][outport_vc[i]]] && buffer_availability[i][outport_vc[i]] > BUFFER_SIZE/4) begin
+                next_valid[i] = 1;
+                if (cb_if.packet_sent[i]) begin
+                    next_valid[i] = 0;
+                    next_outport_vc[i] = cb_if.enable[i][1];
+                end
+                next_buffer_availability[i][outport_vc[i]] -= cb_if.packet_sent[i];
+                cb_if.in_pop[cb_if.sel[i][outport_vc[i]]] = cb_if.packet_sent[i];
+            end else begin
                 next_out[i] = '0;
                 next_valid[i] = 0;
-            end else begin
-                next_valid[i] = 1;
-                if (cb_if.packet_sent[i]) next_valid[i] = 0;
-                next_buffer_availability[i][next_out[i].vc] -= cb_if.packet_sent[i];
-                cb_if.in_pop[cb_if.sel[i]] = cb_if.packet_sent[i];
+                next_outport_vc[i] = cb_if.enable[i][1];
             end
 
             for (int j = 0; j < NUM_VCS; j++) begin
@@ -65,6 +72,8 @@ module crossbar#(
                 end
                 /* verilator lint_on WIDTHTRUNC */
             end
+
+            cb_if.valid[i] = valid[i] && cb_if.enable[i][outport_vc[i]];
         end
     end
 endmodule

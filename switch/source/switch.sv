@@ -45,6 +45,7 @@ module switch #(
     // Connect buffers to IO
     always_comb begin
         buf_if.wdata = '0;
+        buf_if.WEN = '0;
         for (int i = 0; i < NUM_BUFFERS; i++) begin
             if (!sw_if.in[i].vc) begin
                 buf_if.WEN[i] = sw_if.data_ready_in[i];
@@ -138,7 +139,8 @@ module switch #(
     ) sa_a_if();
     switch_allocator_if #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS)
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS)
     ) sa_if();
 
     arbiter #(
@@ -150,7 +152,8 @@ module switch #(
     );
     switch_allocator #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS)
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS)
     ) SWALLOC (
         clk,
         n_rst,
@@ -160,10 +163,11 @@ module switch #(
     // Connect buffers to arbiter
     assign sa_a_if.bid = buf_if.req_switch;
     // Connect buffers and arbiter to switch allocator
-    assign sa_if.valid = buf_if.req_crossbar;
+    assign sa_if.valid = buf_if.req_crossbar | buf_if.req_switch;
     assign sa_if.allocate = sa_a_if.valid;
     assign sa_if.requestor = sa_a_if.select;
     assign sa_if.requested = buf_if.switch_outport[sa_a_if.select];
+    assign sa_if.requested_vc = buf_if.final_vc[sa_a_if.select];
     assign buf_if.switch_granted = sa_if.switch_valid << sa_a_if.select;
 
     // Stage 4: Crossbar traversal
@@ -221,7 +225,7 @@ module switch #(
         .rb_if(rb_if)
     );
 
-    assign reg_bank_claim = sa_if.enable[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
+    assign reg_bank_claim = |sa_if.enable[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
     assign rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
 
     assign sw_if.data_ready_out = {cb_if.valid[NUM_OUTPORTS-1:1], cb_if.valid[0] && !reg_bank_claim};
