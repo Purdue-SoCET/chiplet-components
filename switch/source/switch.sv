@@ -93,7 +93,7 @@ module switch #(
     assign rc_if.head_flit = buf_if.rdata[rc_a_if.select];
     assign rc_if.route_lut = rb_if.route_lut;
     assign buf_if.routing_outport = rc_if.out_sel;
-    assign buf_if.routing_granted = rc_if.sel_valid << rc_a_if.select;
+    assign buf_if.routing_granted = rc_a_if.valid << rc_a_if.select;
 
     // Stage 2: VC allocation
     arbiter_if #(

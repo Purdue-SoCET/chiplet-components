@@ -23,10 +23,10 @@ module arbiter#(
         next_select = a_if.select;
         left = 0;
         right = 0;
-        found = a_if.bid[a_if.select];
+        found = 0;
 
         for (int i = 0; i < WIDTH; i++) begin
-            left[i] = i <= a_if.select;
+            left[i] = i < a_if.select;
         end
         right = ~left;
         left &= a_if.bid;
