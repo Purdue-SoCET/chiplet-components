@@ -10,14 +10,14 @@
 // across the network
 class NetworkManager {
     std::array<std::queue<uint64_t>, 4> to_be_sent;
-    std::array<uint8_t, 4> buffer_occupancy;
-    std::array<std::queue<uint64_t>, 4> to_check;
+    std::array<uint8_t, 8> buffer_occupancy;
+    std::array<std::vector<std::queue<uint32_t>>, 4> to_check;
 
   public:
-    NetworkManager() : to_be_sent(), buffer_occupancy({8, 8, 8, 8}), to_check() {}
+    NetworkManager() : to_be_sent(), buffer_occupancy({8, 8, 8, 8, 8, 8, 8, 8}), to_check() {}
 
     void queuePacketSend(uint8_t from, const std::span<uint64_t> &flit);
-    void queuePacketCheck(uint8_t to, const std::span<uint64_t> &flit);
+    void queuePacketCheck(uint8_t to, std::queue<uint32_t> flit);
     void tick();
     void reset();
 

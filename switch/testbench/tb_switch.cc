@@ -1,11 +1,11 @@
 #include "NetworkManager.h"
 #include "Vswitch_wrapper.h"
+#include "crc.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include <queue>
 #include <span>
 #include <vector>
-#include "crc.h"
 
 uint64_t sim_time = 0;
 uint64_t fails = 0;
@@ -55,20 +55,8 @@ void wait_for_propagate(uint32_t waits) {
     }
 }
 
-void ensure(uint32_t actual, uint32_t expected, const char *test_name) {
-    if (actual != expected) {
-        std::cout << "[FAIL] "
-                  << "Time " << sim_time << "\t" << test_name << ": Expected: " << std::hex
-                  << expected << ", Actual: " << actual << std::dec << std::endl;
-        fails++;
-    } else {
-        std::cout << "[PASS] "
-                  << "Time " << sim_time << "\t" << test_name << std::endl;
-    }
-}
-
 class SmallWrite {
-    public:
+  public:
     uint64_t len : 4;
     uint64_t addr : 19;
     uint64_t dest : 5;
@@ -78,42 +66,38 @@ class SmallWrite {
     bool vc;
 
   public:
-    SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr)
-        : fmt(0x9), dest(dest), addr(addr >> 2), len(len), req(req),
-          id(0), vc(0) {}
+    SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr, bool vc)
+        : fmt(0x9), dest(dest), addr(addr >> 2), len(len), req(req), id(0), vc(vc) {}
 
     operator uint64_t() {
-        return (((uint64_t)this->vc) << 39) |
-               (((uint64_t)this->id) << 37) |
-               (((uint64_t)this->req) << 32) |
-               (((uint64_t)this->fmt) << 28) |
-               (((uint64_t)this->dest) << 23) |
-               (((uint64_t)this->addr) << 4) |
+        return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
+               (((uint64_t)this->req) << 32) | (((uint64_t)this->fmt) << 28) |
+               (((uint64_t)this->dest) << 23) | (((uint64_t)this->addr) << 4) |
                (((uint64_t)this->len));
     }
 } __attribute__((packed)) __attribute__((aligned(8)));
 
-void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data) {
-    SmallWrite hdr(from, to, data.size(), 0xCAFECAFE);
+void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, bool vc = 0) {
+    SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
     std::vector<uint64_t> flits = {hdr};
     crc_t crc = crc_init();
     for (auto d : data) {
-        flits.push_back((((uint64_t)hdr.vc) << 39) |
-                        (((uint64_t)hdr.id) << 37) |
-                        (((uint64_t)hdr.req) << 32) |
-                        d);
+        flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
+                        (((uint64_t)hdr.req) << 32) | d);
         crc = crc_update(crc, &d, 4);
     }
-    flits.push_back((((uint64_t)hdr.vc) << 39) |
-                        (((uint64_t)hdr.id) << 37) |
-                        (((uint64_t)hdr.req) << 32) |
-                        crc_finalize(crc));
+    flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
+                    (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
-    manager->queuePacketCheck(to, flits);
+    std::queue<uint32_t> flit_queue = {};
+    for (auto f : flits) {
+        flit_queue.push(f & 0xFFFFFFFF);
+    }
+    manager->queuePacketCheck(to, flit_queue);
 }
 
 class ConfigPkt {
-    public:
+  public:
     uint64_t data_lo : 7;
     uint8_t addr;
     uint8_t data_hi;
@@ -130,14 +114,10 @@ class ConfigPkt {
           id(0), vc(0), reserved(0) {}
 
     operator uint64_t() {
-        return (((uint64_t)this->vc) << 39) |
-               (((uint64_t)this->id) << 37) |
-               (((uint64_t)this->req) << 32) |
-               (((uint64_t)this->fmt) << 28) |
-               (((uint64_t)this->dest) << 23) |
-               (((uint64_t)this->data_hi) << 15) |
-               (((uint64_t)this->addr) << 7) |
-               (((uint64_t)this->data_lo));
+        return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
+               (((uint64_t)this->req) << 32) | (((uint64_t)this->fmt) << 28) |
+               (((uint64_t)this->dest) << 23) | (((uint64_t)this->data_hi) << 15) |
+               (((uint64_t)this->addr) << 7) | (((uint64_t)this->data_lo));
     }
 } __attribute__((packed)) __attribute__((aligned(8)));
 
@@ -252,6 +232,16 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Send packet from 1 to 4
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345679};
+        sendSmallWrite(1, 4, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
     // Send packet from 2 to 1
     {
         resetAndInit();
@@ -272,6 +262,16 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Send packet from 2 to 4
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
+        sendSmallWrite(2, 4, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
     // Send packet from 3 to 1
     {
         resetAndInit();
@@ -287,6 +287,46 @@ int main(int argc, char **argv) {
         resetAndInit();
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567D};
         sendSmallWrite(3, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 3 to 4
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
+        sendSmallWrite(3, 4, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 4 to 1
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567C};
+        sendSmallWrite(4, 1, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 4 to 2
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567D};
+        sendSmallWrite(4, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Send packet from 4 to 3
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
+        sendSmallWrite(4, 3, data);
         while (!manager->isComplete()) {
             tick();
         }
@@ -317,13 +357,40 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Send packet from 1 to 3 with different vcs
+    {
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF};
+        sendSmallWrite(1, 3, data);
+        sendSmallWrite(1, 3, data, 1);
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
     // Put 3 packets on each switch and send them all
     {
         resetAndInit();
-        for (int from = 1; from <= 3; from++) {
-            for (int to = 1; to <= 3; to++) {
+        for (int from = 1; from <= 4; from++) {
+            for (int to = 1; to <= 4; to++) {
                 if (from != to) {
                     std::vector<uint32_t> data = {0xCAFECAFE};
+                    sendSmallWrite(from, to, data);
+                }
+            }
+        }
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Put 3 packets on each switch and send them all with larger packets
+    {
+        resetAndInit();
+        for (int from = 1; from <= 4; from++) {
+            for (int to = 1; to <= 4; to++) {
+                if (from != to) {
+                    std::vector<uint32_t> data = {0xCAFECAFE, 0xFAFAFAFA, 0xAFAFAFAF, 0x12345678};
                     sendSmallWrite(from, to, data);
                 }
             }
