@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <span>
+#include <stdint>
 
 extern int fails;
 extern int sim_time;
