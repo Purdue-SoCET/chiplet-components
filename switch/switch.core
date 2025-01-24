@@ -6,10 +6,27 @@ filesets:
     rtl:
         files:
             - "source/switch.sv"
+            - "source/crossbar.sv"
+            - "source/route_compute.sv"
+            - "source/switch_allocator.sv"
+            - "source/switch_reg_bank.sv"
+            - "source/vc_allocator.sv"
+            - "source/buffers.sv"
+            - "source/arbiter.sv"
+            - "include/switch_pkg.sv" : {is_include_file: true}
+            - "include/buffers_if.sv" : {is_include_file: true}
+            - "include/crossbar_if.sv" : {is_include_file: true}
+            - "include/route_compute_if.sv" : {is_include_file: true}
+            - "include/switch_allocator_if.sv" : {is_include_file: true}
+            - "include/switch_reg_bank_if.sv" : {is_include_file: true}
+            - "include/vc_allocator_if.sv" : {is_include_file: true}
+            - "include/arbiter_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"
+            - "socet:digital-lib:fifo"
+            - "socet:digital-lib:counter"
             # - "socet:bus-components:bus_protocol_if"
 
     synth:
@@ -19,11 +36,18 @@ filesets:
 
     tb:
         files:
-            - "testbench/tb_switch.sv"
-            - "waves/switch.do": { file_type: user }
-            - "waves/switch.gtkw": { file_type: user }
+            - "testbench/switch_wrapper.sv"
+            - "testbench/tb_switch.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/crc.c": {file_type: cppSource}
+            - "testbench/crc.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/utility.cc": {file_type: cppSource}
+            - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
+        depend:
+            - "socet:digital-lib:edge_detector"
 
     synfiles:
         depend:
@@ -40,26 +64,21 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_switch
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
         tools:
-            modelsim:
-                vsim_options:
-                    - -vopt
-                    - -voptargs='+acc'
-                    - -t ps
-                    - -do waves/switch.do
-                    - -onfinish stop
-                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
-                    - -coverage
-                vlog_options:
-                    - +cover
             verilator:
                 verilator_options:
                     - --cc
                     - --trace
+                    - --trace-structs
                     - --main
                     - --timing
                     - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
                 make_options:
                     - -j
 
@@ -68,6 +87,8 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
         tools:
             verilator:
                 mode: lint-only

@@ -4,8 +4,7 @@
 
 `include "chiplet_types_pkg.vh"
 
-interface phy_manager_if
-
+interface phy_manager_if;
     import chiplet_types_pkg::*;
 
     logic data_ready, buffer_full;

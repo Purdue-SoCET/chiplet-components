@@ -12,23 +12,57 @@ module rx_phy_manager #() (
 
     flit_t flit;
     logic [39:0] decode_output;
+    logic [49:0] enc_flit, next_enc_flit, prev_flit;
+    format_e format;
+    pkt_id_t curr_id, next_id;
+    wrap_dec_8b_10b_if.dec dec_if;
 
+    always_ff @(posedge clk, negedge n_rst) begin
+        if(!n_rst) begin
+            enc_flit <= '0;
+            prev_flit <= '0;
+            curr_id <= '0;
+        end
+        else begin
+            enc_flit <= next_enc_flit;
+            prev_flit <= enc_flit;
+            curr_id <= next_id;
+        end
+    end
+
+    always_comb begin //input flit logic
+        if(phy_if.data_ready) next_enc_flit = phy_if.encoded_flit;
+        else next_enc_flit = enc_flit;
+    end
+
+    wrap_dec_8b_10b decode (clk, n_rst, dec_if);
+    
     always_comb begin //8b10b decode
-
-
+        //run 8b10b with enc_flit output to flit
+        dec_if.enc_flit = enc_flit;
+        switch_if.data_ready = dec_if.done_out;
+        switch_if.flit = dec_if.flit;
 
         flit = flit_t'(decode_output);
+        next_id = flit.id;
     end
 
     always_comb begin //CRC checker
-
-
-    end
-
-    always_comb begin //format check
-
+        if(curr_id != next_id) begin
+            // run CRC check with prev_flit
+        end
 
     end
-
-
 endmodule
+
+
+    // always_comb begin //format check
+    //     if(curr_id != next_id) begin
+    //         format = format_e'(flit.payload[31:28]);
+    //     end
+    //     else format = format;
+    //     if(format == FMT_MSG) begin
+
+    //     end
+
+    // end
