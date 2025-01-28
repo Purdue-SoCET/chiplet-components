@@ -14,7 +14,7 @@ void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint64_t> &fl
 }
 
 // `from` is 1-indexed
-void NetworkManager::queuePacketCheck(uint8_t from, std::queue<uint32_t> flit) {
+void NetworkManager::queuePacketCheck(uint8_t from, std::queue<uint64_t> flit) {
     this->to_check[from - 1].push_back(flit);
 }
 
@@ -30,13 +30,14 @@ void NetworkManager::tick() {
         dut->packet_sent[i] = 0;
         if (dut->data_ready_out[i] && this->to_check[i].size() > 0) {
             std::cout << "Checking data from switch " << i + 1 << std::endl;
-            std::vector<uint32_t> expected;
+            std::vector<uint64_t> expected;
             for (auto possible_packets : this->to_check[i]) {
                 expected.push_back(possible_packets.front());
             }
             std::string test_name = "Expected output from test ";
             test_name += std::to_string(i);
-            int found = ensure(dut->out[i] & 0xFFFFFFFF, expected, test_name.c_str());
+            int found =
+                utility::ensure<uint64_t>(dut->out[i] & 0x7FFFFFFFFF, expected, test_name.c_str());
             if (found >= 0) {
                 this->to_check[i][found].pop();
                 if (this->to_check[i][found].empty()) {

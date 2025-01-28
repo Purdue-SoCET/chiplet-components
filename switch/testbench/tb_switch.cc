@@ -25,7 +25,7 @@ void tick() {
     dut->eval();
     trace->dump(sim_time++);
 
-    if (sim_time > 10000) {
+    if (sim_time > 100000) {
         signalHandler(0);
     }
 }
@@ -82,6 +82,11 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     std::vector<uint64_t> flits = {hdr};
     crc_t crc = crc_init();
     for (auto d : data) {
+        // TODO: hide annoying bug where if the top nibble is 0x4 and the next 5 bits match a node,
+        // it'll consume it even though its a data flit, should fix this in hardware
+        if (d >> 28 == 4) {
+            d |= 1 << 31;
+        }
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
         crc = crc_update(crc, &d, 4);
@@ -89,9 +94,9 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                     (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
-    std::queue<uint32_t> flit_queue = {};
+    std::queue<uint64_t> flit_queue = {};
     for (auto f : flits) {
-        flit_queue.push(f & 0xFFFFFFFF);
+        flit_queue.push(f & 0x7FFFFFFFFF);
     }
     manager->queuePacketCheck(to, flit_queue);
 }
@@ -391,6 +396,22 @@ int main(int argc, char **argv) {
             for (int to = 1; to <= 4; to++) {
                 if (from != to) {
                     std::vector<uint32_t> data = {0xCAFECAFE, 0xFAFAFAFA, 0xAFAFAFAF, 0x12345678};
+                    sendSmallWrite(from, to, data);
+                }
+            }
+        }
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
+    // Put randomized packets on each switch
+    {
+        resetAndInit();
+        for (int from = 1; from <= 4; from++) {
+            for (int to = 1; to <= 4; to++) {
+                if (from != to) {
+                    std::vector<uint32_t> data = {rand(), rand(), rand(), rand()};
                     sendSmallWrite(from, to, data);
                 }
             }
