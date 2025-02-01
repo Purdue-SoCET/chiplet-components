@@ -37,6 +37,13 @@ module crossbar#(
             valid <= next_valid;
             buffer_availability <= next_buffer_availability;
             outport_vc <= next_outport_vc;
+            for (int i = 1; i < NUM_OUT; i++) begin
+                for (int j = 0; j < NUM_VCS; j++) begin
+                    if (buffer_availability[i][j] > BUFFER_SIZE) begin
+                        $warning("Tracking for %d:%d is out of sync!", i, j);
+                    end
+                end
+            end
         end
     end
 

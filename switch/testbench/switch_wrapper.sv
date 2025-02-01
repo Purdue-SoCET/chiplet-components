@@ -20,6 +20,8 @@ module switch_wrapper(
     output logic buffer_available [7:0],
     output logic credit_granted [3:0]
 );
+    localparam BUFFER_SIZE = 8;
+
     switch_if #(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(2),
@@ -30,7 +32,7 @@ module switch_wrapper(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
-        .BUFFER_SIZE(8),
+        .BUFFER_SIZE(BUFFER_SIZE),
         .TOTAL_NODES(4),
         .NODE(1) // TODO: This should be configurable
     ) switch1 (
@@ -45,6 +47,8 @@ module switch_wrapper(
     assign sw_if1.credit_granted[1] = {sw_if3.buffer_available[1][1], sw_if3.buffer_available[1][0]};
     assign sw_if1.packet_sent = {sw_if3.data_ready_in[1] & sw_if1.data_ready_out[1], data_ready_out[0] & packet_sent[0]};
 
+    `BIND_SWITCH_TRACKER(switch1)
+
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
     switch_if #(
@@ -57,7 +61,7 @@ module switch_wrapper(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
-        .BUFFER_SIZE(8),
+        .BUFFER_SIZE(BUFFER_SIZE),
         .TOTAL_NODES(4),
         .NODE(2) // TODO: This should be configurable
     ) switch2 (
@@ -84,7 +88,7 @@ module switch_wrapper(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(3),
         .NUM_VCS(2),
-        .BUFFER_SIZE(8),
+        .BUFFER_SIZE(BUFFER_SIZE),
         .TOTAL_NODES(4),
         .NODE(3) // TODO: This should be configurable
     ) switch3 (
@@ -111,7 +115,7 @@ module switch_wrapper(
         .NUM_OUTPORTS(3),
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
-        .BUFFER_SIZE(8),
+        .BUFFER_SIZE(BUFFER_SIZE),
         .TOTAL_NODES(4),
         .NODE(4) // TODO: This should be configurable
     ) switch4 (

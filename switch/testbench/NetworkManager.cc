@@ -4,6 +4,8 @@
 #include <span>
 #include <string>
 
+#define BUFFER_SIZE 8
+
 extern Vswitch_wrapper *dut;
 
 // `from` is 1-indexed
@@ -21,7 +23,21 @@ void NetworkManager::queuePacketCheck(uint8_t from, std::queue<uint64_t> flit) {
 void NetworkManager::reset() {
     this->to_be_sent = {};
     this->to_check = {};
-    this->buffer_occupancy = {8, 8, 8, 8, 8, 8, 8, 8};
+    this->buffer_occupancy = {BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE,
+                              BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE};
+}
+
+void NetworkManager::reportRemainingCheck() {
+    for (int sw = 0; sw < 4; sw++) {
+        printf("Remaining for switch %d\n", sw + 1);
+        for (auto packet : this->to_check[sw]) {
+            for (; !packet.empty(); packet.pop()) {
+                printf("%08llx, ", packet.front());
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
 }
 
 void NetworkManager::tick() {
@@ -32,7 +48,7 @@ void NetworkManager::tick() {
             std::cout << "Checking data from switch " << i + 1 << std::endl;
             std::vector<uint64_t> expected;
             for (auto possible_packets : this->to_check[i]) {
-                expected.push_back(possible_packets.front());
+                expected.push_back(possible_packets.front() & 0x7FFFFFFFFF);
             }
             std::string test_name = "Expected output from test ";
             test_name += std::to_string(i);
@@ -49,7 +65,7 @@ void NetworkManager::tick() {
     }
     for (int i = 0; i < 8; i++) {
         if (dut->buffer_available[i]) {
-            this->buffer_occupancy[i] += 6;
+            this->buffer_occupancy[i] += 3 * BUFFER_SIZE / 4;
         }
     }
 
@@ -59,7 +75,7 @@ void NetworkManager::tick() {
         dut->data_ready_in[i] = 0;
         auto to_be_sent = this->to_be_sent[i].front();
         auto vc = to_be_sent >> 39;
-        if (this->to_be_sent[i].size() && this->buffer_occupancy[vc * 4 + i] > 2) {
+        if (this->to_be_sent[i].size() && this->buffer_occupancy[vc * 4 + i] > (BUFFER_SIZE / 4)) {
             this->to_be_sent[i].pop();
             this->buffer_occupancy[vc * 4 + i]--;
             std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch "

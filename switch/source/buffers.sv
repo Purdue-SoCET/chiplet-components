@@ -49,9 +49,8 @@ module buffers #(
         end
     end
 
-    genvar i;
     generate
-        for (i = 0; i < NUM_BUFFERS; i++) begin
+        for (genvar i = 0; i < NUM_BUFFERS; i++) begin
             socetlib_fifo #(
                 .T(flit_t),
                 .DEPTH(DEPTH)
@@ -152,6 +151,7 @@ module buffers #(
                 default : begin end
             endcase
 
+            // TODO: Can start arbitration request early to improve performance
             buf_if.req_routing[i] = state_table[i].state == ROUTING;
             buf_if.req_vc[i] = state_table[i].state == VC_ALLOCATION;
             buf_if.req_switch[i] = state_table[i].state == SWITCH_ALLOCATION;

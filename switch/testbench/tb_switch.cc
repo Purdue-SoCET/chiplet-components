@@ -4,6 +4,7 @@
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include <queue>
+#include <random>
 #include <span>
 #include <vector>
 
@@ -25,7 +26,7 @@ void tick() {
     dut->eval();
     trace->dump(sim_time++);
 
-    if (sim_time > 100000) {
+    if (sim_time > 1000000) {
         signalHandler(0);
     }
 }
@@ -67,7 +68,8 @@ class SmallWrite {
 
   public:
     SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr, bool vc)
-        : fmt(0x9), dest(dest), addr(addr >> 2), len(len), req(req), id(0), vc(vc) {}
+        : fmt(0x9), dest(dest), addr(addr >> 2), len(len == 16 ? 0 : len), req(req), id(0), vc(vc) {
+    }
 
     operator uint64_t() {
         return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
@@ -84,9 +86,7 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     for (auto d : data) {
         // TODO: hide annoying bug where if the top nibble is 0x4 and the next 5 bits match a node,
         // it'll consume it even though its a data flit, should fix this in hardware
-        if (d >> 28 == 4) {
-            d |= 1 << 31;
-        }
+        d |= 0xF << 28;
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
         crc = crc_update(crc, &d, 4);
@@ -172,6 +172,8 @@ void resetAndInit() {
 void signalHandler(int signum) {
     std::cout << "Got signal " << signum << std::endl;
     std::cout << "Calling SystemVerilog 'final' block & exiting!" << std::endl;
+
+    manager->reportRemainingCheck();
 
     dut->final();
     trace->close();
@@ -407,12 +409,22 @@ int main(int argc, char **argv) {
 
     // Put randomized packets on each switch
     {
+        unsigned seed = std::time(nullptr);
+        std::srand(seed);
+        printf("Seed: %d\n", seed);
         resetAndInit();
+        uint8_t packet_size = 6;
+        std::vector<uint32_t> data(packet_size);
+        std::generate(data.begin(), data.end(), std::rand);
         for (int from = 1; from <= 4; from++) {
             for (int to = 1; to <= 4; to++) {
                 if (from != to) {
-                    std::vector<uint32_t> data = {rand(), rand(), rand(), rand()};
-                    sendSmallWrite(from, to, data);
+                    for (int i = 0; i < 10; i++) {
+                        uint8_t packet_size = (std::rand() % 16) + 1;
+                        std::vector<uint32_t> data(packet_size);
+                        std::generate(data.begin(), data.end(), std::rand);
+                        sendSmallWrite(from, to, data);
+                    }
                 }
             }
         }
@@ -443,6 +455,7 @@ int main(int argc, char **argv) {
         std::cout << "\x1b[32mALL TESTS PASSED\x1b[0m" << std::endl;
     }
 
+    dut->final();
     trace->close();
 
     return 0;
