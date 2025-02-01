@@ -225,7 +225,7 @@ module switch #(
         .rb_if(rb_if)
     );
 
-    assign reg_bank_claim = |sa_if.enable[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
+    assign reg_bank_claim = cb_if.valid[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
     assign rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
 
     assign sw_if.data_ready_out = {cb_if.valid[NUM_OUTPORTS-1:1], cb_if.valid[0] && !reg_bank_claim};
