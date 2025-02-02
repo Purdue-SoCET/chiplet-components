@@ -1,6 +1,7 @@
 #include "NetworkManager.h"
 #include "Vswitch_wrapper.h"
 #include "crc.h"
+#include "utility.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include <queue>
@@ -92,11 +93,11 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
         crc = crc_update(crc, &d, 4);
     }
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
-                    (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
+                    (((uint64_t)hdr.req) << 32) | (0xF << 28) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
     std::queue<uint64_t> flit_queue = {};
     for (auto f : flits) {
-        flit_queue.push(f & 0x7FFFFFFFFF);
+        flit_queue.push(f & FLIT_MASK);
     }
     manager->queuePacketCheck(to, flit_queue);
 }

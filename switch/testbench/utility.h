@@ -4,11 +4,12 @@
 #include <iostream>
 #include <span>
 
-extern int fails;
-extern int sim_time;
+#define FLIT_MASK 0x7FFFFFFFFF
 
-namespace utility {
-template <typename T> int ensure(T actual, const std::span<T> &expected, const char *test_name) {
+template <typename T>
+int ensure(T actual, const std::span<T> &expected, const char *test_name) {
+    extern int fails;
+    extern int sim_time;
     bool found = false;
     int i = 0;
     for (i = 0; i < expected.size(); i++) {
@@ -31,4 +32,3 @@ template <typename T> int ensure(T actual, const std::span<T> &expected, const c
     }
     return i;
 }
-} // namespace utility

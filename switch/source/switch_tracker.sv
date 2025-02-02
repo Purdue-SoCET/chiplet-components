@@ -11,11 +11,11 @@
         .nrst(n_rst),                                                                           \
         .not_idle(buf_if.req_routing | buf_if.req_vc | buf_if.req_switch | buf_if.req_crossbar),\
         .is_active(buf_if.req_crossbar),                                                        \
-        /*.buffer_outport_sel(buf_if.switch_outport),*/                                         \
         .packet_sent(buf_if.REN),                                                               \
         .outport_enabled(cb_if.enable),                                                         \
         .buffer_availability(CB.buffer_availability),                                           \
-        .outport_selected_vc(CB.outport_vc)                                                     \
+        .outport_selected_vc(CB.outport_vc),                                                    \
+        .outport_packet_sent(cb_if.packet_sent)                                                 \
     );
 
 module switch_tracker#(
@@ -38,22 +38,30 @@ module switch_tracker#(
     // TODO: calculate actual throughput taking into account
     // head/tail/addr/crc flits
     input logic [NUM_VCS*NUM_BUFFERS-1:0] packet_sent,
-    //
-    // input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] buffer_outport_sel,
     // Switch is allocated, but can't send due to low credit, used to measure
     // back pressure
     input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] outport_enabled,
     input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability,
-    input logic [NUM_OUTPORTS-1:0] [$clog2(NUM_VCS)-1:0] outport_selected_vc
+    input logic [NUM_OUTPORTS-1:0] [$clog2(NUM_VCS)-1:0] outport_selected_vc,
+    input logic [NUM_OUTPORTS-1:0] outport_packet_sent
 );
     int v_latency [NUM_VCS*NUM_BUFFERS-1:0] [$];
     int v_active_time [NUM_VCS*NUM_BUFFERS-1:0] [$];
     int v_flits_sent [NUM_VCS*NUM_BUFFERS-1:0] [$];
     int latency [NUM_VCS*NUM_BUFFERS-1:0], active_time [NUM_VCS*NUM_BUFFERS-1:0];
     int num_flits_sent [NUM_VCS*NUM_BUFFERS-1:0], num_packets_sent [NUM_VCS*NUM_BUFFERS-1:0];
+
+    int v_outport_active [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$];
+    int v_outport_credit_blocked [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$];
+    int v_outport_vc_blocked [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$];
+    int v_outport_packet_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$];
     int outport_total_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0];
-    int outport_blocked_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0];
+    int outport_credit_blocked_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0];
+    int outport_vc_blocked_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0];
+    int outport_packet_len [NUM_OUTPORTS-1:0] [NUM_VCS-1:0];
+
     logic [NUM_VCS*NUM_BUFFERS-1:0] not_idle_negedge;
+    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] outport_enabled_negedge;
 
     generate
         for (genvar i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
@@ -123,7 +131,7 @@ module switch_tracker#(
                 ) OUTPORT_TOTAL_COUNTER (
                     .CLK(clk),
                     .nRST(nrst),
-                    .clear(0),
+                    .clear(outport_enabled_negedge[i][j]),
                     .count_enable(outport_enabled[i][j] && outport_selected_vc[i] == j),
                     .overflow_val(-1),
                     .count_out(outport_total_len[i][j]),
@@ -135,11 +143,45 @@ module switch_tracker#(
                 ) OUTPORT_CREDIT_BLOCKED_COUNTER (
                     .CLK(clk),
                     .nRST(nrst),
-                    .clear(0),
+                    .clear(outport_enabled_negedge[i][j]),
                     .count_enable(outport_enabled[i][j] && buffer_availability[i][j] <= BUFFER_SIZE/4 && outport_selected_vc[i] == j),
                     .overflow_val(-1),
-                    .count_out(outport_blocked_len[i][j]),
+                    .count_out(outport_credit_blocked_len[i][j]),
                     .overflow_flag()
+                );
+
+                socetlib_counter #(
+                    .NBITS(32)
+                ) OUTPORT_VC_BLOCKED_COUNTER (
+                    .CLK(clk),
+                    .nRST(nrst),
+                    .clear(outport_enabled_negedge[i][j]),
+                    .count_enable(outport_enabled[i][j] && outport_selected_vc[i] != j),
+                    .overflow_val(-1),
+                    .count_out(outport_vc_blocked_len[i][j]),
+                    .overflow_flag()
+                );
+
+                socetlib_counter #(
+                    .NBITS(32)
+                ) OUTPORT_PACKET_LEN_COUNTER (
+                    .CLK(clk),
+                    .nRST(nrst),
+                    .clear(outport_enabled_negedge[i][j]),
+                    .count_enable(outport_packet_sent[i] && outport_selected_vc[i] != j),
+                    .overflow_val(-1),
+                    .count_out(outport_packet_len[i][j]),
+                    .overflow_flag()
+                );
+
+                socetlib_edge_detector #(
+                    .WIDTH(1)
+                ) OUTPORT_EDGE (
+                    .CLK(clk),
+                    .nRST(nrst),
+                    .signal(outport_enabled[i][j]),
+                    .pos_edge(),
+                    .neg_edge(outport_enabled_negedge[i][j])
                 );
             end
         end
@@ -152,12 +194,30 @@ module switch_tracker#(
                 v_active_time[i] = {};
                 v_flits_sent[i] = {};
             end
+            for (int i = 0; i < NUM_OUTPORTS; i++) begin
+                for (int j = 0; j < NUM_VCS; j++) begin
+                    v_outport_active[i][j] = {};
+                    v_outport_credit_blocked[i][j] = {};
+                    v_outport_vc_blocked[i][j] = {};
+                    v_outport_packet_len[i][j] = {};
+                end
+            end
         end else begin
             for (int i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
                 if (not_idle_negedge[i]) begin
                     v_latency[i].push_back(latency[i]);
                     v_active_time[i].push_back(active_time[i]);
                     v_flits_sent[i].push_back(num_flits_sent[i]);
+                end
+            end
+            for (int i = 0; i < NUM_OUTPORTS; i++) begin
+                for (int j = 0; j < NUM_VCS; j++) begin
+                    if (outport_enabled_negedge[i][j]) begin
+                        v_outport_active[i][j].push_back(outport_total_len[i][j]);
+                        v_outport_credit_blocked[i][j].push_back(outport_credit_blocked_len[i][j]);
+                        v_outport_vc_blocked[i][j].push_back(outport_vc_blocked_len[i][j]);
+                        v_outport_packet_len[i][j].push_back(outport_packet_len[i][j]);
+                    end
                 end
             end
         end
@@ -185,24 +245,23 @@ module switch_tracker#(
     end
     endfunction
 
-    function real average_queue(input int q [$]);
+    function void write_queue(input int fd, string name, int q [$]);
+        string comma;
     begin
-        real avg;
-        avg = 0;
+        $fwrite(fd, {"\"", name, "\"", ": ["});
         foreach (q[i]) begin
-            avg += q[i];
+            if (i != q.size() - 1) comma = ", ";
+            else comma = "";
+            $fwrite(fd, "%0d%s", q[i], comma);
         end
-         return avg / q.size();
+        $fwrite(fd, "]");
     end
     endfunction
 
-    real avg_latency;
-    real avg_active_time;
-    real avg_flits_per_packet;
-    real outport_blocked;
     final begin
         string localtime = get_localtime();
         string filename = {"./switch", node2string(NODE), "_perf", localtime, ".txt"};
+        string comma;
         int fd = $fopen(filename, "w");
         if (fd != 0) begin
             $display("File %s was opened successfully : %0d", filename, fd);
@@ -211,26 +270,41 @@ module switch_tracker#(
             $stop();
         end
 
+        $fwrite(fd, "[\n");
+        $fwrite(fd, "[\n");
         for (int i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
-            $fwrite(fd, "(Switch %0d) Packets sent through buffer %0d: %0d\n", NODE, i, num_packets_sent[i]);
-
-            avg_latency = average_queue(v_latency[i]);
-            avg_active_time = average_queue(v_active_time[i]);
-            avg_flits_per_packet = average_queue(v_flits_sent[i]);
-
-            $fwrite(fd, "(Buffer %0d) avg latency: %f cycles\n", i, avg_latency);
-            $fwrite(fd, "(Buffer %0d) avg active time: %f cycles\n", i, avg_active_time);
-            $fwrite(fd, "(Buffer %0d) flits per packet: %f cycles\n", i, avg_flits_per_packet);
-            $fwrite(fd, "(Buffer %0d) crossbar cycles per flit: %f cycles\n", i, avg_active_time / avg_flits_per_packet);
-            $fwrite(fd, "(Buffer %0d) avg pipeline efficiency: %f%%\n", i, 100 *  (avg_latency - avg_active_time) / avg_latency);
+            $fwrite(fd, "{\n");
+            $fwrite(fd, "\"packets_sent\": %0d,\n", num_packets_sent[i]);
+            write_queue(fd, "latency", v_latency[i]);
+            $fwrite(fd, ",\n");
+            write_queue(fd, "active_time", v_active_time[i]);
+            $fwrite(fd, ",\n");
+            write_queue(fd, "flits_per_packet", v_flits_sent[i]);
+            comma = i == NUM_VCS*NUM_BUFFERS - 1 ? "" : ",";
+            $fwrite(fd, "\n}%s\n", comma);
         end
+        $fwrite(fd, "],\n");
 
+        $fwrite(fd, "[\n");
         for (int i = 0; i < NUM_OUTPORTS; i++) begin
+            $fwrite(fd, "[\n");
             for (int j = 0; j < NUM_VCS; j++) begin
-                outport_blocked = real'(outport_blocked_len[i][j]) / outport_total_len[i][j];
-                $fwrite(fd, "(Outport %0d:%0d) avg outport credit constraint: %f%%\n", i, j, 100 * (1 - outport_blocked));
+                $fwrite(fd, "{\n");
+                write_queue(fd, "outport_total_len", v_outport_active[i][j]);
+                $fwrite(fd, ",\n");
+                write_queue(fd, "outport_packet_len", v_outport_packet_len[i][j]);
+                $fwrite(fd, ",\n");
+                write_queue(fd, "outport_credit_blocked_len", v_outport_credit_blocked[i][j]);
+                $fwrite(fd, ",\n");
+                write_queue(fd, "outport_vc_blocked_len", v_outport_vc_blocked[i][j]);
+                comma = j == NUM_VCS - 1 ? "" : ",";
+                $fwrite(fd, "\n}%s\n", comma);
             end
+            comma = i == NUM_OUTPORTS- 1 ? "" : ",";
+            $fwrite(fd, "]%s\n", comma);
         end
+        $fwrite(fd, "]\n");
+        $fwrite(fd, "]\n");
 
         $fclose(fd);
     end
