@@ -168,7 +168,7 @@ module switch_tracker#(
                     .CLK(clk),
                     .nRST(nrst),
                     .clear(outport_enabled_negedge[i][j]),
-                    .count_enable(outport_packet_sent[i] && outport_selected_vc[i] != j),
+                    .count_enable(outport_packet_sent[i] && outport_selected_vc[i] == j),
                     .overflow_val(-1),
                     .count_out(outport_packet_len[i][j]),
                     .overflow_flag()
