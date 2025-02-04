@@ -26,14 +26,14 @@ module arbiter#(
         found = 0;
 
         for (int i = 0; i < WIDTH; i++) begin
-            left[i] = i < a_if.select;
+            left[i] = i <= a_if.select;
         end
         right = ~left;
         left &= a_if.bid;
         right &= a_if.bid;
         
         // Current winner has finished request
-        if (!found) begin
+        if (!a_if.valid) begin
             // Start looking at everything after current requester to find
             // first set 
             for (int i = 0; i < WIDTH; i++) begin
@@ -45,7 +45,7 @@ module arbiter#(
                 end
             end
             
-            // Then look for anything to the right (including current
+            // Then look for anything to the left (including current
             // selection)
             for (int i = 0; i < WIDTH; i++) begin
                 if (!found && left[i]) begin

@@ -37,6 +37,13 @@ module crossbar#(
             valid <= next_valid;
             buffer_availability <= next_buffer_availability;
             outport_vc <= next_outport_vc;
+            for (int i = 1; i < NUM_OUT; i++) begin
+                for (int j = 0; j < NUM_VCS; j++) begin
+                    if (buffer_availability[i][j] > BUFFER_SIZE) begin
+                        $warning("Tracking for %d:%d is out of sync!", i, j);
+                    end
+                end
+            end
         end
     end
 
@@ -50,16 +57,18 @@ module crossbar#(
             next_out[i] = cb_if.in[cb_if.sel[i][outport_vc[i]]];
 
             if (cb_if.enable[i][outport_vc[i]] && !cb_if.empty[cb_if.sel[i][outport_vc[i]]] && buffer_availability[i][outport_vc[i]] > BUFFER_SIZE/4) begin
-                next_valid[i] = 1;
                 if (cb_if.packet_sent[i]) begin
                     next_valid[i] = 0;
-                    next_outport_vc[i] = cb_if.enable[i][1];
+                    cb_if.in_pop[cb_if.sel[i][outport_vc[i]]] = 1;
+                end else begin
+                    next_valid[i] = 1;
+                    cb_if.in_pop[cb_if.sel[i][outport_vc[i]]] = 0;
                 end
-                next_buffer_availability[i][outport_vc[i]] -= cb_if.packet_sent[i];
-                cb_if.in_pop[cb_if.sel[i][outport_vc[i]]] = cb_if.packet_sent[i];
             end else begin
-                next_out[i] = '0;
                 next_valid[i] = 0;
+            end
+
+            if (!next_valid[i]) begin
                 next_outport_vc[i] = cb_if.enable[i][1];
             end
 
@@ -70,6 +79,7 @@ module crossbar#(
                 end else begin
                     next_buffer_availability[i][j] += cb_if.credit_granted[i][j] * 3*BUFFER_SIZE/4;
                 end
+                next_buffer_availability[i][j] -= cb_if.packet_sent[i] && j == outport_vc[i];
                 /* verilator lint_on WIDTHTRUNC */
             end
 

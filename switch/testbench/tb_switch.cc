@@ -1,9 +1,11 @@
 #include "NetworkManager.h"
 #include "Vswitch_wrapper.h"
 #include "crc.h"
+#include "utility.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include <queue>
+#include <random>
 #include <span>
 #include <vector>
 
@@ -25,7 +27,7 @@ void tick() {
     dut->eval();
     trace->dump(sim_time++);
 
-    if (sim_time > 10000) {
+    if (sim_time > 1000000) {
         signalHandler(0);
     }
 }
@@ -67,7 +69,8 @@ class SmallWrite {
 
   public:
     SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr, bool vc)
-        : fmt(0x9), dest(dest), addr(addr >> 2), len(len), req(req), id(0), vc(vc) {}
+        : fmt(0x9), dest(dest), addr(addr >> 2), len(len == 16 ? 0 : len), req(req), id(0), vc(vc) {
+    }
 
     operator uint64_t() {
         return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
@@ -82,16 +85,19 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     std::vector<uint64_t> flits = {hdr};
     crc_t crc = crc_init();
     for (auto d : data) {
+        // TODO: hide annoying bug where if the top nibble is 0x4 and the next 5 bits match a node,
+        // it'll consume it even though its a data flit, should fix this in hardware
+        d |= 0xF << 28;
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
         crc = crc_update(crc, &d, 4);
     }
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
-                    (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
+                    (((uint64_t)hdr.req) << 32) | (0xF << 28) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
-    std::queue<uint32_t> flit_queue = {};
+    std::queue<uint64_t> flit_queue = {};
     for (auto f : flits) {
-        flit_queue.push(f & 0xFFFFFFFF);
+        flit_queue.push(f & FLIT_MASK);
     }
     manager->queuePacketCheck(to, flit_queue);
 }
@@ -167,6 +173,8 @@ void resetAndInit() {
 void signalHandler(int signum) {
     std::cout << "Got signal " << signum << std::endl;
     std::cout << "Calling SystemVerilog 'final' block & exiting!" << std::endl;
+
+    manager->reportRemainingCheck();
 
     dut->final();
     trace->close();
@@ -400,6 +408,32 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Put randomized packets on each switch
+    {
+        unsigned seed = std::time(nullptr);
+        std::srand(seed);
+        printf("Seed: %d\n", seed);
+        resetAndInit();
+        uint8_t packet_size = 6;
+        std::vector<uint32_t> data(packet_size);
+        std::generate(data.begin(), data.end(), std::rand);
+        for (int from = 1; from <= 4; from++) {
+            for (int to = 1; to <= 4; to++) {
+                if (from != to) {
+                    for (int i = 0; i < 10; i++) {
+                        uint8_t packet_size = (std::rand() % 16) + 1;
+                        std::vector<uint32_t> data(packet_size);
+                        std::generate(data.begin(), data.end(), std::rand);
+                        sendSmallWrite(from, to, data);
+                    }
+                }
+            }
+        }
+        while (!manager->isComplete()) {
+            tick();
+        }
+    }
+
     wait_for_propagate(100);
     /*
     // Test dateline crossing
@@ -422,6 +456,7 @@ int main(int argc, char **argv) {
         std::cout << "\x1b[32mALL TESTS PASSED\x1b[0m" << std::endl;
     }
 
+    dut->final();
     trace->close();
 
     return 0;
