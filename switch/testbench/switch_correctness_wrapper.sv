@@ -47,7 +47,7 @@ module switch_wrapper(
     assign sw_if1.credit_granted[1] = {sw_if3.buffer_available[1][1], sw_if3.buffer_available[1][0]};
     assign sw_if1.packet_sent = {sw_if3.data_ready_in[1] & sw_if1.data_ready_out[1], data_ready_out[0] & packet_sent[0]};
 
-    `BIND_SWITCH_TRACKER(switch1)
+    `BIND_SWITCH_TRACKER
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 

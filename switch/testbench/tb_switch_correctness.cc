@@ -1,6 +1,7 @@
 #include "NetworkManager.h"
 #include "Vswitch_wrapper.h"
 #include "crc.h"
+#include "packet.h"
 #include "utility.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
@@ -15,70 +16,6 @@ uint64_t fails = 0;
 NetworkManager *manager;
 Vswitch_wrapper *dut;
 VerilatedFstC *trace;
-
-void signalHandler(int);
-
-void tick() {
-    dut->clk = 0;
-    manager->tick();
-    dut->eval();
-    trace->dump(sim_time++);
-    dut->clk = 1;
-    dut->eval();
-    trace->dump(sim_time++);
-
-    if (sim_time > 1000000) {
-        signalHandler(0);
-    }
-}
-
-void reset() {
-    dut->clk = 0;
-    dut->nrst = 1;
-    for (int i = 0; i < 4; i++) {
-        dut->in_flit[i] = 0;
-        dut->data_ready_in[i] = 0;
-        dut->packet_sent[i] = 0;
-    }
-
-    tick();
-    dut->nrst = 0;
-    tick();
-    tick();
-    tick();
-    dut->nrst = 1;
-    tick();
-    tick();
-}
-
-void wait_for_propagate(uint32_t waits) {
-    for (int i = 0; i < waits; i++) {
-        tick();
-    }
-}
-
-class SmallWrite {
-  public:
-    uint64_t len : 4;
-    uint64_t addr : 19;
-    uint64_t dest : 5;
-    uint64_t fmt : 4;
-    uint64_t req : 5;
-    uint64_t id : 2;
-    bool vc;
-
-  public:
-    SmallWrite(uint8_t req, uint8_t dest, uint8_t len, uint32_t addr, bool vc)
-        : fmt(0x9), dest(dest), addr(addr >> 2), len(len == 16 ? 0 : len), req(req), id(0), vc(vc) {
-    }
-
-    operator uint64_t() {
-        return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
-               (((uint64_t)this->req) << 32) | (((uint64_t)this->fmt) << 28) |
-               (((uint64_t)this->dest) << 23) | (((uint64_t)this->addr) << 4) |
-               (((uint64_t)this->len));
-    }
-} __attribute__((packed)) __attribute__((aligned(8)));
 
 void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, bool vc = 0) {
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
@@ -101,31 +38,6 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     }
     manager->queuePacketCheck(to, flit_queue);
 }
-
-class ConfigPkt {
-  public:
-    uint64_t data_lo : 7;
-    uint8_t addr;
-    uint8_t data_hi;
-    uint64_t dest : 5;
-    uint64_t fmt : 4;
-    uint64_t req : 5;
-    uint64_t id : 2;
-    bool vc;
-    uint64_t reserved : 24;
-
-  public:
-    ConfigPkt(uint8_t req, uint8_t dest, uint8_t addr, uint16_t data)
-        : fmt(0x4), dest(dest), data_hi(data >> 7), addr(addr), data_lo(data & 0x7F), req(req),
-          id(0), vc(0), reserved(0) {}
-
-    operator uint64_t() {
-        return (((uint64_t)this->vc) << 39) | (((uint64_t)this->id) << 37) |
-               (((uint64_t)this->req) << 32) | (((uint64_t)this->fmt) << 28) |
-               (((uint64_t)this->dest) << 23) | (((uint64_t)this->data_hi) << 15) |
-               (((uint64_t)this->addr) << 7) | (((uint64_t)this->data_lo));
-    }
-} __attribute__((packed)) __attribute__((aligned(8)));
 
 // Send all config packets out of switch 1, we can't check these since they will be consumed by the
 // switch.
@@ -168,18 +80,6 @@ void resetAndInit() {
 
     // Give some time for the packets to flow through the network
     wait_for_propagate(125);
-}
-
-void signalHandler(int signum) {
-    std::cout << "Got signal " << signum << std::endl;
-    std::cout << "Calling SystemVerilog 'final' block & exiting!" << std::endl;
-
-    manager->reportRemainingCheck();
-
-    dut->final();
-    trace->close();
-
-    exit(signum);
 }
 
 int main(int argc, char **argv) {
@@ -226,7 +126,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
         sendSmallWrite(1, 2, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -236,7 +136,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345679};
         sendSmallWrite(1, 3, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -246,7 +146,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345679};
         sendSmallWrite(1, 4, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -256,7 +156,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567A};
         sendSmallWrite(2, 1, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -266,7 +166,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
         sendSmallWrite(2, 3, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -276,7 +176,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
         sendSmallWrite(2, 4, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -286,7 +186,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567C};
         sendSmallWrite(3, 1, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -296,7 +196,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567D};
         sendSmallWrite(3, 2, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -306,7 +206,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
         sendSmallWrite(3, 4, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -316,7 +216,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567C};
         sendSmallWrite(4, 1, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -326,7 +226,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567D};
         sendSmallWrite(4, 2, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -336,7 +236,7 @@ int main(int argc, char **argv) {
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567B};
         sendSmallWrite(4, 3, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -349,7 +249,7 @@ int main(int argc, char **argv) {
         data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567F};
         sendSmallWrite(1, 3, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -361,7 +261,7 @@ int main(int argc, char **argv) {
         data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x1234567F};
         sendSmallWrite(2, 1, data);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -372,7 +272,7 @@ int main(int argc, char **argv) {
         sendSmallWrite(1, 3, data);
         sendSmallWrite(1, 3, data, 1);
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -388,7 +288,7 @@ int main(int argc, char **argv) {
             }
         }
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -404,7 +304,7 @@ int main(int argc, char **argv) {
             }
         }
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
@@ -430,7 +330,7 @@ int main(int argc, char **argv) {
             }
         }
         while (!manager->isComplete()) {
-            tick();
+            tick(true);
         }
     }
 
