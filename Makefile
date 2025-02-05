@@ -118,6 +118,17 @@ versim_%_src:
 	@$(call finderr,$(BUILD),"waveform.vcd","Could not find waveform file.")
 	@gtkwave $$(find $(BUILD) -name waveform.vcd) --save $$(dirname $$(find $(BUILD) -name "*.eda.yml"))/waves/$*.gtkw
 
+versim_switch_src_%:
+	@$(call sim_start,switch,$*,verilator,"Verilator")
+
+	@fusesoc --cores-root . run --build-root $(BUILD) --run --target $* --tool verilator $(ORG):$(PROJECT):switch
+
+	@$(call sim_end)
+
+	@$(call finderr,$(BUILD),"*.eda.yml","Could not decode build directory structure.")
+	@$(call finderr,$(BUILD),"waveform.vcd","Could not find waveform file.")
+	@gtkwave $$(find $(BUILD) -name waveform.vcd) --save $$(dirname $$(find $(BUILD) -name "*.eda.yml"))/waves/switch.gtkw
+
 
 qsim_%_src: 
 	@$(call sim_start,$*,sim,modelsim,"QuestaSim CLI")

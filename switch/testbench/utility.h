@@ -32,3 +32,11 @@ int ensure(T actual, const std::span<T> &expected, const char *test_name) {
     }
     return i;
 }
+
+void reset();
+
+void signalHandler(int);
+
+void tick(bool limit);
+
+void wait_for_propagate(uint32_t waits);

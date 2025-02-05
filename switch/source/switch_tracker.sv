@@ -1,4 +1,4 @@
-`define BIND_SWITCH_TRACKER(name)                                                               \
+`define BIND_SWITCH_TRACKER                                                                     \
     bind switch switch_tracker #(                                                               \
         .NUM_OUTPORTS(NUM_OUTPORTS),                                                            \
         .NUM_BUFFERS(NUM_BUFFERS),                                                              \
@@ -6,7 +6,7 @@
         .BUFFER_SIZE(BUFFER_SIZE),                                                              \
         .TOTAL_NODES(TOTAL_NODES),                                                              \
         .NODE(NODE)                                                                             \
-    ) TRACK_``name (                                                                            \
+    ) TRACK_SWITCH (                                                                            \
         .clk(clk),                                                                              \
         .nrst(n_rst),                                                                           \
         .not_idle(buf_if.req_routing | buf_if.req_vc | buf_if.req_switch | buf_if.req_crossbar),\
