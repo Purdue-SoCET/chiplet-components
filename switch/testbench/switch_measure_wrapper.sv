@@ -1,24 +1,34 @@
-`define POSEDGE(name, sig)                      \
-    logic name;                                 \
-    socetlib_edge_detector DETECT_``name`` (    \
-        .CLK(clk),                              \
-        .nRST(nrst),                            \
-        .signal(sig),                           \
-        .pos_edge(name),                        \
-        .neg_edge()                             \
-    );
+`define CONNECT(to, from, in_port, out_port)                                                    \
+    assign to.in[in_port] = from.out[out_port];                                                 \
+    assign to.data_ready_in[in_port] = from.data_ready_out[out_port];                           \
+    assign to.credit_granted[in_port] = from.buffer_available[out_port];                        \
+    assign to.packet_sent[in_port] = from.data_ready_in[out_port] & to.data_ready_out[in_port];
+
+`define CONNECT_TO_TOP(to, idx)                                             \
+    assign to.in[0] = in_flit[idx];                                         \
+    assign to.data_ready_in[0] = data_ready_in[idx];                        \
+    assign to.credit_granted[0] = to.packet_sent[0] << to.out[0].vc;        \
+    assign to.packet_sent[0] = data_ready_out[idx] & packet_sent[idx];      \
+    assign out[idx] = to.out[0];                                            \
+    assign data_ready_out[idx] = to.data_ready_out[0];                      \
+    assign credit_granted[idx] = to.credit_granted[0][0];                   \
+    assign credit_granted[idx] = to.credit_granted[0][0];                   \
+    assign buffer_available[idx] = to.buffer_available[0][0];               \
+    assign buffer_available[NUM_NODES + idx] = to.buffer_available[0][1];
+
+parameter NUM_NODES = 4;
 
 module switch_wrapper(
     input logic clk, nrst,
     // Flit sent in from endpoint
-    input flit_t in_flit [3:0],
-    input logic data_ready_in [3:0],
-    input logic packet_sent [3:0],
+    input flit_t in_flit [NUM_NODES-1:0],
+    input logic data_ready_in [NUM_NODES-1:0],
+    input logic packet_sent [NUM_NODES-1:0],
     // Flit received by endpoint
-    output flit_t out [3:0],
-    output logic data_ready_out [3:0],
-    output logic buffer_available [7:0],
-    output logic credit_granted [3:0]
+    output flit_t out [NUM_NODES-1:0],
+    output logic data_ready_out [NUM_NODES-1:0],
+    output logic buffer_available [NUM_NODES*2-1:0],
+    output logic credit_granted [NUM_NODES-1:0]
 );
     localparam BUFFER_SIZE = 8;
     localparam NUM_BUFFERS = 3;
@@ -72,16 +82,9 @@ module switch_wrapper(
         .sw_if(sw_if1)
     );
 
-    assign sw_if1.in = {sw_if3.out[1], sw_if2.out[1], in_flit[0]};
-    assign sw_if1.data_ready_in[0] = data_ready_in[0];
-    assign sw_if1.data_ready_in[1] = sw_if2.data_ready_out[1];
-    assign sw_if1.data_ready_in[2] = sw_if3.data_ready_out[1];
-    assign sw_if1.credit_granted[0] = sw_if1.packet_sent[0] << sw_if1.out[0].vc;
-    assign sw_if1.credit_granted[1] = sw_if2.buffer_available[1];
-    assign sw_if1.credit_granted[2] = sw_if3.buffer_available[1];
-    assign sw_if1.packet_sent[0] = data_ready_out[0] & packet_sent[0];
-    assign sw_if1.packet_sent[1] = sw_if2.data_ready_in[1] & sw_if1.data_ready_out[1];
-    assign sw_if1.packet_sent[2] = sw_if3.data_ready_in[1] & sw_if1.data_ready_out[2];
+    `CONNECT_TO_TOP(sw_if1, 0)
+    `CONNECT(sw_if1, sw_if2, 1, 1)
+    `CONNECT(sw_if1, sw_if3, 2, 1)
 
     `BIND_SWITCH_TRACKER
 
@@ -106,16 +109,9 @@ module switch_wrapper(
         .sw_if(sw_if2)
     );
 
-    assign sw_if2.in = {sw_if4.out[1], sw_if1.out[1], in_flit[1]};
-    assign sw_if2.data_ready_in[0] = data_ready_in[1];
-    assign sw_if2.data_ready_in[1] = sw_if1.data_ready_out[1];
-    assign sw_if2.data_ready_in[2] = sw_if4.data_ready_out[1];
-    assign sw_if2.credit_granted[0] = sw_if2.packet_sent[0] << sw_if2.out[0].vc;
-    assign sw_if2.credit_granted[1] = sw_if1.buffer_available[1];
-    assign sw_if2.credit_granted[2] = sw_if4.buffer_available[1];
-    assign sw_if2.packet_sent[0] = data_ready_out[1] & packet_sent[1];
-    assign sw_if2.packet_sent[1] = sw_if1.data_ready_in[1] & sw_if2.data_ready_out[1];
-    assign sw_if2.packet_sent[2] = sw_if4.data_ready_in[1] & sw_if2.data_ready_out[2];
+    `CONNECT_TO_TOP(sw_if2, 1)
+    `CONNECT(sw_if2, sw_if1, 1, 1)
+    `CONNECT(sw_if2, sw_if4, 2, 1)
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -138,16 +134,9 @@ module switch_wrapper(
         .sw_if(sw_if3)
     );
 
-    assign sw_if3.in = {sw_if4.out[2], sw_if1.out[2], in_flit[2]};
-    assign sw_if3.data_ready_in[0] = data_ready_in[2];
-    assign sw_if3.data_ready_in[1] = sw_if1.data_ready_out[2];
-    assign sw_if3.data_ready_in[2] = sw_if4.data_ready_out[2];
-    assign sw_if3.credit_granted[0] = sw_if3.packet_sent[0] << sw_if3.out[0].vc;
-    assign sw_if3.credit_granted[1] = sw_if1.buffer_available[2];
-    assign sw_if3.credit_granted[2] = sw_if4.buffer_available[2];
-    assign sw_if3.packet_sent[0] = data_ready_out[2] & packet_sent[2];
-    assign sw_if3.packet_sent[1] = sw_if1.data_ready_in[2] & sw_if3.data_ready_out[1];
-    assign sw_if3.packet_sent[2] = sw_if4.data_ready_in[2] & sw_if3.data_ready_out[2];
+    `CONNECT_TO_TOP(sw_if3, 2)
+    `CONNECT(sw_if3, sw_if1, 1, 2)
+    `CONNECT(sw_if3, sw_if4, 2, 2)
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -170,20 +159,7 @@ module switch_wrapper(
         .sw_if(sw_if4)
     );
 
-    assign sw_if4.in = {sw_if3.out[2], sw_if2.out[2], in_flit[3]};
-    assign sw_if4.data_ready_in[0] = data_ready_in[3];
-    assign sw_if4.data_ready_in[1] = sw_if2.data_ready_out[2];
-    assign sw_if4.data_ready_in[2] = sw_if3.data_ready_out[2];
-    assign sw_if4.credit_granted[0] = sw_if4.packet_sent[0] << sw_if4.out[0].vc;
-    assign sw_if4.credit_granted[1] = sw_if2.buffer_available[2];
-    assign sw_if4.credit_granted[2] = sw_if3.buffer_available[2];
-    assign sw_if4.packet_sent[0] = data_ready_out[3] & packet_sent[3];
-    assign sw_if4.packet_sent[1] = sw_if2.data_ready_in[2] & sw_if4.data_ready_out[1];
-    assign sw_if4.packet_sent[2] = sw_if3.data_ready_in[2] & sw_if4.data_ready_out[2];
-
-    assign out = {sw_if4.out[0], sw_if3.out[0], sw_if2.out[0], sw_if1.out[0]};
-    assign data_ready_out = {sw_if4.data_ready_out[0], sw_if3.data_ready_out[0], sw_if2.data_ready_out[0], sw_if1.data_ready_out[0]};
-    assign buffer_available = {sw_if4.buffer_available[0][1], sw_if3.buffer_available[0][1], sw_if2.buffer_available[0][1], sw_if1.buffer_available[0][1],
-                               sw_if4.buffer_available[0][0], sw_if3.buffer_available[0][0], sw_if2.buffer_available[0][0], sw_if1.buffer_available[0][0]};
-    assign credit_granted = {sw_if4.credit_granted[0][0], sw_if3.credit_granted[0][0], sw_if2.credit_granted[0][0], sw_if1.credit_granted[0][0]};
+    `CONNECT_TO_TOP(sw_if4, 3)
+    `CONNECT(sw_if4, sw_if2, 1, 2)
+    `CONNECT(sw_if4, sw_if3, 2, 2)
 endmodule
