@@ -39,6 +39,39 @@ def print_buffer(latency, active_time, flits_per_packet):
     print(f"Average crossbar cycles per flit: {avg_crossbar_cycles_per_flit:.2f} +- {crossbar_cycles_per_flit_stdev:.2f}")
     print(f"Average crossbar transfer rate: {avg_crossbar_transfer_rate:.2f} +- {crossbar_cycles_per_flit_stdev:.2f}B/cycle")
 
+def print_outport(outport_active_len, outport_packet_len, outport_credit_blocked_len, outport_vc_blocked_len):
+    outport_transfer_rate = [x * 4 / y for x, y in zip(outport_packet_len, outport_active_len)]
+    outport_credit_constrained = [x / y for x, y in zip(outport_credit_blocked_len, outport_active_len)]
+    outport_vc_constrained = [x / y for x, y in zip(outport_vc_blocked_len, outport_active_len)]
+    outport_total_constrained_len = [x + y for x, y in zip(outport_credit_blocked_len, outport_vc_blocked_len)]
+    outport_total_constrained = [(x + y) / z for x, y, z in zip(outport_credit_blocked_len, outport_vc_blocked_len, outport_active_len)]
+    outport_transfer_rate_wo_overhead = [w * 4 / (x - y - z) for w, x, y, z in zip(outport_packet_len, outport_active_len, outport_credit_blocked_len, outport_vc_blocked_len)]
+
+    avg_packet_len = numpy.average(outport_packet_len)
+    avg_active_len = numpy.average(outport_active_len)
+    avg_credit_blocked_len = numpy.average(outport_credit_blocked_len)
+    avg_vc_blocked_len = numpy.average(outport_vc_blocked_len)
+    avg_transfer_rate = numpy.average(outport_transfer_rate)
+    transfer_rate_stdev = numpy.std(outport_transfer_rate)
+    avg_credit_constrained = numpy.average(outport_credit_constrained)
+    avg_vc_constrained = numpy.average(outport_vc_constrained)
+    avg_total_constrained_len = numpy.average(outport_total_constrained_len)
+    avg_total_constrained = numpy.average(outport_total_constrained)
+    total_constrained_stdev = numpy.std(outport_total_constrained)
+    avg_transfer_rate_wo_overhead = numpy.average(outport_transfer_rate_wo_overhead)
+    transfer_rate_wo_overhead_stdev = numpy.std(outport_transfer_rate_wo_overhead)
+
+    print(f"Outport avg active len (cycles): {avg_active_len:.2f}")
+    print(f"Outport avg packet len (flits): {avg_packet_len:.2f}")
+    print(f"Outport transfer rate (inc. overhead): {avg_transfer_rate:.2f} +- {transfer_rate_stdev:.2f}B/cycle")
+    print(f"Outport credit blocked len (cycles): {avg_credit_blocked_len:.2f}")
+    print(f"Outport credit constrained: {100 * avg_credit_constrained:.2f}%")
+    print(f"Outport vc blocked len (cycles): {avg_vc_blocked_len:.2f}")
+    print(f"Outport vc constrained: {100 * avg_vc_constrained:.2f}%")
+    print(f"Outport total blocked len (cycles): {avg_total_constrained_len:.2f}")
+    print(f"Outport total constrained: {100 * avg_total_constrained:.2f} +- {100 * total_constrained_stdev:.2f}%")
+    print(f"Outport transfer rate (w/o overhead): {avg_transfer_rate_wo_overhead:.2f} +- {transfer_rate_wo_overhead_stdev:.2f}B/cycle")
+
 def main():
     if len(sys.argv) != 2:
         print("Incorrect number of arguments!")
@@ -79,39 +112,18 @@ def main():
                 outport_packet_len = vc["outport_packet_len"]
                 outport_credit_blocked_len = vc["outport_credit_blocked_len"]
                 outport_vc_blocked_len = vc["outport_vc_blocked_len"]
-                outport_transfer_rate = [x * 4 / y for x, y in zip(outport_packet_len, outport_active_len)]
-                outport_credit_constrained = [x / y for x, y in zip(outport_credit_blocked_len, outport_active_len)]
-                outport_vc_constrained = [x / y for x, y in zip(outport_vc_blocked_len, outport_active_len)]
-                outport_total_constrained_len = [x + y for x, y in zip(outport_credit_blocked_len, outport_vc_blocked_len)]
-                outport_total_constrained = [(x + y) / z for x, y, z in zip(outport_credit_blocked_len, outport_vc_blocked_len, outport_active_len)]
-                outport_transfer_rate_wo_overhead = [w * 4 / (x - y - z) for w, x, y, z in zip(outport_packet_len, outport_active_len, outport_credit_blocked_len, outport_vc_blocked_len)]
-
-                avg_packet_len = numpy.average(outport_packet_len)
-                avg_active_len = numpy.average(outport_active_len)
-                avg_credit_blocked_len = numpy.average(outport_credit_blocked_len)
-                avg_vc_blocked_len = numpy.average(outport_vc_blocked_len)
-                avg_transfer_rate = numpy.average(outport_transfer_rate)
-                transfer_rate_stdev = numpy.std(outport_transfer_rate)
-                avg_credit_constrained = numpy.average(outport_credit_constrained)
-                avg_vc_constrained = numpy.average(outport_vc_constrained)
-                avg_total_constrained_len = numpy.average(outport_total_constrained_len)
-                avg_total_constrained = numpy.average(outport_total_constrained)
-                total_constrained_stdev = numpy.std(outport_total_constrained)
-                avg_transfer_rate_wo_overhead = numpy.average(outport_transfer_rate_wo_overhead)
-                transfer_rate_wo_overhead_stdev = numpy.std(outport_transfer_rate_wo_overhead)
 
                 print(f"Statistics for outport {i}:{j}")
-                print(f"Outport avg active len (cycles): {avg_active_len:.2f}")
-                print(f"Outport avg packet len (flits): {avg_packet_len:.2f}")
-                print(f"Outport transfer rate (inc. overhead): {avg_transfer_rate:.2f} +- {transfer_rate_stdev:.2f}B/cycle")
-                print(f"Outport credit blocked len (cycles): {avg_credit_blocked_len:.2f}")
-                print(f"Outport credit constrained: {100 * avg_credit_constrained:.2f}%")
-                print(f"Outport vc blocked len (cycles): {avg_vc_blocked_len:.2f}")
-                print(f"Outport vc constrained: {100 * avg_vc_constrained:.2f}%")
-                print(f"Outport total blocked len (cycles): {avg_total_constrained_len:.2f}")
-                print(f"Outport total constrained: {100 * avg_total_constrained:.2f} +- {100 * total_constrained_stdev:.2f}%")
-                print(f"Outport transfer rate (w/o overhead): {avg_transfer_rate_wo_overhead:.2f} +- {transfer_rate_wo_overhead_stdev:.2f}B/cycle")
+                print_outport(outport_active_len, outport_packet_len, outport_credit_blocked_len, outport_vc_blocked_len)
                 print("")
+
+        total_outport_active_len = [x for y in outport_stats for z in y for x in z["outport_total_len"]]
+        total_outport_packet_len = [x for y in outport_stats for z in y for x in z["outport_packet_len"]]
+        total_outport_credit_blocked_len = [x for y in outport_stats for z in y for x in z["outport_credit_blocked_len"]]
+        total_outport_vc_blocked_len = [x for y in outport_stats for z in y for x in z["outport_vc_blocked_len"]]
+        print(f"Overall statistics for all outport")
+        print_outport(total_outport_active_len, total_outport_packet_len, total_outport_credit_blocked_len, total_outport_vc_blocked_len)
+        print("")
 
 if __name__ == "__main__":
     main()
