@@ -4,8 +4,6 @@
 #include <span>
 #include <string>
 
-#define BUFFER_SIZE 8
-
 extern Vswitch_wrapper *dut;
 
 // `from` is 1-indexed
@@ -55,7 +53,8 @@ void NetworkManager::tick() {
             }
             std::string test_name = "Expected output from test ";
             test_name += std::to_string(i);
-            int found = ensure<uint64_t>(dut->out[i] & FLIT_MASK, expected, test_name.c_str());
+            int found =
+                ensure<uint64_t>(dut->out[i] & FLIT_MASK, expected, test_name.c_str(), false);
             if (found >= 0) {
                 this->to_check[i][found].pop();
                 if (this->to_check[i][found].empty()) {

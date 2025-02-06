@@ -10,7 +10,7 @@
 #include <span>
 #include <vector>
 
-#define INJECTION_RATE_FREQ 100000
+#define INJECTION_RATE_FREQ 100000000
 #define TOTAL_INJECTIONS 1000
 #define FREQ_MHZ 100
 
@@ -100,10 +100,9 @@ bool inject() {
     static uint32_t total_injections = 0;
     const uint32_t cycles_per_sec = FREQ_MHZ * 1e6;
     const uint32_t cycles_per_injection = cycles_per_sec / INJECTION_RATE_FREQ;
-    static_assert(cycles_per_injection > 1);
+    static_assert(cycles_per_injection > 0);
     if (total_injections <= TOTAL_INJECTIONS && sim_time % cycles_per_injection == 0) {
         total_injections++;
-        printf("[INJECTION] Injecting num %d at time %llu\n", total_injections, sim_time);
         for (int from = 1; from <= 4; from++) {
             uint8_t to = from;
             do {

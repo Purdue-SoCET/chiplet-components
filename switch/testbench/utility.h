@@ -7,15 +7,17 @@
 #define FLIT_MASK 0x7FFFFFFFFF
 
 template <typename T>
-int ensure(T actual, const std::span<T> &expected, const char *test_name) {
-    extern uint64_t fails;
-    extern uint64_t sim_time;
+int ensure(T actual, const std::span<T> &expected, const char *test_name, bool print_on_success) {
+    extern int fails;
+    extern int sim_time;
     bool found = false;
     int i = 0;
     for (i = 0; i < expected.size(); i++) {
         if (actual == expected[i]) {
-            std::cout << "[PASS] "
-                      << "Time " << sim_time << "\t" << test_name << std::endl;
+            if (print_on_success) {
+                std::cout << "[PASS] "
+                          << "Time " << sim_time << "\t" << test_name << std::endl;
+            }
             found = true;
             break;
         }
