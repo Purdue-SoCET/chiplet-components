@@ -19,7 +19,7 @@ interface buffers_if #(
     logic [$clog2(NUM_OUTPORTS)-1:0] routing_outport;
     logic [NUM_BUFFERS-1:0] [$clog2(NUM_OUTPORTS)-1:0] switch_outport;
     logic [$clog2(NUM_VCS)-1:0] vc_selection;
-    logic [NUM_BUFFERS-1:0] final_vc;
+    logic [NUM_BUFFERS-1:0] [$clog2(NUM_VCS)-1:0] final_vc;
     logic [NUM_BUFFERS-1:0] available;
     logic [NUM_BUFFERS-1:0] empty;
 

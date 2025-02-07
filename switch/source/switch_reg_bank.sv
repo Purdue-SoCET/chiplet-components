@@ -20,7 +20,7 @@ module switch_reg_bank #(
     switch_cfg_hdr_t switch_cfg;
     logic [14:0] cfg_data;
 
-    route_lut_t [TABLE_SIZE-1:0] next_route_lut;
+    route_lut_entry_t [TABLE_SIZE-1:0] next_route_lut;
     logic [NUM_OUTPORTS-1:0] next_dateline;
 
     always_ff @(posedge clk, negedge n_rst) begin
@@ -44,7 +44,10 @@ module switch_reg_bank #(
             // TODO: claiming here will likely make the vc allocator on
             // the other side of the link become unsynchronized
             if(switch_cfg.addr <= 8'h10) begin
-                next_route_lut[switch_cfg.addr] = route_lut_t'(cfg_data);
+                next_route_lut[switch_cfg.addr] = '{
+                    valid: 1,
+                    lut: route_lut_t'(cfg_data)
+                };
             end
             else if(switch_cfg.addr == 8'h15) begin
                 next_dateline = cfg_data[NUM_OUTPORTS-1:0];

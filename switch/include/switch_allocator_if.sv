@@ -23,7 +23,7 @@ interface switch_allocator_if #(
     // The requested output vc from each input buffer
     logic [$clog2(NUM_VCS)-1:0] requested_vc;
     // Whether the switch was able to be allocated
-    logic [SELECT_SIZE-1:0] switch_valid;
+    logic switch_valid;
     // Input buffer select lines for each output port
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [SELECT_SIZE-1:0] select;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] enable;

@@ -1,13 +1,3 @@
-`define POSEDGE(name, sig)                      \
-    logic name;                                 \
-    socetlib_edge_detector DETECT_``name`` (    \
-        .CLK(clk),                              \
-        .nRST(nrst),                            \
-        .signal(sig),                           \
-        .pos_edge(name),                        \
-        .neg_edge()                             \
-    );
-
 module switch_wrapper(
     input logic clk, nrst,
     // Flit sent in from endpoint
