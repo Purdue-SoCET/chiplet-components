@@ -95,6 +95,12 @@ module switch #(
     assign rc_if.route_lut = rb_if.route_lut;
     assign buf_if.routing_outport = rc_if.out_sel;
     assign buf_if.routing_granted = rc_a_if.valid << rc_a_if.select;
+    // Connect route compute to switch allocator
+    always_comb begin
+        for (int i = 0; i < NUM_OUTPORTS; i++) begin
+            rc_if.buffer_available[i] = |sa_if.enable[i];
+        end
+    end
 
     // Stage 2: VC allocation
     arbiter_if #(
