@@ -4,16 +4,16 @@
     assign to.credit_granted[in_port] = from.buffer_available[out_port];                        \
     assign to.packet_sent[in_port] = from.data_ready_in[out_port] & to.data_ready_out[in_port];
 
-`define CONNECT_TO_TOP(to, idx)                                             \
-    assign to.in[0] = in_flit[idx];                                         \
-    assign to.data_ready_in[0] = data_ready_in[idx];                        \
-    assign to.credit_granted[0] = to.packet_sent[0] << to.out[0].vc;        \
-    assign to.packet_sent[0] = data_ready_out[idx] & packet_sent[idx];      \
-    assign out[idx] = to.out[0];                                            \
-    assign data_ready_out[idx] = to.data_ready_out[0];                      \
-    assign credit_granted[idx] = to.credit_granted[0][0];                   \
-    assign credit_granted[idx] = to.credit_granted[0][0];                   \
-    assign buffer_available[idx] = to.buffer_available[0][0];               \
+`define CONNECT_TO_TOP(to, idx)                                                 \
+    assign to.in[0] = in_flit[idx];                                             \
+    assign to.data_ready_in[0] = data_ready_in[idx];                            \
+    assign to.credit_granted[0] = to.packet_sent[0] << to.out[0].metadata.vc;   \
+    assign to.packet_sent[0] = data_ready_out[idx] & packet_sent[idx];          \
+    assign out[idx] = to.out[0];                                                \
+    assign data_ready_out[idx] = to.data_ready_out[0];                          \
+    assign credit_granted[idx] = to.credit_granted[0][0];                       \
+    assign credit_granted[idx] = to.credit_granted[0][0];                       \
+    assign buffer_available[idx] = to.buffer_available[0][0];                   \
     assign buffer_available[NUM_NODES + idx] = to.buffer_available[0][1];
 
 parameter NUM_NODES = 4;

@@ -21,6 +21,14 @@ interface switch_reg_bank_if #(
         input in_flit,
         output dateline, route_lut
     );
+
+    modport rc(
+        input route_lut
+    );
+
+    modport vc(
+        input dateline
+    );
 endinterface
 
 `endif //SWITCH_REG_BANK_VH

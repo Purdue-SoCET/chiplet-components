@@ -1,21 +1,21 @@
-`define BIND_SWITCH_TRACKER                                                                     \
-    bind switch switch_tracker #(                                                               \
-        .NUM_OUTPORTS(NUM_OUTPORTS),                                                            \
-        .NUM_BUFFERS(NUM_BUFFERS),                                                              \
-        .NUM_VCS(NUM_VCS),                                                                      \
-        .BUFFER_SIZE(BUFFER_SIZE),                                                              \
-        .TOTAL_NODES(TOTAL_NODES),                                                              \
-        .NODE(NODE)                                                                             \
-    ) TRACK_SWITCH (                                                                            \
-        .clk(clk),                                                                              \
-        .nrst(n_rst),                                                                           \
-        .not_idle(buf_if.req_routing | buf_if.req_vc | buf_if.req_switch | buf_if.req_crossbar),\
-        .is_active(buf_if.req_crossbar),                                                        \
-        .packet_sent(buf_if.REN),                                                               \
-        .outport_enabled(cb_if.enable),                                                         \
-        .buffer_availability(CB.buffer_availability),                                           \
-        .outport_selected_vc(CB.outport_vc),                                                    \
-        .outport_packet_sent(cb_if.packet_sent)                                                 \
+`define BIND_SWITCH_TRACKER                             \
+    bind switch switch_tracker #(                       \
+        .NUM_OUTPORTS(NUM_OUTPORTS),                    \
+        .NUM_BUFFERS(NUM_BUFFERS),                      \
+        .NUM_VCS(NUM_VCS),                              \
+        .BUFFER_SIZE(BUFFER_SIZE),                      \
+        .TOTAL_NODES(TOTAL_NODES),                      \
+        .NODE(NODE)                                     \
+    ) TRACK_SWITCH (                                    \
+        .clk(clk),                                      \
+        .nrst(n_rst),                                   \
+        .not_idle(buf_if.req_pipeline | buf_if.active), \
+        .is_active(buf_if.active),                      \
+        .packet_sent(buf_if.REN),                       \
+        .outport_enabled(cb_if.enable),                 \
+        .buffer_availability(CB.buffer_availability),   \
+        .outport_selected_vc(CB.outport_vc),            \
+        .outport_packet_sent(cb_if.packet_sent)         \
     );
 
 module switch_tracker#(

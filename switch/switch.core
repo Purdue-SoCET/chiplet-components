@@ -17,11 +17,10 @@ filesets:
             - "include/switch_pkg.sv" : {is_include_file: true}
             - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
-            - "include/route_compute_if.sv" : {is_include_file: true}
             - "include/switch_allocator_if.sv" : {is_include_file: true}
             - "include/switch_reg_bank_if.sv" : {is_include_file: true}
-            - "include/vc_allocator_if.sv" : {is_include_file: true}
             - "include/arbiter_if.sv" : {is_include_file: true}
+            - "include/pipeline_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:
@@ -146,6 +145,7 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
+            - correctness_tb
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:
