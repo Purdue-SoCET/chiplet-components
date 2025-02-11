@@ -15,7 +15,7 @@ interface switch_reg_bank_if #(
 
     flit_t in_flit;
     logic [NUM_OUTPORTS-1:0] dateline;
-    route_lut_entry_t [TABLE_SIZE-1:0] route_lut;
+    route_lut_t [TABLE_SIZE-1:0] route_lut;
 
     modport reg_bank(
         input in_flit,

@@ -15,13 +15,12 @@ interface route_compute_if #(
 
     logic valid;
     flit_t head_flit;
-    route_lut_entry_t [TABLE_SIZE-1:0] route_lut;
+    route_lut_t [TABLE_SIZE-1:0] route_lut;
     logic [SELECT_SIZE-1:0] out_sel;
-    logic [NUM_OUTPORTS-1:0] buffer_available;
 
     //TODO 
     modport route(
-        input valid, head_flit, route_lut, buffer_available,
+        input valid, head_flit, route_lut,
         output out_sel
     );
 endinterface
