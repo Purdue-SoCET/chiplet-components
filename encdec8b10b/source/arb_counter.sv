@@ -4,6 +4,7 @@
 //note check != 0 edge case for decrementing is in arbitrator no need for it here but should be added if removed from higher level module
 `timescale 1ns / 10ps
 
+// `include "arb_counter_if.sv"
 module arb_counter #(parameter NBITS = 4)
 (
     input CLK,
@@ -25,6 +26,7 @@ module arb_counter #(parameter NBITS = 4)
 
     always_comb begin
         n_count = 0;
+        cnt_if.overflow = 0;
         if (cnt_if.clear == 1'b1) begin
             n_count = 0; 
         end else  if (cnt_if.en && cnt_if.dec) begin
@@ -41,6 +43,9 @@ module arb_counter #(parameter NBITS = 4)
         end
          else begin 
             n_count = count;
+        end
+        if (n_count == $pow(2,NBITS) - 1) begin
+            cnt_if.overflow = '1;
         end
         // no overflow val just countering till 2** nbits
         // if (n_count == overflow_val) begin

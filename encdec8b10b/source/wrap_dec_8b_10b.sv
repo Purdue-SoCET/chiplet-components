@@ -1,17 +1,12 @@
-// parameter ENC_WORD_W = 40;
-// typedef enum logic [1:0] {SELECT_COMMA_1_FLIT,SELECT_COMMA_2_FLIT,SELECT_COMMA_DATA} comma_length_sel_t;
-// typedef enum logic [3:0] {START_PACKET_SEL, END_PACKET_SEL,RESEND_PACKET0_SEL,RESEND_PACKET1_SEL
-//                           RESEND_PACKET2_SEL, RESEND_PACKET3_SEL, ACK_SEL, NACK_SEL, DATA_SEL} comma_sel_t;
-// typedef enum logic [9:0] {START_COMMA = , END_COMMA = , RESEND_PACKET0_COMMA = , RESEND_PACKET1_COMMA = ,
-//                           RESEND_PACKET2_SEL, RESEND_PACKET3_SEL, ACK_COMMA, NACK_COMMA} comma_t;
-// typedef logic [(ENC_WORD_W - 1):0] enc_word_t;
-// typedef struct packed {
-//     logic [9:0] header;
-//     enc_word_t word;
-// } flit_enc_t;
+
+/*
+File is a wrapper for 8b/10b encoding and decoding as well as a predecoder for crc and packet counting
+
+
+*/
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"
-`include "wrap_dec_8b_10b_if.sv"
+// `include "wrap_dec_8b_10b_if.sv"
 module wrap_dec_8b_10b # (parameter PORTCOUNT = 5) 
             (input logic CLK, nRST, wrap_dec_8b_10b_if.dec dec_if
                        );
@@ -21,8 +16,8 @@ flit_t flit_data;
 flit_t n_flit;
 comma_sel_t n_comma_sel;
 logic [PORTCOUNT-1 :0] err_dec;
-logic [7:0] n_curr_packet_size;
-
+logic [6:0] n_curr_packet_size;
+logic komma_kill;
 typedef enum logic [1:0] {LOOK_FOR_START_PACKET, LOOK_FOR_DATA_PACKET, LOOK_FOR_END_PACKET} counter_fsm;
 counter_fsm seen_start_comma, n_seen_start_comma;
 
@@ -36,7 +31,7 @@ always_ff @(posedge CLK, negedge nRST) begin
         seen_start_comma <= LOOK_FOR_START_PACKET;
     end
     else if (dec_if.done) begin
-        dec_if.done_out <= dec_if.done;
+        dec_if.done_out <= dec_if.done && ~ komma_kill;
         dec_if.flit <= n_flit;
         dec_if.comma_sel <= n_comma_sel;
         dec_if.err_out <= dec_if.err || | err_dec;
@@ -63,18 +58,21 @@ msg_hdr_t msg_hdr;
 resp_hdr_t resp_hdr;
 
 //comma selection
+
 always_comb begin
     n_flit = '0;
+    komma_kill = '0;
     n_comma_sel = dec_if.comma_sel;
-    long_hdr = long_hdr_t'(dec_if.flit.payload);
-    short_hdr = short_hdr_t'(dec_if.flit.payload);
-    msg_hdr = msg_hdr_t'(dec_if.flit.payload);
-    resp_hdr = resp_hdr_t'(dec_if.flit.payload);
+    long_hdr = long_hdr_t'({flit_data.payload, 32'd0});
+    short_hdr = short_hdr_t'(flit_data.payload);
+    msg_hdr = msg_hdr_t'(flit_data.payload);
+    resp_hdr = resp_hdr_t'(flit_data.payload);
     n_curr_packet_size = dec_if.curr_packet_size;
     n_seen_start_comma = seen_start_comma;
     case (dec_if.comma_length_sel) 
     SELECT_COMMA_1_FLIT: begin
         n_curr_packet_size = '0;
+        komma_kill = '1;
         case(dec_if.enc_flit.word[9:0])
             START_COMMA:  begin 
                 n_comma_sel = START_PACKET_SEL;
@@ -120,14 +118,17 @@ always_comb begin
         n_flit = flit_data;
         n_comma_sel = DATA_SEL;
         if (seen_start_comma == LOOK_FOR_DATA_PACKET) begin
-        casez (flit_data.payload[31:28])
-            FMT_LONG_READ: n_curr_packet_size = 'd3;
-            FMT_SHORT_READ: n_curr_packet_size = 'd2;
-            FMT_LONG_WRITE: n_curr_packet_size = 'd3 + (long_hdr.length ? long_hdr.length : 128);
-            FMT_MEM_RESP: n_curr_packet_size = 2 + (resp_hdr.length ? resp_hdr.length : 128); 
-            FMT_MSG: n_curr_packet_size = 2 + (msg_hdr.length ? msg_hdr.length : 128); 
-            FMT_SWITCH_CFG: n_curr_packet_size = '1;
-            FMT_SHORT_WRITE: n_curr_packet_size = 2 + (short_hdr.length ? short_hdr.length : 16);
+        //predecode message package size if reading new packet
+        case (flit_data.payload[31:28])
+            FMT_LONG_READ: n_curr_packet_size = 'd2;
+            FMT_SHORT_READ: n_curr_packet_size = 'd1;
+            FMT_LONG_WRITE: n_curr_packet_size = 'd2 + (long_hdr.length != '0 ? {1'd0, long_hdr.length} : 8'd128);
+            FMT_MEM_RESP: n_curr_packet_size = 'd1 + (resp_hdr.length !='0 ? {1'd0,resp_hdr.length} : 8'd128); 
+            FMT_MSG: n_curr_packet_size = 'd1 + (msg_hdr.length != '0 ? {1'd0,msg_hdr.length} : 8'd128); 
+            FMT_SWITCH_CFG: n_curr_packet_size = 'd1;
+            FMT_SHORT_WRITE: n_curr_packet_size = 'd1 + (short_hdr.length != '0 ? {4'd0,short_hdr.length} : 8'd16);
+            default: begin
+            end
         endcase
             n_seen_start_comma = LOOK_FOR_END_PACKET;
         end

@@ -20,10 +20,17 @@ interface endnode_if;
     comma_length_sel_t comma_sel_tx_out; //select length of packet for uart
     logic done_tx, packet_done_tx; //done tx from uart packet_done_tx from switch for 
     logic get_data; // get next flit to sned on  port
-
+    logic nack_recieved;
+    logic rs0_recieved;
+    logic rs1_recieved;
+    logic rs2_recieved;
+    logic rs3_recieved;
+    logic ack_recieved;
+    logic [15:0] crc_fail_cnt;
     modport eif(
         input  enc_flit_rx, done_in_rx, comma_length_sel_in_rx, err_in_rx, start_tx, flit_tx, done_tx, packet_done_tx,
-        output  get_data, done_rx, err_rx, crc_corr_rx, flit_rx, data_out_tx, start_out_tx, comma_sel_tx_out
+        output  get_data, done_rx, err_rx, crc_corr_rx, flit_rx, data_out_tx, start_out_tx, comma_sel_tx_out,nack_recieved,ack_recieved,rs0_recieved,rs1_recieved,
+        rs2_recieved,rs3_recieved,crc_fail_cnt
     );
 endinterface
 

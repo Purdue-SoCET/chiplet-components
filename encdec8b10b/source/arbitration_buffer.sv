@@ -1,11 +1,12 @@
 `timescale 1ns / 10ps
 
+// `include "arbitration_buffer_if.sv"
 module arbitration_buffer #(parameter COUNTER_SIZE = 4) (input logic CLK, nRST, arbitration_buffer_if.arb arb_if);
 //needed FSM to select to tx
 //incrementing and decrement ing
 import phy_types_pkg::*;
 import chiplet_types_pkg::*; 
-typedef enum logic [2:0] {SENDING_COMMA, SENDING_DATA, SENDING_START,SENDING_END,IDLE} arb_state_t;
+typedef enum logic [2:0] {SENDING_COMMA, SENDING_DATA,STALL_DATA_SEND,   SENDING_START,SENDING_END,IDLE} arb_state_t;
 arb_state_t state, n_state;
 
 // TODO: find a way to do this in a for loop 
@@ -126,13 +127,21 @@ always_comb begin
     end
     SENDING_START: begin
         if(arb_if.done) begin
-            n_state = SENDING_DATA;
+            n_state = STALL_DATA_SEND;
         end
     end
 
     SENDING_DATA: begin
-        if(arb_if.done) begin
+        if (arb_if.done) begin
+            n_state = STALL_DATA_SEND;
+        end
+    end
+    STALL_DATA_SEND: begin
+        if (arb_if.packet_done) begin
             n_state = SENDING_END;
+        end
+        else begin
+            n_state = SENDING_DATA;
         end
     end
     default:begin
@@ -142,7 +151,7 @@ always_comb begin
 end
 
 always_comb begin
-    arb_if.comma_sel = START_PACKET_SEL;
+    arb_if.comma_sel = NADA_SEL;
     arb_if.get_data = '0;
     res0_if.dec = '0;
     res1_if.dec = '0;
@@ -150,9 +159,16 @@ always_comb begin
     res3_if.dec = '0;
     nack_if.dec ='0;
     ack_if.dec ='0;
+    res0_que_if.dec = '0;
+    res1_que_if.dec = '0;
+    res2_que_if.dec = '0;
+    res3_que_if.dec = '0;
+    nack_que_if.dec ='0;
+    ack_que_if.dec ='0;
     arb_if.start = '0;
     send_data_if.dec = '0;
     arb_if.comma_header_out = '0;
+    send_data_arb_n = send_data_arb;
     case (state)
     IDLE: begin
         if (send_data_arb)begin 
@@ -211,21 +227,24 @@ always_comb begin
     SENDING_START: begin
         if(arb_if.done) begin
             arb_if.get_data = '1;
-            arb_if.comma_sel = DATA_SEL;
-            arb_if.start = '1;
+            // arb_if.comma_sel = DATA_SEL;
+            // arb_if.start = '1;
         end
     end 
     SENDING_DATA: begin
-         if (arb_if.packet_done) begin
-            arb_if.comma_sel = END_PACKET_SEL;
-            arb_if.start = '1;
-        end
-        else if (arb_if.done) begin
-            arb_if.start = '1;
-            arb_if.get_data = '1;
-            arb_if.comma_sel = DATA_SEL;
+        if (arb_if.done) begin
+            arb_if.get_data = '1;  
         end
        
+    end
+    STALL_DATA_SEND: begin
+        arb_if.start = '1;
+        if (~ arb_if.packet_done) begin
+            arb_if.comma_sel = DATA_SEL;
+        end
+        else begin
+            arb_if.comma_sel = END_PACKET_SEL; 
+        end
     end
     SENDING_END: begin
     end

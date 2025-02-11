@@ -158,7 +158,7 @@ always_comb begin
             endcase
         end
         ERROR: begin
-            rx_if.rx_err = 1'b1;
+            rx_if.rx_err = 1'b1;    
         end
         default: begin 
             rx_if.comma_sel = NADA;

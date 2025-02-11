@@ -1,5 +1,5 @@
-`ifndef WRAP_DEC_8B_10B_VH
-`define WRAP_DEC_8B_10B_VH
+`ifndef ARB_COUNTER_IF
+`define ARB_COUNTER_IF
 
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"
@@ -14,7 +14,7 @@ interface arb_counter_if;
     //TODO 
     modport cnt(
         input en, clear, dec,
-        output count
+        output count,overflow
     );
 endinterface
 

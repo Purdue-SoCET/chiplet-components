@@ -32,16 +32,13 @@ assign mngrx_if.comma_sel = dec_if.comma_sel;
 typedef enum logic [2:0] { INIT,GET_FORMAT, RUN_CRC, CHECK_CRC, ERR} state_t;
 state_t state, n_state;
 
-logic have_packet , n_have_packet;
 
 always_ff @(posedge CLK, negedge nRST) begin
     if(~nRST) begin
         state <= INIT;
-        have_packet <= '0;
     end
     else begin
         state <= n_state;
-        have_packet <= n_have_packet;
     end
 end
 
@@ -90,7 +87,6 @@ always_comb begin
     cntr_clear = '0;
     cntr_enable = '0;
     mngrx_if.packet_done = '0;
-    n_have_packet = have_packet;
     crc_in = dec_if.flit.payload;
     case (state)    
         INIT: begin
@@ -98,10 +94,6 @@ always_comb begin
                 crc_update = '1;
             end
          end
-        GET_FORMAT: begin
-            n_have_packet = '1;
-            cntr_clear = '1;
-        end
         RUN_CRC: begin 
             crc_update = '1;
             crc_in = dec_if.flit.payload;
@@ -117,7 +109,6 @@ always_comb begin
             end
         end
         CHECK_CRC: begin 
-            n_have_packet = '0;
             mngrx_if.done_out = '1;
             mngrx_if.crc_corr = crc_out == dec_if.flit.payload;
             crc_clear = '1;
@@ -127,6 +118,9 @@ always_comb begin
         ERR: begin 
             mngrx_if.err_out = '1;
             crc_clear = '1;
+        end
+        default: begin
+
         end
     endcase
 end
