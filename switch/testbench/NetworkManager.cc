@@ -52,7 +52,7 @@ void NetworkManager::tick() {
                 expected.push_back(possible_packets.front() & FLIT_MASK);
             }
             std::string test_name = "Expected output from test ";
-            test_name += std::to_string(i);
+            test_name += std::to_string(i + 1);
             int found =
                 ensure<uint64_t>(dut->out[i] & FLIT_MASK, expected, test_name.c_str(), false);
             if (found >= 0) {
