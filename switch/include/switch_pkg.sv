@@ -11,10 +11,5 @@ package switch_pkg;
         node_id_t   dest;
         logic [4:0] out_sel;
     } route_lut_t;
-
-    typedef struct packed {
-        logic valid;
-        route_lut_t lut;
-    } route_lut_entry_t;
 endpackage
 `endif //CHIPLET_TYPES_PKG_VH
