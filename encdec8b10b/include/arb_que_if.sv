@@ -1,5 +1,5 @@
-`ifndef WRAP_DEC_8B_10B_VH
-`define WRAP_DEC_8B_10B_VH
+`ifndef ARB_QUE_IF
+`define ARB_QUE_IF
 
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"

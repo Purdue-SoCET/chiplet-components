@@ -1,5 +1,5 @@
-`ifndef WRAP_DEC_8B_10B_VH
-`define WRAP_DEC_8B_10B_VH
+`ifndef PHY_MANAGER_RX_IF
+`define PHY_MANAGER_RX_IF
 
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"

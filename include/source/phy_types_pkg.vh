@@ -22,7 +22,8 @@ package phy_types_pkg;
         RESEND_PACKET3_SEL,
         ACK_SEL,
         NACK_SEL,
-        DATA_SEL
+        DATA_SEL,
+        NADA_SEL // for debug purposes
     } comma_sel_t;
 
     //comma definitions

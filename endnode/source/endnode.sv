@@ -23,7 +23,13 @@ module endnode #() (
         (.CLK(CLK),
         .nRST(nRST),
         .mngrx_if(phy_rx_if));
-
+    socetlib_counter #(.NBITS(16)) crc_counter
+        (.CLK(CLK),
+         .nRST(nRST),
+         .count_enable(~phy_rx_if.crc_corr && packet_done),
+         .overflow_val('d65535),
+         .count_out(end_if.crc_fail_cnt)
+        );
     // uart_baud #(.PORTCOUNT(PORTCOUNT),.FREQUENCY(FREQUENCY),.EXPECTED_BAUD_RATE(EXPECTED_BAUD_RATE)) uarts
     //     (.CLK(CLK),
     //     .nRST(nRST),
@@ -38,6 +44,14 @@ module endnode #() (
     assign phy_rx_if.comma_length_sel_rx = end_if.comma_length_sel_in_rx;
     assign phy_rx_if.uart_err_rx = end_if.err_in_rx;
 
+    //comma to switch response
+    assign end_if.nack_recieved = phy_rx_if.comma_sel == NACK_SEL;
+    assign end_if.rs0_recieved = phy_rx_if.comma_sel == RESEND_PACKET0_SEL;
+    assign end_if.rs1_recieved = phy_rx_if.comma_sel == RESEND_PACKET1_SEL;
+    assign end_if.rs2_recieved = phy_rx_if.comma_sel == RESEND_PACKET2_SEL;
+    assign end_if.rs3_recieved = phy_rx_if.comma_sel == RESEND_PACKET3_SEL;
+    assign end_if.ack_recieved = phy_rx_if.comma_sel == ACK_SEL;
+                
     //rx to switch connections
     assign end_if.done_rx = phy_rx_if.done_out;
     assign end_if.err_rx = err_store;
@@ -58,13 +72,19 @@ module endnode #() (
     assign phy_tx_if.data_write = end_if.start_tx;
     assign end_if.get_data = phy_tx_if.get_data;
     always_comb begin
-        if (phy_rx_if.packet_done && phy_rx_if.comma_sel == END_PACKET_SEL) begin
-            phy_tx_if.ack_write = phy_rx_if.crc_corr && ~err_store && ~ phy_tx_if.ack_cnt_full;
-            phy_tx_if.nack_write = phy_rx_if.crc_corr && ~err_store && phy_tx_if.ack_cnt_full;
-            phy_tx_if.rs0_write = (~phy_rx_if.crc_corr || ~err_store) && phy_rx_if.flit.id == 'd0;
-            phy_tx_if.rs1_write = (~phy_rx_if.crc_corr || ~err_store) && phy_rx_if.flit.id == 'd1;
-            phy_tx_if.rs2_write = (~phy_rx_if.crc_corr || ~err_store) && phy_rx_if.flit.id == 'd2;
-            phy_tx_if.rs3_write = (~phy_rx_if.crc_corr || ~err_store) && phy_rx_if.flit.id == 'd3;
+        phy_tx_if.ack_write = '0;
+        phy_tx_if.nack_write = '0;
+        phy_tx_if.rs0_write = '0;
+        phy_tx_if.rs1_write = '0;
+        phy_tx_if.rs2_write = '0;
+        phy_tx_if.rs3_write = '0;
+        if (phy_rx_if.packet_done) begin // maybe need to take into consideration end of packet comma
+            phy_tx_if.ack_write = ~err_store && ~ phy_tx_if.ack_cnt_full;
+            phy_tx_if.nack_write = ~err_store && phy_tx_if.ack_cnt_full;
+            phy_tx_if.rs0_write =  err_store && phy_rx_if.flit.id == 'd0;
+            phy_tx_if.rs1_write =  err_store && phy_rx_if.flit.id == 'd1;
+            phy_tx_if.rs2_write =  err_store && phy_rx_if.flit.id == 'd2;
+            phy_tx_if.rs3_write =  err_store && phy_rx_if.flit.id == 'd3;
         end
     end
 

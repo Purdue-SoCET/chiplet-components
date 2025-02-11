@@ -13,13 +13,8 @@ package chiplet_types_pkg;
     typedef logic [1:0] pkt_id_t;
 
     typedef enum logic [3:0] {
-        FMT_LONG_READ   = 4'h0,
-        FMT_LONG_WRITE  = 4'h1,
-        FMT_MEM_RESP    = 4'h2,
-        FMT_MSG         = 4'h3,
-        FMT_SWITCH_CFG  = 4'h4,
-        FMT_SHORT_READ  = 4'h8,
-        FMT_SHORT_WRITE = 4'h9
+        FMT_LONG_READ= '0, FMT_LONG_WRITE= '1, FMT_MEM_RESP= 'd2, FMT_MSG= 'd3,
+        FMT_SWITCH_CFG = 'd4, FMT_SHORT_READ = 'd5, FMT_SHORT_WRITE = 'd6
     } format_e;
 
     // Long Header

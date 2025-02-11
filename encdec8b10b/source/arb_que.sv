@@ -1,6 +1,6 @@
 `timescale 1ns / 10ps
 
-
+// `include "arb_que_if.sv"
 module arb_que#(NBITS = 8)(input logic CLK, nRST, arb_que_if.que que_if);
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
