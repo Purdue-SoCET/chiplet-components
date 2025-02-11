@@ -11,7 +11,7 @@
 // } flit_enc_t;
 `timescale 1ns / 10ps
 `include "chiplet_types_pkg.vh"
-`include "wrap_enc_8b_10b_if.sv"
+// `include "wrap_enc_8b_10b_if.sv"
 `include "phy_types_pkg.vh"
 module wrap_enc_8b_10b #(parameter PORTCOUNT = 5) 
             (input logic CLK, nRST, wrap_enc_8b_10b_if.enc enc_if);
