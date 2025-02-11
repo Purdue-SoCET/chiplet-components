@@ -201,7 +201,12 @@ module switch #(
     assign buf_if.REN = cb_if.in_pop;
     // Connect crossbar to IO
     assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
-    assign cb_if.credit_granted = {sw_if.credit_granted[NUM_OUTPORTS-1:1], sw_if.credit_granted[0] | {NUM_VCS-1{reg_bank_claim}}};
+    always_comb begin
+        cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
+        for (int i = 0; i < NUM_VCS; i++) begin
+            cb_if.credit_granted[0][i] |= reg_bank_claim && cb_if.out[0].vc == i;
+        end
+    end
     assign sw_if.out = cb_if.out;
 
     // Stage 5: Claim things going to this node and forward things to reg bank
