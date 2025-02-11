@@ -16,9 +16,7 @@ module buffers #(
 
     typedef enum logic [2:0] {
         IDLE,
-        ROUTING,
-        VC_ALLOCATION,
-        SWITCH_ALLOCATION,
+        PIPELINE,
         ACTIVE
     } state_t;
 
@@ -58,7 +56,7 @@ module buffers #(
                 .CLK(CLK),
                 .nRST(nRST),
                 .WEN(buf_if.WEN[i]),
-                .REN(buf_if.REN[i] && buf_if.req_crossbar[i] && !overflow[i]),
+                .REN(buf_if.REN[i] && buf_if.active[i] && !overflow[i]),
                 .clear(1'b0),
                 .wdata(buf_if.wdata[i]),
                 .full(),
@@ -76,7 +74,7 @@ module buffers #(
             ) PACKET_COUNTER (
                 .CLK(CLK),
                 .nRST(nRST),
-                .clear(state_table[i].state == SWITCH_ALLOCATION),
+                .clear(state_table[i].state == PIPELINE),
                 .count_enable(buf_if.REN[i]),
                 .overflow_val(overflow_val[i]),
                 .count_out(count_out[i]),
@@ -108,9 +106,7 @@ module buffers #(
     end
 
     always_comb begin
-        buf_if.req_routing = '0;
-        buf_if.req_vc = '0;
-        buf_if.req_switch = '0;
+        buf_if.req_pipeline = '0;
         next_overflow_val = overflow_val;
         next_state_table = state_table;
 
@@ -119,29 +115,19 @@ module buffers #(
                 IDLE : begin
                     // Head flit condition
                     if (buf_if.WEN[i] || count[i] > 0) begin
-                        next_state_table[i].state = ROUTING;
+                        next_state_table[i].state = PIPELINE;
                     end
                 end
-                ROUTING : begin
-                    if (buf_if.routing_granted[i]) begin
-                        next_state_table[i].outport_sel = buf_if.routing_outport;
-                        next_state_table[i].state = VC_ALLOCATION;
-                    end
-                end
-                VC_ALLOCATION : begin
-                    if (buf_if.vc_granted[i]) begin
-                        next_state_table[i].vc = buf_if.vc_selection;
-                        next_state_table[i].state = SWITCH_ALLOCATION;
-                    end
-                end
-                SWITCH_ALLOCATION : begin
-                    if (buf_if.switch_granted[i]) begin
+                PIPELINE : begin
+                    if (buf_if.pipeline_granted[i]) begin
                         next_state_table[i].state = ACTIVE;
                         next_overflow_val[i] = expected_num_flits(buf_if.rdata[i].payload);
                     end
                 end
                 ACTIVE : begin
-                    if (buf_if.REN[i] && count_out[i] + 1 == overflow_val[i]) begin
+                    if (buf_if.pipeline_failed[i]) begin
+                        next_state_table[i].state = PIPELINE;
+                    end else if (buf_if.REN[i] && count_out[i] + 1 == overflow_val[i]) begin
                         next_state_table[i].outport_sel = 0;
                         next_state_table[i].vc = 0;
                         next_state_table[i].state = IDLE;
@@ -151,13 +137,8 @@ module buffers #(
                 default : begin end
             endcase
 
-            // TODO: Can start arbitration request early to improve performance
-            buf_if.req_routing[i] = state_table[i].state == ROUTING;
-            buf_if.req_vc[i] = state_table[i].state == VC_ALLOCATION;
-            buf_if.req_switch[i] = state_table[i].state == SWITCH_ALLOCATION;
-            buf_if.req_crossbar[i] = state_table[i].state == ACTIVE;
-            buf_if.switch_outport[i] = state_table[i].outport_sel;
-            buf_if.final_vc[i] = state_table[i].vc;
+            buf_if.req_pipeline[i] = state_table[i].state == PIPELINE;
+            buf_if.active[i] = state_table[i].state == ACTIVE;
         end
     end
 endmodule

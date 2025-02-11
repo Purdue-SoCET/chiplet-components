@@ -2,8 +2,6 @@
 `define SWITCH_PKG_SV
 `timescale 1ns / 10ps
 package switch_pkg;
-    parameter NUM_OUTPORTS = 2;
-
     // TODO: make a version with static out_sel size since the routing table
     // depends on this
     typedef struct packed {

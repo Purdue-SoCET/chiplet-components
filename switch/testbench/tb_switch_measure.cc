@@ -91,8 +91,6 @@ void resetAndInit() {
     sendRouteTableInit(4, 1, 0, 3, 2);
     // {*, 1, 2}
     sendRouteTableInit(4, 2, 0, 1, 2);
-    // Set dateline for going out any way of 4
-    sendConfig(4, DATELINE_ADDR, 0x6);
 
     // Give some time for the packets to flow through the network
     wait_for_propagate(300);

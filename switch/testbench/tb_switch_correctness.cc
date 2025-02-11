@@ -70,7 +70,7 @@ void resetAndInit() {
     // {*, 2, 2}
     sendRouteTableInit(4, 1, 0, 2, 2);
     // Set dateline for going out of either port
-    sendConfig(4, 0x15, 0x6);
+    sendConfig(4, DATELINE_ADDR, 0x6);
     // {*, *, 1}
     sendRouteTableInit(4, 2, 0, 0, 1);
 
@@ -314,9 +314,6 @@ int main(int argc, char **argv) {
         std::srand(seed);
         printf("Seed: %d\n", seed);
         resetAndInit();
-        uint8_t packet_size = 6;
-        std::vector<uint32_t> data(packet_size);
-        std::generate(data.begin(), data.end(), std::rand);
         for (int from = 1; from <= 4; from++) {
             for (int to = 1; to <= 4; to++) {
                 if (from != to) {

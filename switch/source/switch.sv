@@ -16,11 +16,13 @@ module switch #(
     input logic clk, n_rst,
     switch_if.switch sw_if
 );
-    parameter int BUFFER_BITS = BUFFER_SIZE * 32;
-    parameter flit_t RESET_VAL = '0;
-
-    logic [NUM_OUTPORTS-1:0] next_data_ready_out;
     logic reg_bank_claim;
+
+    pipeline_if #(
+        .NUM_BUFFERS(2*NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS)
+    ) pipe_if();
 
     // Buffers
     buffers_if #(
@@ -47,7 +49,7 @@ module switch #(
         buf_if.wdata = '0;
         buf_if.WEN = '0;
         for (int i = 0; i < NUM_BUFFERS; i++) begin
-            if (!sw_if.in[i].vc) begin
+            if (!sw_if.in[i].metadata.vc) begin
                 buf_if.WEN[i] = sw_if.data_ready_in[i];
                 buf_if.wdata[i] = sw_if.in[i];
             end else begin
@@ -60,15 +62,12 @@ module switch #(
             end
         end
     end
+    assign buf_if.pipeline_failed = (pipe_if.pipe_valid && pipe_if.pipe_failed) << pipe_if.pipe_ingress_port;
 
     // Stage 1: Route compute
     arbiter_if #(
         .WIDTH(2*NUM_BUFFERS)
     ) rc_a_if();
-    route_compute_if #(
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TABLE_SIZE(32) // TODO: parameterize
-    ) rc_if();
 
     arbiter #(
         .WIDTH(2*NUM_BUFFERS)
@@ -84,34 +83,20 @@ module switch #(
     ) RC (
         .clk(clk),
         .n_rst(n_rst),
-        .route_if(rc_if)
+        .pipe_if(pipe_if),
+        .rb_if(rb_if)
     );
 
     // Connect buffers to arbiter
-    assign rc_a_if.bid = buf_if.req_routing;
+    assign rc_a_if.bid = buf_if.req_pipeline;
     // Connect arbiter to route compute
-    assign rc_if.valid = rc_a_if.valid;
-    assign rc_if.head_flit = buf_if.rdata[rc_a_if.select];
-    assign rc_if.route_lut = rb_if.route_lut;
-    assign buf_if.routing_outport = rc_if.out_sel;
-    assign buf_if.routing_granted = rc_a_if.valid << rc_a_if.select;
+    assign pipe_if.rc_valid = rc_a_if.valid;
+    assign pipe_if.rc_metadata = buf_if.rdata[rc_a_if.select].metadata;
+    assign pipe_if.rc_dest = buf_if.rdata[rc_a_if.select].payload[27:23];
+    assign pipe_if.rc_ingress_port = rc_a_if.select;
+    assign buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
 
     // Stage 2: VC allocation
-    arbiter_if #(
-        .WIDTH(2*NUM_BUFFERS)
-    ) vc_a_if();
-    vc_allocator_if #(
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .NUM_VCS(NUM_VCS)
-    ) vc_if();
-
-    arbiter #(
-        .WIDTH(2*NUM_BUFFERS)
-    ) VCALLOC_ARBITER (
-        .CLK(clk),
-        .nRST(n_rst),
-        .a_if(vc_a_if)
-    );
     vc_allocator #(
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_BUFFERS(NUM_BUFFERS),
@@ -120,55 +105,30 @@ module switch #(
     ) VCALLOC (
         .clk(clk),
         .n_rst(n_rst),
-        .vc_if(vc_if)
+        .pipe_if(pipe_if),
+        .rb_if(rb_if)
     );
 
-    // Connect buffers to arbiter
-    assign vc_a_if.bid = buf_if.req_vc;
-    // Connect buffers to VC allocator
-    assign vc_if.incoming_vc = buf_if.rdata[vc_a_if.select].vc;
-    assign vc_if.outport = buf_if.switch_outport[vc_a_if.select];
-    assign buf_if.vc_selection = vc_if.assigned_vc;
-    assign buf_if.vc_granted = vc_a_if.valid << vc_a_if.select;
-    // Connect VC allocator to register bank
-    assign vc_if.dateline = rb_if.dateline;
-
     // Stage 3: Switch allocation
-    arbiter_if #(
-        .WIDTH(2*NUM_BUFFERS)
-    ) sa_a_if();
     switch_allocator_if #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS)
     ) sa_if();
 
-    arbiter #(
-        .WIDTH(2*NUM_BUFFERS)
-    ) SWALLOC_ARBITER (
-        .CLK(clk),
-        .nRST(n_rst),
-        .a_if(sa_a_if)
-    );
     switch_allocator #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS)
     ) SWALLOC (
-        clk,
-        n_rst,
-        sa_if
+        .clk(clk),
+        .n_rst(n_rst),
+        .pipe_if(pipe_if),
+        .sa_if(sa_if)
     );
 
-    // Connect buffers to arbiter
-    assign sa_a_if.bid = buf_if.req_switch;
     // Connect buffers and arbiter to switch allocator
-    assign sa_if.valid = buf_if.req_crossbar | buf_if.req_switch;
-    assign sa_if.allocate = sa_a_if.valid;
-    assign sa_if.requestor = sa_a_if.select;
-    assign sa_if.requested = buf_if.switch_outport[sa_a_if.select];
-    assign sa_if.requested_vc = buf_if.final_vc[sa_a_if.select];
-    assign buf_if.switch_granted = sa_if.switch_valid << sa_a_if.select;
+    assign sa_if.valid = buf_if.active;
 
     // Stage 4: Crossbar traversal
     crossbar_if #(
@@ -189,12 +149,7 @@ module switch #(
     );
 
     // Connect buffers and switch allocator to crossbar
-    always_comb begin
-        cb_if.in = buf_if.rdata;
-        for (int i = 0; i < NUM_BUFFERS; i++) begin
-            cb_if.in[i].vc = buf_if.final_vc[i];
-        end
-    end
+    assign cb_if.in = buf_if.rdata;
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
     assign cb_if.empty = buf_if.empty;
@@ -204,7 +159,7 @@ module switch #(
     always_comb begin
         cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
         for (int i = 0; i < NUM_VCS; i++) begin
-            cb_if.credit_granted[0][i] |= reg_bank_claim && cb_if.out[0].vc == i;
+            cb_if.credit_granted[0][i] |= reg_bank_claim && cb_if.out[0].metadata.vc == i;
         end
     end
     assign sw_if.out = cb_if.out;

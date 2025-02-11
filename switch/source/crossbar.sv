@@ -55,6 +55,7 @@ module crossbar#(
 
         for (int i = 0; i < NUM_OUT; i++) begin
             next_out[i] = cb_if.in[cb_if.sel[i][outport_vc[i]]];
+            next_out[i].metadata.vc = outport_vc[i];
 
             if (cb_if.enable[i][outport_vc[i]] && !cb_if.empty[cb_if.sel[i][outport_vc[i]]] && buffer_availability[i][outport_vc[i]] > BUFFER_SIZE/4) begin
                 if (cb_if.packet_sent[i]) begin

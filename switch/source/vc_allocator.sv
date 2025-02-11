@@ -1,7 +1,5 @@
-`include "vc_allocator_if.sv"
+`include "pipeline_if.sv"
 
-// TODO: Really stupid VC allocator, can probably track vc_taken's to improve
-// performance
 module vc_allocator#(
     parameter int NUM_OUTPORTS,
     parameter int NUM_BUFFERS,
@@ -10,10 +8,27 @@ module vc_allocator#(
 )(
     input logic clk,
     input logic n_rst,
-    vc_allocator_if.allocator vc_if
+    pipeline_if.vc pipe_if,
+    switch_reg_bank_if.vc rb_if
 );
+    logic next_sa_final_vc;
+
+    always_ff @(posedge clk, negedge n_rst) begin
+        if (!n_rst) begin
+            pipe_if.sa_valid <= 0;
+            pipe_if.sa_ingress_port <= 0;
+            pipe_if.sa_egress_port <= 0;
+            pipe_if.sa_final_vc <= 0;
+        end else begin
+            pipe_if.sa_valid <= pipe_if.vc_valid;
+            pipe_if.sa_ingress_port <= pipe_if.vc_ingress_port;
+            pipe_if.sa_egress_port <= pipe_if.vc_egress_port;
+            pipe_if.sa_final_vc <= next_sa_final_vc;
+        end
+    end
+
     always_comb begin
         // Only upgrade VC if we cross a dateline
-        vc_if.assigned_vc = vc_if.incoming_vc || vc_if.dateline[vc_if.outport];
+        next_sa_final_vc = pipe_if.vc_metadata.vc || rb_if.dateline[pipe_if.vc_egress_port];
     end
 endmodule
