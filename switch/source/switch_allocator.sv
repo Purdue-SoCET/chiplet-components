@@ -1,18 +1,25 @@
+`include "switch_pkg.sv"
+
 module switch_allocator#(
     parameter int NUM_BUFFERS,
-    parameter int NUM_OUTPORTS
+    parameter int NUM_OUTPORTS,
+    parameter int NUM_VCS
 )(
     input logic clk,
     input logic n_rst,
     switch_allocator_if.allocator sa_if
 );
-    logic [NUM_OUTPORTS-1:0] [$clog2(NUM_BUFFERS)-1:0] next_select;
-    logic [NUM_OUTPORTS-1:0] next_enable;
+    import switch_pkg::*;
+
+    localparam SELECT_SIZE = $clog2(NUM_BUFFERS) + (NUM_BUFFERS == 1);
+
+    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [SELECT_SIZE-1:0] next_select;
+    logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] next_enable;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
-            sa_if.select <= {NUM_OUTPORTS{'0}};
-            sa_if.enable <= {NUM_OUTPORTS{'0}};
+            sa_if.select <= '0;
+            sa_if.enable <= '0;
         end else begin
             sa_if.select <= next_select;
             sa_if.enable <= next_enable;
@@ -22,20 +29,21 @@ module switch_allocator#(
     always_comb begin
         next_select = sa_if.select;
         next_enable = sa_if.enable;
+        sa_if.switch_valid = 0;
 
-        // For any new input buffer that requests a output port, arbitrate
-        // between them. Lowest buffer wins out
-        for (int buffer = 0; buffer < NUM_BUFFERS; buffer++) begin
-             /* Buffer is requesting and  Enable isn't set for requested output */
-            if (sa_if.allocate[buffer] && !next_enable[sa_if.requested[buffer]]) begin
-                next_select[sa_if.requested[buffer]] = buffer;
-                next_enable[sa_if.requested[buffer]] = 1;
+        // If any input buffer drops `valid`, deallocate it.
+        for (int outport = 0; outport < NUM_OUTPORTS; outport++) begin
+            for (int vc = 0; vc < NUM_VCS; vc++) begin
+                next_enable[outport][vc] &= sa_if.valid[sa_if.select[outport][vc]];
             end
         end
 
-        // If any input buffer drops `allocate`, deallocate it.
-        for (int outport = 0; outport < NUM_OUTPORTS; outport++) begin
-            next_enable[outport] &= sa_if.allocate[sa_if.select[outport]];
+        // If a buffer requests allocation and the outport hasn't been
+        // allocated yet, allow the allocation
+        if (sa_if.allocate && !sa_if.enable[sa_if.requested][sa_if.requested_vc]) begin
+            next_select[sa_if.requested][sa_if.requested_vc] = sa_if.requestor;
+            next_enable[sa_if.requested][sa_if.requested_vc] = 1'b1;
+            sa_if.switch_valid = 1;
         end
     end
 endmodule

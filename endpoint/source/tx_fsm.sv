@@ -14,14 +14,11 @@ module tx_fsm#(
 );
     import chiplet_types_pkg::*;
 
-    localparam PKT_MAX_LENGTH = 130;
-    localparam LENGTH_WIDTH = $clog2(PKT_MAX_LENGTH);
-
     typedef enum logic [3:0] {
         IDLE, START_SEND_PKT, SEND_PKT
     } state_e;
 
-    typedef logic [LENGTH_WIDTH-1:0] length_counter_t;
+    typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
 
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
@@ -101,33 +98,7 @@ module tx_fsm#(
         casez (state)
             IDLE : begin end
             START_SEND_PKT : begin
-                case (long_hdr.format)
-                    FMT_LONG_READ : begin
-                        next_curr_pkt_length = 3; // header + address + crc
-                    end
-                    FMT_LONG_WRITE : begin
-                        next_curr_pkt_length = 3 + // header + address + crc
-                            (long_hdr.length ? long_hdr.length : 128); // data
-                    end
-                    FMT_MEM_RESP : begin
-                        next_curr_pkt_length = 2 + // header + crc
-                            (resp_hdr.length ? resp_hdr.length : 128); // data
-                    end
-                    FMT_MSG : begin
-                        next_curr_pkt_length = 2 + // header + crc
-                            (msg_hdr.length ? msg_hdr.length : 128); // data
-                    end
-                    FMT_SWITCH_CFG : begin
-                        next_curr_pkt_length = 1;
-                    end
-                    FMT_SHORT_READ : begin
-                        next_curr_pkt_length = 2; // header + crc
-                    end
-                    FMT_SHORT_WRITE : begin
-                        next_curr_pkt_length = 2 + // header + crc
-                            (short_hdr.length ? short_hdr.length : 16); // data
-                    end
-                endcase
+                next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
             end
             SEND_PKT : begin
                 switch_if.data_ready = 1;
