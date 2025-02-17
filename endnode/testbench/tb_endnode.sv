@@ -62,8 +62,8 @@ module tb_endnode;
             long_hdr.lst_b = '0;
             long_hdr.fst_b = '0;
             long_hdr.length = length;
-            long_hdr.addr = 30'h0;
-            long_hdr.r1 = '0;
+            // long_hdr.addr = 30'h0;
+            // long_hdr.r1 = '0;
             header = flit_t'({meta_data, long_hdr.format, long_hdr.dest, long_hdr.r0, long_hdr.lst_b, long_hdr.fst_b, long_hdr.length});
         end
 
@@ -75,8 +75,8 @@ module tb_endnode;
             long_hdr.lst_b = '0;
             long_hdr.fst_b = '0;
             long_hdr.length = length;
-            long_hdr.addr = 30'h0;
-            long_hdr.r1 = '0;
+            // long_hdr.addr = 30'h0;
+            // long_hdr.r1 = '0;
             header = flit_t'({meta_data, long_hdr.format, long_hdr.dest, long_hdr.r0, long_hdr.lst_b, long_hdr.fst_b, long_hdr.length});
         end
 
