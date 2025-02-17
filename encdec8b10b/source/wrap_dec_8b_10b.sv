@@ -118,18 +118,19 @@ always_comb begin
         n_flit = flit_data;
         n_comma_sel = DATA_SEL;
         if (seen_start_comma == LOOK_FOR_DATA_PACKET) begin
+            n_curr_packet_size = expected_num_flits(flit_data.payload) - 'd1;
         //predecode message package size if reading new packet
-        case (flit_data.payload[31:28])
-            FMT_LONG_READ: n_curr_packet_size = 'd2;
-            FMT_SHORT_READ: n_curr_packet_size = 'd1;
-            FMT_LONG_WRITE: n_curr_packet_size = 'd2 + (long_hdr.length != '0 ? {1'd0, long_hdr.length} : 8'd128);
-            FMT_MEM_RESP: n_curr_packet_size = 'd1 + (resp_hdr.length !='0 ? {1'd0,resp_hdr.length} : 8'd128); 
-            FMT_MSG: n_curr_packet_size = 'd1 + (msg_hdr.length != '0 ? {1'd0,msg_hdr.length} : 8'd128); 
-            FMT_SWITCH_CFG: n_curr_packet_size = 'd1;
-            FMT_SHORT_WRITE: n_curr_packet_size = 'd1 + (short_hdr.length != '0 ? {4'd0,short_hdr.length} : 8'd16);
-            default: begin
-            end
-        endcase
+        // case (flit_data.payload[31:28])
+        //     FMT_LONG_READ: n_curr_packet_size = 'd2;
+        //     FMT_SHORT_READ: n_curr_packet_size = 'd1;
+        //     FMT_LONG_WRITE: n_curr_packet_size = 'd2 + (long_hdr.length != '0 ? {1'd0, long_hdr.length} : 8'd128);
+        //     FMT_MEM_RESP: n_curr_packet_size = 'd1 + (resp_hdr.length !='0 ? {1'd0,resp_hdr.length} : 8'd128); 
+        //     FMT_MSG: n_curr_packet_size = 'd1 + (msg_hdr.length != '0 ? {1'd0,msg_hdr.length} : 8'd128); 
+        //     FMT_SWITCH_CFG: n_curr_packet_size = 'd1;
+        //     FMT_SHORT_WRITE: n_curr_packet_size = 'd1 + (short_hdr.length != '0 ? {4'd0,short_hdr.length} : 8'd16);
+        //     default: begin
+        //     end
+        // endcase
             n_seen_start_comma = LOOK_FOR_END_PACKET;
         end
     end
