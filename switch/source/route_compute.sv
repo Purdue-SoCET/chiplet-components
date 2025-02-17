@@ -29,7 +29,7 @@ module route_compute #(
             pipe_if.vc_ingress_port <= 0;
             pipe_if.vc_egress_port <= 0;
         end else begin
-            pipe_if.vc_valid <= pipe_if.rc_valid;
+            pipe_if.vc_valid <= pipe_if.rc_valid && !rb_if.reg_bank_claim;
             pipe_if.vc_metadata <= pipe_if.rc_metadata;
             pipe_if.vc_ingress_port <= pipe_if.rc_ingress_port;
             pipe_if.vc_egress_port <= next_vc_egress_port;

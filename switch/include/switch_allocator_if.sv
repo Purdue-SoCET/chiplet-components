@@ -12,6 +12,7 @@ interface switch_allocator_if #(
 
     localparam SELECT_SIZE = $clog2(NUM_BUFFERS) + (NUM_BUFFERS == 1);
 
+    logic reg_bank_claim;
     // Used to tell when an outport can be deallocated
     logic [NUM_BUFFERS-1:0] valid;
     // Input buffer select lines for each output port
@@ -19,7 +20,7 @@ interface switch_allocator_if #(
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] enable;
 
     modport allocator(
-        input valid,
+        input valid, reg_bank_claim,
         output select, enable
     );
 

@@ -95,6 +95,12 @@ module switch #(
     assign pipe_if.rc_dest = buf_if.rdata[rc_a_if.select].payload[27:23];
     assign pipe_if.rc_ingress_port = rc_a_if.select;
     assign buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
+    // Connect switch allocator to register bank
+    assign rb_if.reg_bank_claim = pipe_if.rc_valid &&
+        buf_if.rdata[pipe_if.rc_ingress_port].payload[31:28] == FMT_SWITCH_CFG &&
+        buf_if.rdata[pipe_if.rc_ingress_port].payload[27:23] == NODE;
+    assign rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
+    assign buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
 
     // Stage 2: VC allocation
     vc_allocator #(
@@ -155,13 +161,8 @@ module switch #(
     assign cb_if.empty = buf_if.empty;
     assign buf_if.REN = cb_if.in_pop;
     // Connect crossbar to IO
-    assign cb_if.packet_sent = {sw_if.packet_sent[NUM_OUTPORTS-1:1], sw_if.packet_sent[0] || reg_bank_claim};
-    always_comb begin
-        cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
-        for (int i = 0; i < NUM_VCS; i++) begin
-            cb_if.credit_granted[0][i] |= reg_bank_claim && cb_if.out[0].metadata.vc == i;
-        end
-    end
+    assign cb_if.packet_sent = sw_if.packet_sent[NUM_OUTPORTS-1:0];
+    assign cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
     assign sw_if.out = cb_if.out;
 
     // Stage 5: Claim things going to this node and forward things to reg bank
@@ -185,8 +186,5 @@ module switch #(
         .rb_if(rb_if)
     );
 
-    assign reg_bank_claim = cb_if.valid[0] && cb_if.out[0].payload[31:28] == FMT_SWITCH_CFG && cb_if.out[0].payload[27:23] == NODE;
-    assign rb_if.in_flit = reg_bank_claim ? cb_if.out[0] : '0;
-
-    assign sw_if.data_ready_out = {cb_if.valid[NUM_OUTPORTS-1:1], cb_if.valid[0] && !reg_bank_claim};
+    assign sw_if.data_ready_out = cb_if.valid;
 endmodule

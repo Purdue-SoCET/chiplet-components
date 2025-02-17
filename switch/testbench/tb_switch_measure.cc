@@ -26,15 +26,12 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     std::vector<uint64_t> flits = {hdr};
     crc_t crc = crc_init();
     for (auto d : data) {
-        // TODO: hide annoying bug where if the top nibble is 0x4 and the next 5 bits match a node,
-        // it'll consume it even though its a data flit, should fix this in hardware
-        d |= 0xF << 28;
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
         crc = crc_update(crc, &d, 4);
     }
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
-                    (((uint64_t)hdr.req) << 32) | (0xF << 28) | crc_finalize(crc));
+                    (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
     std::queue<uint64_t> flit_queue = {};
     for (auto f : flits) {
