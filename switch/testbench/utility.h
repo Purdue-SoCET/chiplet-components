@@ -11,7 +11,7 @@
 template <typename T>
 int ensure(T actual, const std::span<T> &expected, const char *test_name, bool print_on_success) {
     extern int fails;
-    extern int sim_time;
+    extern uint64_t sim_time;
     bool found = false;
     int i = 0;
     for (i = 0; i < expected.size(); i++) {

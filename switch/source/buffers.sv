@@ -56,7 +56,7 @@ module buffers #(
                 .CLK(CLK),
                 .nRST(nRST),
                 .WEN(buf_if.WEN[i]),
-                .REN(buf_if.REN[i] && buf_if.active[i] && !overflow[i]),
+                .REN((buf_if.REN[i] && buf_if.active[i] && !overflow[i]) || buf_if.reg_bank_granted[i]),
                 .clear(1'b0),
                 .wdata(buf_if.wdata[i]),
                 .full(),
@@ -87,7 +87,7 @@ module buffers #(
                 .CLK(CLK),
                 .nRST(nRST),
                 .clear(waterfall_overflow[i]),
-                .count_enable(buf_if.REN[i]),
+                .count_enable(buf_if.REN[i] || buf_if.reg_bank_granted[i]),
                 .overflow_val(3*DEPTH/4),
                 .count_out(),
                 .overflow_flag(waterfall_overflow[i])
@@ -119,7 +119,9 @@ module buffers #(
                     end
                 end
                 PIPELINE : begin
-                    if (buf_if.pipeline_granted[i]) begin
+                    if (buf_if.reg_bank_granted[i]) begin
+                        next_state_table[i].state = IDLE;
+                    end else if (buf_if.pipeline_granted[i]) begin
                         next_state_table[i].state = ACTIVE;
                         next_overflow_val[i] = expected_num_flits(buf_if.rdata[i].payload);
                     end
