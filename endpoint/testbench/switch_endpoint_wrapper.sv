@@ -55,8 +55,6 @@ module switch_endpoint_wrapper #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .data_ready(sw_if1.data_ready_out[0]),
-        .flit(sw_if1.out[0]),
         .switch_if(sw_if1),
         .bus_if(bus_if)
     );

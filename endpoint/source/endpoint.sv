@@ -8,8 +8,6 @@ module endpoint #(
     parameter NUM_MSGS=4
 ) (
     input logic clk, n_rst,
-    input logic data_ready,
-    input chiplet_types_pkg::flit_t flit,
     switch_if.endpoint switch_if,
     bus_protocol_if.peripheral_vital bus_if
 );
@@ -45,8 +43,8 @@ module endpoint #(
     cache #(.NUM_WORDS(CACHE_NUM_WORDS), .RX(1'b1)) rx_cache(
         .clk(clk),
         .n_rst(n_rst),
-        .in_flit(flit),
-        .data_ready(data_ready),
+        .in_flit(switch_if.out[0]),
+        .data_ready(switch_if.data_ready_out[0]),
         .bus_if(rx_bus_if)
     );
 
