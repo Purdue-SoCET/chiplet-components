@@ -32,7 +32,7 @@ module tx_fsm#(
     resp_hdr_t       resp_hdr;
     switch_cfg_hdr_t switch_cfg_hdr;
 
-    socetlib_counter #(.NBITS(LENGTH_WIDTH)) length_counter (
+    socetlib_counter #(.NBITS(PKT_LENGTH_WIDTH)) length_counter (
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
@@ -54,7 +54,7 @@ module tx_fsm#(
         end
     end
 
-    assign flit_sent = !switch_if.buffer_full && switch_if.data_ready;
+    assign flit_sent = !switch_if.buffer_full && switch_if.data_ready_out;
 
     // Next state logic
     always_comb begin
@@ -92,7 +92,7 @@ module tx_fsm#(
         resp_hdr = resp_hdr_t'(tx_bus_if.rdata);
         switch_cfg_hdr = switch_cfg_hdr_t'(tx_bus_if.rdata);
         next_curr_pkt_length = curr_pkt_length;
-        switch_if.data_ready = 0;
+        switch_if.data_ready_in = 0;
         flit = flit_t'(0);
 
         casez (state)
@@ -101,7 +101,7 @@ module tx_fsm#(
                 next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
             end
             SEND_PKT : begin
-                switch_if.data_ready = 1;
+                switch_if.data_ready_in = 1;
                 tx_cache_if.ren = 1;
                 // TODO: how to tell that switch consumed value?
                 flit.vc = 0;
@@ -111,6 +111,6 @@ module tx_fsm#(
             end
         endcase
 
-        switch_if.flit = flit;
+        switch_if.in = flit;
     end
 endmodule
