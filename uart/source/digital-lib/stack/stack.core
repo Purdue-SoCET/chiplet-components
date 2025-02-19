@@ -1,0 +1,100 @@
+CAPI=2:
+name: socet:digital-lib:stack:0.0.1
+description: Simple stack buffer 
+
+filesets:
+    rtl:
+        files:
+            - src/socetlib_stack.sv
+        file_type: systemVerilogSource
+
+    tb:
+        files:
+            - tb/tb_socetlib_stack.sv
+        file_type: systemVerilogSource
+    
+    waiver:
+        files:
+            - tb_waiver.vlt
+        file_type: systemVerilogSource
+
+    fpga:
+        files:
+            - fpga/fpga_socetlib_stack.sv
+        file_type: systemVerilogSource
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: socetlib_stack
+        # No parameters?
+    
+    sim:
+        <<: *default
+        description: Simulate w/TB
+        default_tool: verilator
+        filesets_append:
+            - tb
+            - tool_verilator ? (waiver)
+        toplevel: tb_socetlib_stack
+        tools:
+            verilator:
+                verilator_options:
+                    - --binary
+                    - --trace-fst
+                    - --trace-structs
+                    - --coverage
+                make_options:
+                    - -j
+
+            vcs:
+                vcs_options:
+                    - -assert svaext
+                    - -debug_access+pp
+                    - -debug_access+all
+                    - -debug_pp +vcd+vcdpluson
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+
+    gui:
+        <<: *default
+        description: Simulate TB with GUI
+        default_tool: xcelium
+        filesets_append:
+            - tb
+        toplevel: tb_socetlib_stack
+        tools:
+            xcelium:
+                xrun_options:
+                    - -gui
+                    - -access +rwc
+    fpga:
+        <<: *default
+        filesets_append:
+            - fpga
+        description: FPGA Wrapper
+        default_tool: quartus
+        toplevel: fpga_socetlib_stack
+        tools:
+            quartus:
+                family: Cyclone 10 GX
+                device: 10CX220YF672E5G
+
+    lint:
+        <<: *default
+        filesets_append:
+            - fpga
+            - tb
+        description: Linting
+        default_tool: veriblelint
+
+parameters:
+    coverage_file:
+        datatype: file
+        default: "coverage.dat"
+        description: "Name of coverage file for Verilator coverage reporting"
+        paramtype: plusarg

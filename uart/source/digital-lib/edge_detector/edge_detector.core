@@ -1,0 +1,77 @@
+CAPI=2:
+name: socet:digital-lib:edge_detector:0.0.3
+description: N-bit edge detector (positive and negative edges)
+
+filesets:
+    rtl:
+        files:
+            - src/socetlib_edge_detector.sv
+        file_type: systemVerilogSource
+
+    tb:
+        files:
+            - tb/tb_socetlib_edge_detector.sv
+        file_type: systemVerilogSource
+    
+    waiver:
+        files:
+            - tb_waiver.vlt
+        file_type: systemVerilogSource
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: socetlib_edge_detector
+        # No parameters?
+    
+    sim:
+        <<: *default
+        description: Simulate w/TB
+        default_tool: verilator
+        filesets_append:
+            - tb
+            - tool_verilator ? (waiver)
+        toplevel: tb_socetlib_edge_detector
+        tools:
+            verilator:
+                verilator_options:
+                    - --binary
+                    - --trace-fst
+                    - --trace-structs
+                    - --coverage
+                make_options:
+                    - -j
+            xcelium:
+                xrun_options:
+                    - +xmtimescale+1ns/100ps
+            modelsim:
+                vsim_options:
+                    - -vopt
+                    - -voptargs='+acc'
+                    - -t ps
+
+    gui:
+        <<: *default
+        description: Simulate TB with GUI
+        default_tool: xcelium
+        filesets_append:
+            - tb
+        toplevel: tb_socetlib_edge_detector
+        tools:
+            xcelium:
+                xrun_options:
+                    - -gui
+                    - -access +rwc
+                    - +xmtimescale+1ns/100ps
+    lint:
+        <<: *default
+        description: Linting
+        default_tool: veriblelint
+
+parameters:
+    coverage_file:
+        datatype: file
+        default: "coverage.dat"
+        description: "Name of coverage file for Verilator coverage reporting"
+        paramtype: plusarg

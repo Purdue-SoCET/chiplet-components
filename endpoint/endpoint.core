@@ -5,12 +5,23 @@ description: ""
 filesets:
     rtl:
         files:
-            - "source/endpoint.sv"
-            - "source/cache.sv"
-            - "source/tx_fsm.sv"
-            - "source/message_table.sv"
-            - "include/message_table_if.sv" : {is_include_file: true}
-            - "include/tx_fsm_if.sv" : {is_include_file: true}
+            - "include/arb_que_if.sv"
+            - "include/wrap_dec_8b_10b_if.sv"
+            - "include/arbitration_buffer_if.sv"
+            - "include/arb_counter_if.sv"
+            - "include/phy_manager_rx_if.sv"
+            - "include/wrap_enc_8b_10b_if.sv"
+            - "include/phy_manager_tx_if.sv"
+            - "include/wrap_dec_8b_10b_if.sv"
+            - "source/arb_que.sv"
+            - "source/enc_8b10b.sv"
+            - "source/arb_counter.sv"
+            - "source/arbitration_buffer.sv"
+            - "source/dec_8b10b.sv"
+            - "source/wrap_enc_8b_10b.sv"
+            - "source/wrap_dec_8b_10b.sv"
+            - "source/phy_manager_rx.sv"
+            - "source/phy_manager_tx.sv"
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"

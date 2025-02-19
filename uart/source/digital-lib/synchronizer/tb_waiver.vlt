@@ -1,0 +1,6 @@
+// DESCRIPTION: Verilator output: Waivers generated with --waiver-output
+
+`verilator_config
+
+lint_off -rule WIDTHTRUNC -file "*tb/tb_socetlib_synchronizer.sv" -match "Operator ASSIGN expects 1 bits on the Assign RHS, but Assign RHS's RAND generates 32 bits."
+
