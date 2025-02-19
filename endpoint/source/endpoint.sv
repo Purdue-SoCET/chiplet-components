@@ -7,6 +7,8 @@ module endpoint #(
     parameter NUM_MSGS=4
 ) (
     input logic clk, n_rst,
+    input logic data_ready,
+    input flit_t flit,
     phy_manager_if.rx_switch switch_if,
     bus_protocol_if.peripheral_vital bus_if
 );
@@ -34,12 +36,16 @@ module endpoint #(
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
         .clk(clk),
         .n_rst(n_rst),
+        .in_flit('flit_t('0)),
+        .data_ready(1'b0)
         .bus_if(tx_bus_if)
     );
 
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
+    cache #(.NUM_WORDS(CACHE_NUM_WORDS), .RX(1'b1)) rx_cache(
         .clk(clk),
         .n_rst(n_rst),
+        .in_flit(flit),
+        .data_ready(data_ready),
         .bus_if(rx_bus_if)
     );
 
