@@ -16,18 +16,21 @@ module switch_endpoint_wrapper #(
     parameter DATA_WIDTH = 32
 ) (
     input logic clk, n_rst,
+    // Bus side signals
     input logic wen, ren, 
     input logic [ADDR_WIDTH-1:0] addr,
     input logic [DATA_WIDTH-1:0] wdata,
     input logic [(DATA_WIDTH/8)-1:0] strobe,
     output logic [DATA_WIDTH-1:0] rdata,
     output logic error, request_stall,
-    input logic [1:0] packet_sent,
+    // Switch side signals to write directly to switch
     input chiplet_types_pkg::flit_t in_flit,
-    input logic data_ready_in,
-    output chiplet_types_pkg::flit_t out,
-    output logic data_ready_out,
-    output logic credit_granted
+    output logic data_ready_in,
+    // Switch side signals to read directly from the switch
+    output chiplet_types_pkg::flit_t out_flit,
+    output data_ready_out,
+
+    input logic packet_sent
 );
     switch_if #(
         .NUM_OUTPORTS(2),
@@ -51,7 +54,7 @@ module switch_endpoint_wrapper #(
     bus_protocol_if bus_if();
 
     endpoint #(
-        .NUM_MSGS(NUM_MSGS)
+        .NUM_MSGS(4)
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
@@ -59,24 +62,20 @@ module switch_endpoint_wrapper #(
         .bus_if(bus_if)
     );
 
-    /*
-    rx_switch_if.buffer_full = sw_if1.buffer_available[0];
-    sw_if1.data_ready_in[0] = rx_switch_if.data_ready;
-    sw_if1.data_ready_in[1] = data_ready_in;
-    sw_if1.in[0] = rx_switch_if.flit;
-    sw_if1.in[1] = in_flit;
-    sw_if1.credit_granted = credit_granted;
-    sw_if1.packet_sent = packet_sent;
-    data_ready_out = sw_if1.data_ready_out[0];
-    out = sw_if1.out[0];
-    //endpoint in flit = sw_if1.out[0];
-    bus_if.wen = wen;
-    bus_if.ren = ren,;
-    bus_if.addr = addr;
-    bus_if.wdata = wdata;
-    bus_if.strobe = strobe;
-    rdata = bus_if.rdata;
-    error = bus_if.error;
-    request_stall = bus_if.request_stall;
-    */
+    assign bus_if.wen = wen;
+    assign bus_if.ren = ren;
+    assign bus_if.addr = addr;
+    assign bus_if.wdata = wdata;
+    assign bus_if.strobe = strobe;
+    assign rdata = bus_if.rdata;
+    assign error = bus_if.error;
+    assign request_stall = bus_if.request_stall;
+
+    assign sw_if.in[1] = in_flit;
+    assign data_ready_in = sw_if.data_ready_in[1];
+
+    assign out_flit = sw_if.out[1];
+    assign data_ready_out = sw_if.data_ready_out[1];
+
+    assign sw_if.packet_sent[1] = packet_sent;
 endmodule

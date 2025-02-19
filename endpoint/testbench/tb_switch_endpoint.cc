@@ -1,5 +1,4 @@
 #include "NetworkManager.h"
-#include "Vswitch_wrapper.h"
 #include "Vswitch_endpoint_wrapper.h"
 #include "crc.h"
 #include "verilated.h"
@@ -40,6 +39,7 @@ void reset() {
         dut->addr = 0;
         dut->wdata = 0;
         dut->strobe = 0;
+        dut->in_flit = 0;
         dut->packet_sent = 0;
     }
 
@@ -146,26 +146,8 @@ void resetAndInit() {
     // {*, *, 1}
     sendRouteTableInit(1, 0, 0, 0, 1);
 
-    // // For 3:
-    // // {*, *, 1}
-    // sendRouteTableInit(3, 0, 0, 0, 1);
-
-    // // For 4:
-    // // {*, 1, 1}
-    // sendRouteTableInit(4, 0, 0, 1, 1);
-    // // {*, 2, 2}
-    // sendRouteTableInit(4, 1, 0, 2, 2);
-    // // Set dateline for going out of either port
-    // sendConfig(4, 0x15, 0x6);
-    // // {*, *, 1}
-    // sendRouteTableInit(4, 2, 0, 0, 1);
-
-    // // For 2:
-    // // {*, *, 1}
-    // sendRouteTableInit(2, 0, 0, 0, 1);
-
     // Give some time for the packets to flow through the network
-    wait_for_propagate(125);
+    wait_for_propagate(50);
 }
 
 void signalHandler(int signum) {
@@ -185,7 +167,6 @@ int main(int argc, char **argv) {
     Verilated::traceEverOn(true);
     dut->trace(trace, 5);
     trace->open("switch.fst");
-
 
     // Test single packet routing
     // Send packet from 1 to 2
@@ -366,8 +347,8 @@ int main(int argc, char **argv) {
     //     for (int from = 1; from <= 4; from++) {
     //         for (int to = 1; to <= 4; to++) {
     //             if (from != to) {
-    //                 std::vector<uint32_t> data = {0xCAFECAFE, 0xFAFAFAFA, 0xAFAFAFAF, 0x12345678};
-    //                 sendSmallWrite(from, to, data);
+    //                 std::vector<uint32_t> data = {0xCAFECAFE, 0xFAFAFAFA, 0xAFAFAFAF,
+    //                 0x12345678}; sendSmallWrite(from, to, data);
     //             }
     //         }
     //     }

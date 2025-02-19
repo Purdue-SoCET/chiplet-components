@@ -25,6 +25,7 @@ filesets:
     tb:
         files:
             - "testbench/EndSwitchManager.cc" : { file_type: cppSource }
+            - "testbench/EndSwitchManager.h": {file_type: cppSource, is_include_file : true}
             - "testbench/switch_endpoint_wrapper.sv"
             - "testbench/tb_switch_endpoint.cc" : { file_type: cppSource }
             - "waves/endpoint.do": { file_type: user }
