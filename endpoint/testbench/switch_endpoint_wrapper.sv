@@ -36,7 +36,7 @@ module switch_endpoint_wrapper #(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(2),
         .NUM_VCS(2)
-    ) sw_if1 ();
+    ) sw_if ();
 
     switch #(
         .NUM_OUTPORTS(2),
@@ -48,7 +48,7 @@ module switch_endpoint_wrapper #(
     ) switch1 (
         .clk(clk),
         .n_rst(n_rst),
-        .sw_if(sw_if1)
+        .sw_if(sw_if)
     );
 
     bus_protocol_if bus_if();
@@ -58,7 +58,7 @@ module switch_endpoint_wrapper #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .switch_if(sw_if1),
+        .switch_if(sw_if),
         .bus_if(bus_if)
     );
 
