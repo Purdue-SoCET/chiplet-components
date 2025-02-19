@@ -54,8 +54,8 @@ void NetworkManager::tick() {
 
     // Update any inputs
     for (int i = 0; i < 4; i++) {
-        dut->in_flit = 0;
-        dut->data_ready_in = 0;
+        // dut->in_flit = 0;
+        // dut->data_ready_in = 0;
         // bus inputs to endpoint
         dut->wen = 0;
         dut->ren = 0;
