@@ -9,7 +9,7 @@ interface tx_fsm_if #(
 );
     import chiplet_types_pkg::*;
 
-    logic [ADDR_WIDTH-1:0] [NUM_MSGS-1:0] pkt_start_addr;
+    logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] pkt_start_addr;
     node_id_t node_id;
 
     modport tx_fsm(

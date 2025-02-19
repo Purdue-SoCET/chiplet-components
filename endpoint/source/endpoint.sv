@@ -5,7 +5,9 @@
 `include "message_table_if.sv"
 
 module endpoint #(
-    parameter NUM_MSGS=4
+    parameter NUM_MSGS=4,
+    parameter NODE_ID,
+    parameter DEPTH
 ) (
     input logic clk, n_rst,
     switch_if.endpoint switch_if,
@@ -23,8 +25,7 @@ module endpoint #(
     localparam RX_CACHE_START_ADDR = 32'h3000;
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
 
-    logic [ADDR_WIDTH-1:0] [NUM_MSGS-1:0] next_pkt_start_addr;
-    node_id_t node_id;
+    logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -54,7 +55,11 @@ module endpoint #(
         .msg_if(msg_if)
     );
 
-    tx_fsm #(.NUM_MSGS(NUM_MSGS), .TX_SEND_ADDR(TX_SEND_ADDR)) tx(
+    tx_fsm #(
+        .NUM_MSGS(NUM_MSGS),
+        .TX_SEND_ADDR(TX_SEND_ADDR),
+        .DEPTH(DEPTH)
+    ) tx(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
@@ -64,8 +69,7 @@ module endpoint #(
     );
 
     // TODO:
-    assign node_id = 0;
-    assign tx_fsm_if.node_id = node_id;
+    assign tx_fsm_if.node_id = NODE_ID;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin

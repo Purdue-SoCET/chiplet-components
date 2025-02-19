@@ -4,7 +4,8 @@
 
 module tx_fsm#(
     parameter NUM_MSGS=4,
-    parameter TX_SEND_ADDR=32'h1004
+    parameter TX_SEND_ADDR=32'h1004,
+    parameter DEPTH
 )(
     input logic clk, n_rst,
     tx_fsm_if.tx_fsm tx_if,
@@ -22,7 +23,7 @@ module tx_fsm#(
 
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
-    logic length_clear, length_done;
+    logic length_clear, length_done, stop_sending;
     logic flit_sent;
     flit_t flit;
     pkt_id_t curr_pkt_id, next_curr_pkt_id;
@@ -42,6 +43,18 @@ module tx_fsm#(
         .overflow_flag(length_done)
     );
 
+    socetlib_counter #(
+        .NBITS(PKT_LENGTH_WIDTH)
+    ) send_counter (
+        .CLK(clk),
+        .nRST(n_rst),
+        .clear(switch_if.buffer_available[0][0]),
+        .count_enable(switch_if.data_ready_out[0]),
+        .overflow_val(3*DEPTH/4),
+        .count_out(),
+        .overflow_flag(stop_sending)
+    );
+
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             state <= IDLE;
@@ -54,7 +67,7 @@ module tx_fsm#(
         end
     end
 
-    assign flit_sent = !switch_if.buffer_full && switch_if.data_ready_out;
+    assign flit_sent = !stop_sending && switch_if.data_ready_out[0];
 
     // Next state logic
     always_comb begin
@@ -72,6 +85,7 @@ module tx_fsm#(
                     next_state = IDLE;
                 end
             end
+            default : begin end
         endcase
     end
 
@@ -92,7 +106,7 @@ module tx_fsm#(
         resp_hdr = resp_hdr_t'(tx_bus_if.rdata);
         switch_cfg_hdr = switch_cfg_hdr_t'(tx_bus_if.rdata);
         next_curr_pkt_length = curr_pkt_length;
-        switch_if.data_ready_in = 0;
+        switch_if.data_ready_in[0] = 0;
         flit = flit_t'(0);
 
         casez (state)
@@ -101,16 +115,16 @@ module tx_fsm#(
                 next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
             end
             SEND_PKT : begin
-                switch_if.data_ready_in = 1;
+                switch_if.data_ready_in[0] = !stop_sending;
                 tx_cache_if.ren = 1;
-                // TODO: how to tell that switch consumed value?
                 flit.vc = 0;
                 flit.id = curr_pkt_id;
                 flit.req = tx_if.node_id;
                 flit.payload = tx_bus_if.rdata;
             end
+            default : begin end
         endcase
 
-        switch_if.in = flit;
+        switch_if.in[0] = flit;
     end
 endmodule
