@@ -54,7 +54,9 @@ module switch_endpoint_wrapper #(
     bus_protocol_if bus_if();
 
     endpoint #(
-        .NUM_MSGS(4)
+        .NUM_MSGS(4),
+        .NODE_ID(1),
+        .DEPTH(8)
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),

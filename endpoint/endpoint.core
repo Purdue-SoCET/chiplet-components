@@ -32,6 +32,8 @@ filesets:
             - "waves/endpoint.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
+        depend:
+            - "socet:chiplet:switch"
 
     synfiles:
         depend:
