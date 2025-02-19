@@ -32,6 +32,8 @@ module endpoint #(
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
 
+    req_fifo #() requestor_fifo 
+
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
         .clk(clk),
         .n_rst(n_rst),
