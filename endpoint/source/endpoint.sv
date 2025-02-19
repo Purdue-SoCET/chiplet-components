@@ -1,6 +1,7 @@
 `timescale 1ns / 10ps
+
 `include "chiplet_types_pkg.vh"
-`include "phy_manager_if.vh"
+`include "switch_if.vh"
 `include "message_table_if.sv"
 
 module endpoint #(
@@ -8,8 +9,8 @@ module endpoint #(
 ) (
     input logic clk, n_rst,
     input logic data_ready,
-    input flit_t flit,
-    phy_manager_if.rx_switch switch_if,
+    input chiplet_types_pkg::flit_t flit,
+    switch_if.endpoint switch_if,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
@@ -36,8 +37,8 @@ module endpoint #(
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
         .clk(clk),
         .n_rst(n_rst),
-        .in_flit('flit_t('0)),
-        .data_ready(1'b0)
+        .in_flit(flit_t'('0)),
+        .data_ready(1'b0),
         .bus_if(tx_bus_if)
     );
 

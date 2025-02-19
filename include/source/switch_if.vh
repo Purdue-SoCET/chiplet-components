@@ -24,6 +24,11 @@ interface switch_if #(
         input in, credit_granted, data_ready_in, packet_sent, 
         output out, buffer_available, data_ready_out
     );
+
+    modport endpoint(
+        output in, credit_granted, data_ready_in, packet_sent,
+        input out, buffer_available, data_ready_out
+    );
 endinterface
 
 `endif //SWITCH_VH

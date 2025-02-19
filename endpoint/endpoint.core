@@ -24,7 +24,9 @@ filesets:
 
     tb:
         files:
-            - "testbench/tb_endpoint.sv"
+            - "testbench/EndSwitchManager.cc" : { file_type: cppSource }
+            - "testbench/switch_endpoint_wrapper.sv"
+            - "testbench/tb_switch_endpoint.cc" : { file_type: cppSource }
             - "waves/endpoint.do": { file_type: user }
             - "waves/endpoint.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
@@ -45,7 +47,7 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_endpoint
+        toplevel: switch_endpoint_wrapper
         tools:
             modelsim:
                 vsim_options:
@@ -62,9 +64,13 @@ targets:
                 verilator_options:
                     - --cc
                     - --trace
+                    - --trace-structs
                     - --main
                     - --timing
                     - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -trace-fst
                 make_options:
                     - -j
 

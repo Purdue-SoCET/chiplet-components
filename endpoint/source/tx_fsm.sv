@@ -1,5 +1,5 @@
 `include "chiplet_types_pkg.vh"
-`include "phy_manager_if.vh"
+`include "switch_if.vh"
 `include "tx_fsm_if.sv"
 
 module tx_fsm#(
@@ -8,7 +8,7 @@ module tx_fsm#(
 )(
     input logic clk, n_rst,
     tx_fsm_if.tx_fsm tx_if,
-    phy_manager_if.rx_switch switch_if,
+    switch_if.endpoint switch_if,
     bus_protocol_if.protocol tx_cache_if,
     message_table_if.endpoint msg_if
 );

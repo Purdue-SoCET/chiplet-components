@@ -23,9 +23,9 @@ module switch_endpoint_wrapper #(
     output logic [DATA_WIDTH-1:0] rdata,
     output logic error, request_stall,
     input logic [1:0] packet_sent,
-    input flit_t in_flit,
+    input chiplet_types_pkg::flit_t in_flit,
     input logic data_ready_in,
-    output flit_t out,
+    output chiplet_types_pkg::flit_t out,
     output logic data_ready_out,
     output logic credit_granted
 );
@@ -48,8 +48,7 @@ module switch_endpoint_wrapper #(
         .sw_if(sw_if1)
     );
 
-    phy_manager_if.rx_switch rx_switch_if();
-    bus_protocol_if.peripheral_vital bus_if();
+    bus_protocol_if bus_if();
 
     endpoint #(
         .NUM_MSGS(NUM_MSGS)
@@ -58,10 +57,11 @@ module switch_endpoint_wrapper #(
         .n_rst(n_rst),
         .data_ready(sw_if1.data_ready_out[0]),
         .flit(sw_if1.out[0]),
-        .switch_if(rx_switch_if),
+        .switch_if(sw_if1),
         .bus_if(bus_if)
     );
 
+    /*
     rx_switch_if.buffer_full = sw_if1.buffer_available[0];
     sw_if1.data_ready_in[0] = rx_switch_if.data_ready;
     sw_if1.data_ready_in[1] = data_ready_in;
@@ -80,8 +80,5 @@ module switch_endpoint_wrapper #(
     rdata = bus_if.rdata;
     error = bus_if.error;
     request_stall = bus_if.request_stall;
-
-
-
-
+    */
 endmodule

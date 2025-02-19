@@ -5,7 +5,7 @@ module cache#(
     parameter RX = 0
 )(
     input logic clk, n_rst,
-    input flit_t in_flit,
+    input chiplet_types_pkg::flit_t in_flit,
     input logic data_ready,
     bus_protocol_if.peripheral_vital bus_if
 );
@@ -14,7 +14,6 @@ module cache#(
     localparam ADDR_LEN = $clog2(NUM_WORDS);
 
     logic [31:0] rx_addr, next_rx_addr;
-    
 
     word_t byte_en;
 
@@ -27,7 +26,7 @@ module cache#(
             rx_addr <= '0;
         end else begin
             cache <= next_cache;
-            rx_addr <= next_rx_addr
+            rx_addr <= next_rx_addr;
         end
     end
 
