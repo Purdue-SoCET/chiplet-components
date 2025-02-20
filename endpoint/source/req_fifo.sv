@@ -19,7 +19,7 @@ module req_fifo#(
         OVERRUN,
         UNDERRUN,
         REN
-    };
+    } addr_e;
 
     socetlib_fifo #(.T(logic[4:0]), .DEPTH(DEPTH)) requestor_fifo (
         .CLK(clk),
@@ -27,10 +27,13 @@ module req_fifo#(
         .WEN(crc_valid),
         .REN(ren),
         .wdata(req),
+        .clear(0),
+        .full(),
+        .empty(),
         .underrun(underrun),
         .overrun(overflow),
         .count(count),
-        .rdata(fifo_read),
+        .rdata(fifo_read)
     );
 
 always_ff @(posedge clk, negedge n_rst) begin
@@ -61,6 +64,7 @@ always_comb begin
                 ren = 1'b1;
                 next_rdata = fifo_read;
             end
+            default : begin end
         endcase
     end
 end

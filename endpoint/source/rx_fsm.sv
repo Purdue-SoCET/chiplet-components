@@ -95,7 +95,7 @@ module rx_fsm#()(
         casez (state)
             IDLE : begin end
             GET_LENGTH : begin
-                next_curr_pkt_length = expected_num_flits(switch_if.out[0]);
+                next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
                 cache_enable = 1;
                 count_enable = switch_if.data_ready_out[0];
                 next_cache_addr = cache_addr + 
