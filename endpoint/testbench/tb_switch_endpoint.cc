@@ -1,6 +1,7 @@
-#include "NetworkManager.h"
+#include "EndSwitchManager.h"
 #include "Vswitch_endpoint_wrapper.h"
 #include "crc.h"
+#include "utility.h"
 #include "verilated.h"
 #include "verilated_fst_c.h"
 #include <queue>
@@ -32,7 +33,7 @@ void tick() {
 
 void reset() {
     dut->clk = 0;
-    dut->nrst = 1;
+    dut->n_rst = 1;
     for (int i = 0; i < 4; i++) {
         dut->wen = 0;
         dut->ren = 0;
@@ -44,11 +45,11 @@ void reset() {
     }
 
     tick();
-    dut->nrst = 0;
+    dut->n_rst = 0;
     tick();
     tick();
     tick();
-    dut->nrst = 1;
+    dut->n_rst = 1;
     tick();
     tick();
 }
@@ -93,9 +94,9 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                     (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
-    std::queue<uint32_t> flit_queue = {};
+    std::queue<uint64_t> flit_queue = {};
     for (auto f : flits) {
-        flit_queue.push(f & 0xFFFFFFFF);
+        flit_queue.push(f & FLIT_MASK);
     }
     manager->queuePacketCheck(to, flit_queue);
 }

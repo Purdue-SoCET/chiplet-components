@@ -32,6 +32,7 @@ module endpoint #(
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_bus_if();
+    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
 
@@ -41,17 +42,20 @@ module endpoint #(
         .crc_valid(enable),
         .req(req),
         .overflow(overflow),
-        .bus_if() //TODO add another bus interface??
+        .bus_if(rx_fifo_if) //TODO add another bus interface??
     );
 
     rx_fsm #() rx_fsm(
         .clk(clk),
         .n_rst(n_rst),
-        .switch_if(switch_if)
+        .switch_if(switch_if),
         .overflow(overflow),
         .crc_valid(crc_valid),
         .enable(enable),
         .req(req),
+        .crc_error(/* TODO */),
+        .cache_enable(),
+        .cache_addr()
         //TODO add appropriate outputs to fsm
     );
 

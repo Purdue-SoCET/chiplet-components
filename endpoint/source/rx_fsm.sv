@@ -7,7 +7,7 @@ module rx_fsm#()(
     output logic enable, cache_enable,
     output logic [6:0] cache_addr,
     output logic [4:0] req,
-    switch_if.endpoint switch_if,
+    switch_if.endpoint switch_if
 );
     import chiplet_types_pkg::*;
 
@@ -70,7 +70,7 @@ module rx_fsm#()(
                 if(crc_error || overflow) begin
                     next_state = IDLE;
                 end else if(crc_valid) begin
-                    next_state = REQ_EN
+                    next_state = REQ_EN;
                 end
             end
             REQ_EN: begin
@@ -89,7 +89,7 @@ module rx_fsm#()(
         casez (state)
             IDLE : begin end
             GET_LENGTH : begin
-                next_curr_pkt_length = expected_num_flits(switch_if.out[0]);
+                next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
                 cache_enable = 1;
                 //cache_addr = 
                 //TODO specify cache address
