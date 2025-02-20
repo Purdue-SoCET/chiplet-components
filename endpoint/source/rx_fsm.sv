@@ -1,14 +1,9 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 
-module rx_fsm#(
-    parameter NUM_MSGS=4,
-    parameter TX_SEND_ADDR=32'h1004,
-    parameter DEPTH
-)(
+module rx_fsm#()(
     input logic clk, n_rst,
     switch_if.endpoint switch_if,
-    bus_protocol_if.protocol tx_cache_if,
 );
     import chiplet_types_pkg::*;
 
