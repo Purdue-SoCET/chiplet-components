@@ -11,9 +11,9 @@
 // The network manager class maintains queues of flits to be sent into switches and checks values
 // across the network
 class NetworkManager {
-    std::array<std::queue<uint64_t>, 2> to_be_sent;
+    std::array<std::queue<std::queue<uint32_t>>, 2> to_be_sent;
     std::array<uint16_t, 8> buffer_occupancy;
-    std::array<std::vector<std::queue<uint64_t>>, 2> to_check;
+    std::array<std::vector<std::queue<uint32_t>>, 2> to_check;
     uint32_t endpoint_addr;
 
   public:
@@ -22,8 +22,8 @@ class NetworkManager {
                                           BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE}),
           to_check(), endpoint_addr(0) {}
 
-    void queuePacketSend(uint8_t from, const std::span<uint64_t> &flit);
-    void queuePacketCheck(uint8_t to, std::queue<uint64_t> flit);
+    void queuePacketSend(uint8_t from, std::queue<uint32_t> flit);
+    void queuePacketCheck(uint8_t to, std::queue<uint32_t> flit);
     void reportRemainingCheck();
     void tick();
     void reset();
