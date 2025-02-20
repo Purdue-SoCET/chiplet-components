@@ -30,7 +30,8 @@ module switch_endpoint_wrapper #(
     output chiplet_types_pkg::flit_t out_flit,
     output data_ready_out,
 
-    input logic packet_sent
+    input logic packet_sent,
+    input logic credit_granted
 );
     switch_if #(
         .NUM_OUTPORTS(2),
@@ -80,4 +81,5 @@ module switch_endpoint_wrapper #(
     assign data_ready_out = sw_if.data_ready_out[1];
 
     assign sw_if.packet_sent[1] = packet_sent;
+    assign sw_if.credit_granted[1][0] = credit_granted;
 endmodule

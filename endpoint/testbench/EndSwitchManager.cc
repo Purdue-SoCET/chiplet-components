@@ -23,11 +23,13 @@ void NetworkManager::reset() {
 }
 
 void NetworkManager::tick() {
+    static int packets_taken = 0;
     // Check outputs
     if (/* need some register to see if there's data available */ false) {
         // TODO: read and see if the data matches up
     }
     dut->packet_sent = 0;
+    dut->credit_granted = 0;
     if (dut->data_ready_out && this->to_check[1].size() > 0) {
         std::vector<uint32_t> expected;
         for (auto possible_packets : this->to_check[1]) {
@@ -42,6 +44,11 @@ void NetworkManager::tick() {
             }
         }
         dut->packet_sent = 1;
+        packets_taken++;
+        if (packets_taken == 6) {
+            dut->credit_granted = 1;
+            packets_taken = 0;
+        }
     }
 
     // Update any inputs
@@ -55,10 +62,11 @@ void NetworkManager::tick() {
                 } else {
                     dut->addr = 0x1004;
                     dut->wen = 1;
-                    dut->wdata = 1;
+                    dut->wdata = this->curr_id;
+                    this->curr_id = (this->curr_id + 1) % 4;
                 }
             } else {
-                if (!dut->wen) dut->addr = 0x2000;
+                if (!dut->wen) dut->addr = 0x2000 + (0x80 * this->curr_id);
                 else dut->addr += 4;
                 dut->wen = 1;
                 dut->wdata = this->to_be_sent[0].front().front();

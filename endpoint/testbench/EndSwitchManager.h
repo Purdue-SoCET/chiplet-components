@@ -14,13 +14,13 @@ class NetworkManager {
     std::array<std::queue<std::queue<uint32_t>>, 2> to_be_sent;
     std::array<uint16_t, 8> buffer_occupancy;
     std::array<std::vector<std::queue<uint32_t>>, 2> to_check;
-    uint32_t endpoint_addr;
+    uint8_t curr_id;
 
   public:
     NetworkManager()
         : to_be_sent(), buffer_occupancy({BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE,
                                           BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE, BUFFER_SIZE}),
-          to_check(), endpoint_addr(0) {}
+          to_check(), curr_id(0) {}
 
     void queuePacketSend(uint8_t from, std::queue<uint32_t> flit);
     void queuePacketCheck(uint8_t to, std::queue<uint32_t> flit);

@@ -16,7 +16,7 @@ module endpoint #(
     import chiplet_types_pkg::*;
 
     localparam CACHE_NUM_WORDS = 128;
-    localparam ADDR_WIDTH = $clog2(CACHE_NUM_WORDS) + 2;
+    localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
     localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;
     localparam PKT_ID_ADDR_ADDR_LEN = NUM_MSGS * 4;
     localparam TX_SEND_ADDR = 32'h1004;

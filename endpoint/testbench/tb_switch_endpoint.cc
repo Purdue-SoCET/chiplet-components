@@ -31,6 +31,14 @@ void tick() {
     }
 }
 
+void writeBus(uint32_t addr, uint32_t data) {
+    dut->addr = addr;
+    dut->wdata = data;
+    dut->wen = 1;
+    tick();
+    dut->wen = 0;
+}
+
 void reset() {
     dut->clk = 0;
     dut->n_rst = 1;
@@ -140,6 +148,11 @@ void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint
 void resetAndInit() {
     reset();
     manager->reset();
+
+    writeBus(0, 0);
+    writeBus(0x4, 0x080);
+    writeBus(0x8, 0x100);
+    writeBus(0xC, 0x180);
     // Set up routing table
     // For 1:
     // {*, *, 1}
@@ -172,6 +185,21 @@ int main(int argc, char **argv) {
     {
         resetAndInit();
         std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
+        sendSmallWrite(1, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+        data = {0x12345678, 0xFAFAFA, 0xCAFECAFE, 0xAFAFAFAF};
+        sendSmallWrite(1, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+        data = {rand(), rand()};
+        sendSmallWrite(1, 2, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+        data = {rand(), rand()};
         sendSmallWrite(1, 2, data);
         while (!manager->isComplete()) {
             tick();

@@ -68,10 +68,18 @@ module tx_fsm#(
 
     // Next state logic
     always_comb begin
+        next_curr_pkt_id = curr_pkt_id;
         casez (state)
             IDLE : begin
                 if (|msg_if.trigger_send) begin
                     next_state = START_SEND_PKT;
+                    for (int i = 0; i < NUM_MSGS; i++) begin
+                        if (msg_if.trigger_send[i]) begin
+                            /* verilator lint_off WIDTHTRUNC */
+                            next_curr_pkt_id = i;
+                            /* verilator lint_on WIDTHTRUNC */
+                        end
+                    end
                 end
             end
             START_SEND_PKT : begin
