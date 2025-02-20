@@ -4,7 +4,6 @@
 module rx_fsm#()(
     input logic clk, n_rst,
     input logic overflow, 
-    input word_t crc_val,
     output logic fifo_enable, cache_enable,
     output word_t cache_addr,
     output node_id_t req,
@@ -14,7 +13,7 @@ module rx_fsm#()(
     import chiplet_types_pkg::*;
 
     typedef enum logic [2:0] {
-        IDLE, GET_LENGTH, CRC_CHECK, REQ_EN
+        IDLE, HEADER, CRC_WAIT, CRC_CHECK, BODY, REQ_EN
     } state_e;
 
     typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
@@ -22,7 +21,7 @@ module rx_fsm#()(
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     logic length_clear, length_done, stop_sending;
-    logic count_enable;
+    logic count_enable, done, clear_crc, crc_update;
     word_t next_cache_addr, prev_cache_addr, next_prev_cache_addr;
     // pkt_id_t curr_pkt_id, next_curr_pkt_id;
     // long_hdr_t       long_hdr;
@@ -30,6 +29,16 @@ module rx_fsm#()(
     // msg_hdr_t        msg_hdr;
     // resp_hdr_t       resp_hdr;
     // switch_cfg_hdr_t switch_cfg_hdr;
+
+    socetlib_crc #() CRC_CHECKER(
+        .CLK(clk),
+        .nRST(n_rst),
+        .clear(clear_crc),
+        .update(crc_update),
+        .in(switch_if.out[0].payload),
+        .crc_out(crc_val),
+        .done(done)
+    );
 
     socetlib_counter #(.NBITS(PKT_LENGTH_WIDTH)) length_counter (
         .CLK(clk),
@@ -65,12 +74,23 @@ module rx_fsm#()(
         casez (state)
             IDLE : begin
                 if(switch_if.data_ready_out[0]) begin
-                    next_state = GET_LENGTH;
+                    next_state = HEADER;
                 end
             end
-            GET_LENGTH : begin
-                if(length_done)begin
+            HEADER : begin
+                next_state = CRC_WAIT;
+            end
+            CRC_WAIT : begin
+                if(done && !length_done) begin
+                    next_state = BODY;
+                end
+                else if(done && length_done) begin
                     next_state = CRC_CHECK;
+                end
+            end
+            BODY : begin
+                if(switch_if.data_ready_out[0])begin
+                    next_state = CRC_WAIT;
                 end
             end
             CRC_CHECK : begin
@@ -96,16 +116,28 @@ module rx_fsm#()(
         length_clear = 0;
         next_cache_addr = cache_addr;
         crc_error = 0;
+        clear_crc = 0;
+        crc_update = 0;
         next_prev_cache_addr = prev_cache_addr;
 
         casez (state)
-            IDLE : begin end
-            GET_LENGTH : begin
+            IDLE : begin
+                clear_crc = 1;
+             end
+            HEADER : begin
                 next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
                 cache_enable = 1;
                 count_enable = switch_if.data_ready_out[0];
                 next_cache_addr = cache_addr + 4;
                 //TODO specify cache address
+            end
+            CRC_WAIT : begin
+                crc_update = !done;
+            end
+            BODY : begin
+                cache_enable = switch_if.data_ready_out[0];
+                count_enable = switch_if.data_ready_out[0];
+                next_cache_addr = cache_addr + 
             end
             CRC_CHECK : begin
                 if(crc_val != switch_if.out[0].payload) begin
@@ -114,8 +146,10 @@ module rx_fsm#()(
                 end 
              end
             REQ_EN: begin
-                fifo_enable = 1;
-                length_clear = 1;
+                if(!overflow) begin
+                    fifo_enable = 1;
+                    length_clear = 1;
+                end
             end
             default : begin end
         endcase 
