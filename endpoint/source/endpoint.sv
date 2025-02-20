@@ -24,15 +24,18 @@ module endpoint #(
     localparam TX_CACHE_END_ADDR = TX_CACHE_START_ADDR + CACHE_ADDR_LEN;
     localparam RX_CACHE_START_ADDR = 32'h3000;
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
-
+    localparam REQ_FIFO_START_ADDR = 32'h3400;
+    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 16;
+    
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid, rx_cache_wen, crc_error;
+    logic enable, overflow, crc_valid, crc_error;
     node_id_t req;
-    word_t crc_val, rx_cache_addr;
+    word_t crc_val;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_bus_if();
+    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
@@ -49,14 +52,13 @@ module endpoint #(
     rx_fsm #() rx_fsm(
         .clk(clk),
         .n_rst(n_rst),
-        .switch_if(switch_if),
         .overflow(overflow),
         .crc_val(crc_val),
         .fifo_enable(enable),
         .req(req),
         .crc_error(crc_error),
-        .cache_enable(rx_cache_wen),
-        .cache_addr(rx_cache_addr)
+        .switch_if(switch_if),
+        .bus_protocol_if (rx_cache_if)
     );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
@@ -130,6 +132,16 @@ module endpoint #(
             tx_cache_if.request_stall = tx_bus_if.request_stall;
         end
 
+        if (rx_cache_if.wen) begin
+            rx_bus_if.wen = rx_cache_if.wen;
+            rx_bus_if.wdata = rx_cache_if.wdata;
+            rx_bus_if.ren = rx_cache_if.ren;
+            rx_bus_if.addr = rx_cache_if.addr;
+            rx_cache_if.rdata = rx_bus_if.rdata;
+            rx_cache_if.error = rx_bus_if.error;
+            rx_cache_if.request_stall = rx_bus_if.request_stall;
+        end
+
         // TODO: what's the best way to route this, I want to define maps,
         // send them to whereever they need to go, and have this logic there
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
@@ -166,8 +178,13 @@ module endpoint #(
             rx_bus_if.wdata = bus_if.wdata;
             rx_bus_if.strobe = bus_if.strobe;
             bus_if.rdata = rx_bus_if.rdata;
-            bus_if.error = rx_bus_if.wen;
+            //bus_if.error = rx_bus_if.wen;
             bus_if.request_stall = rx_bus_if.request_stall;
+        end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
+            rx_fifo_if.ren = bus_if.ren;
+            rx_fifo_if.addr = bus_if.addr;
+            bus_if.rdata = rx_fifo_if.rdata;
         end
     end
+    
 endmodule

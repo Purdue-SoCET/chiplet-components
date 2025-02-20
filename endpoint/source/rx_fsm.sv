@@ -4,11 +4,11 @@
 module rx_fsm#()(
     input logic clk, n_rst,
     input logic overflow, 
-    output logic fifo_enable, cache_enable,
-    output word_t cache_addr,
+    output logic fifo_enable,
     output node_id_t req,
     output logic crc_error,
-    switch_if.endpoint switch_if
+    switch_if.endpoint switch_if,
+    bus_protocol_if.protocol rx_cache_if
 );
     import chiplet_types_pkg::*;
 
@@ -54,19 +54,20 @@ module rx_fsm#()(
         if (!n_rst) begin
             state <= IDLE;
             curr_pkt_length <= 0;
-            cache_addr <= 0;
+            rx_cache_if.addr <= 0;
             // curr_pkt_id <= 0;
             prev_cache_addr <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
-            cache_addr <= next_cache_addr;
+            rx_cache_if.addr <= next_cache_addr;
             // curr_pkt_id <= next_curr_pkt_id;
             prev_cache_addr <= next_prev_cache_addr;
         end
     end
 
     assign req = switch_if.out[0].req;
+    assign rx_cache_if.wdata = switch_if.out[0].payload;
 
     // Next state logic
     always_comb begin
@@ -112,9 +113,9 @@ module rx_fsm#()(
         next_curr_pkt_length = curr_pkt_length;
         count_enable = 0;
         fifo_enable = 0;
-        cache_enable = 0;
+        rx_cache_if.wen = 0;
         length_clear = 0;
-        next_cache_addr = cache_addr;
+        next_cache_addr = rx_cache_if.addr;
         crc_error = 0;
         clear_crc = 0;
         crc_update = 0;
@@ -126,18 +127,17 @@ module rx_fsm#()(
              end
             HEADER : begin
                 next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
-                cache_enable = 1;
+                rx_cache_if.wen = 1;
                 count_enable = switch_if.data_ready_out[0];
-                next_cache_addr = cache_addr + 4;
-                //TODO specify cache address
+                next_cache_addr = rx_cache_if.addr + 4;
             end
             CRC_WAIT : begin
                 crc_update = !done;
             end
             BODY : begin
-                cache_enable = switch_if.data_ready_out[0];
-                count_enable = switch_if.data_ready_out[0];
-                next_cache_addr = cache_addr + 
+                rx_cache_if.wen = 1;
+                count_enable = 1;
+                next_cache_addr = rx_cache_if.addr + 4;
             end
             CRC_CHECK : begin
                 if(crc_val != switch_if.out[0].payload) begin

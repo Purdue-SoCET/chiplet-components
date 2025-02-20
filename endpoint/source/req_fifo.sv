@@ -10,16 +10,13 @@ module req_fifo#(
     bus_protocol_if.peripheral_vital bus_if
 );
 
+    localparam COUNT_ADDR = 32'h3400;
+    localparam OVERRUN_ADDR = 32'h3404;
+    localparam UNDERRUN_ADDR = 32'h3408;
+    localparam REN_ADDR = 32'h340C;
+
     logic ren, underrun, next_overflow;
     node_id_t next_rdata, rdata, fifo_read, count;
-
-    typedef enum logic [1:0]
-    {
-        COUNT,
-        OVERRUN,
-        UNDERRUN,
-        REN
-    } addr_e;
 
     socetlib_fifo #(.T(logic[4:0]), .DEPTH(DEPTH)) requestor_fifo (
         .CLK(clk),
@@ -51,16 +48,16 @@ always_comb begin
 
     if(bus_if.ren) begin
         casez(bus_if.addr)
-            COUNT: begin
+            COUNT_ADDR: begin
                 next_rdata = count;
             end
-            OVERRUN: begin
+            OVERRUN_ADDR: begin
                 next_rdata = overflow;
             end
-            UNDERRUN: begin
+            UNDERRUN_ADDR: begin
                 next_rdata = underrun;
             end
-            REN: begin
+            REN_ADDR: begin
                 ren = 1'b1;
                 next_rdata = fifo_read;
             end
