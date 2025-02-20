@@ -24,7 +24,6 @@ module tx_fsm#(
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     logic length_clear, length_done, stop_sending;
-    logic flit_sent;
     flit_t flit;
     pkt_id_t curr_pkt_id, next_curr_pkt_id;
     long_hdr_t       long_hdr;
@@ -37,7 +36,7 @@ module tx_fsm#(
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
-        .count_enable(flit_sent),
+        .count_enable(switch_if.data_ready_in[0]),
         .overflow_val(curr_pkt_length),
         .count_out(length),
         .overflow_flag(length_done)
@@ -49,7 +48,7 @@ module tx_fsm#(
         .CLK(clk),
         .nRST(n_rst),
         .clear(switch_if.buffer_available[0][0]),
-        .count_enable(switch_if.data_ready_out[0]),
+        .count_enable(switch_if.data_ready_in[0]),
         .overflow_val(3*DEPTH/4),
         .count_out(),
         .overflow_flag(stop_sending)
@@ -67,8 +66,6 @@ module tx_fsm#(
         end
     end
 
-    assign flit_sent = !stop_sending && switch_if.data_ready_out[0];
-
     // Next state logic
     always_comb begin
         casez (state)
@@ -81,7 +78,7 @@ module tx_fsm#(
                 next_state = SEND_PKT;
             end
             SEND_PKT : begin
-                if (length_done && flit_sent) begin
+                if (length_done) begin
                     next_state = IDLE;
                 end
             end
@@ -108,14 +105,19 @@ module tx_fsm#(
         next_curr_pkt_length = curr_pkt_length;
         switch_if.data_ready_in[0] = 0;
         flit = flit_t'(0);
+        length_clear = 0;
 
         casez (state)
-            IDLE : begin end
+            IDLE : begin
+                next_curr_pkt_length = '1;
+                length_clear = 1;
+            end
             START_SEND_PKT : begin
+                tx_cache_if.ren = 1;
                 next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
             end
             SEND_PKT : begin
-                switch_if.data_ready_in[0] = !stop_sending;
+                switch_if.data_ready_in[0] = !stop_sending && !length_done;
                 tx_cache_if.ren = 1;
                 flit.vc = 0;
                 flit.id = curr_pkt_id;
