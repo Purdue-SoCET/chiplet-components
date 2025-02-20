@@ -26,7 +26,8 @@ module endpoint #(
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic crc_valid, overflow;
+    logic enable, overflow, crc_valid;
+    logic [4:0] req;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -37,8 +38,8 @@ module endpoint #(
     req_fifo #() requestor_fifo(
         .clk(clk),
         .n_rst(n_rst),
-        .crc_valid(crc_valid),
-        .req(switch_if.out[0].req),
+        .crc_valid(enable),
+        .req(req),
         .overflow(overflow),
         .bus_if() //TODO add another bus interface??
     );
@@ -47,6 +48,10 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .switch_if(switch_if)
+        .overflow(overflow),
+        .crc_valid(crc_valid),
+        .enable(enable),
+        .req(req),
         //TODO add appropriate outputs to fsm
     );
 

@@ -3,12 +3,16 @@
 
 module rx_fsm#()(
     input logic clk, n_rst,
+    input logic overflow, crc_valid, crc_error,
+    output logic enable, cache_enable,
+    output logic [6:0] cache_addr,
+    output logic [4:0] req,
     switch_if.endpoint switch_if,
 );
     import chiplet_types_pkg::*;
 
     typedef enum logic [2:0] {
-        IDLE, GET_LENGTH, CRC_WAIT
+        IDLE, GET_LENGTH, CRC_WAIT, REQ_EN
     } state_e;
 
     typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
@@ -47,6 +51,8 @@ module rx_fsm#()(
         end
     end
 
+    assign req = switch_if.out[0].req;
+
     // Next state logic
     always_comb begin
         next_state = state;
@@ -58,11 +64,17 @@ module rx_fsm#()(
             end
             GET_LENGTH : begin
                 next_state = CRC_WAIT;
+                
             end
             CRC_WAIT : begin
-                if(length_done) begin
+                if(crc_error || overflow) begin
                     next_state = IDLE;
+                end else if(crc_valid) begin
+                    next_state = REQ_EN
                 end
+            end
+            REQ_EN: begin
+                next_state = IDLE;
             end
             default : begin end
         endcase
@@ -72,13 +84,23 @@ module rx_fsm#()(
     always_comb begin
         next_curr_pkt_length = curr_pkt_length;
         count_enable = 0;
+        enable = 0;
+        cache_enable = 0;
         casez (state)
             IDLE : begin end
             GET_LENGTH : begin
-                next_curr_pkt_length = expected_num_flits(switch_if.out);
+                next_curr_pkt_length = expected_num_flits(switch_if.out[0]);
+                cache_enable = 1;
+                //cache_addr = 
+                //TODO specify cache address
             end
             CRC_WAIT : begin
                 count_enable = switch_if.data_ready_out[0];
+                cache_enable = 1;
+                //cache_addr = 
+            end
+            REQ_EN: begin
+                enable = 1;
             end
             default : begin end
         endcase 
