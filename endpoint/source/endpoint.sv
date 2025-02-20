@@ -26,7 +26,7 @@ module endpoint #(
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid, rx_cache_wen;
+    logic enable, overflow, crc_valid, rx_cache_wen, crc_error;
     node_id_t req;
     word_t crc_val, rx_cache_addr;
 
@@ -43,7 +43,7 @@ module endpoint #(
         .crc_valid(enable),
         .req(req),
         .overflow(overflow),
-        .bus_if(rx_fifo_if) //TODO add another bus interface??
+        .bus_if(rx_fifo_if)
     );
 
     rx_fsm #() rx_fsm(
@@ -54,7 +54,7 @@ module endpoint #(
         .crc_val(crc_val),
         .fifo_enable(enable),
         .req(req),
-        .crc_error(/* TODO */),
+        .crc_error(crc_error),
         .cache_enable(rx_cache_wen),
         .cache_addr(rx_cache_addr)
     );

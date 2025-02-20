@@ -6,8 +6,9 @@ module rx_fsm#()(
     input logic overflow, 
     input word_t crc_val,
     output logic fifo_enable, cache_enable,
-    output logic [31:0] cache_addr,
+    output word_t cache_addr,
     output node_id_t req,
+    output logic crc_error,
     switch_if.endpoint switch_if,
 );
     import chiplet_types_pkg::*;
@@ -92,6 +93,7 @@ module rx_fsm#()(
         cache_enable = 0;
         length_clear = 0;
         next_cache_addr = cache_addr;
+        crc_error = 0;
         casez (state)
             IDLE : begin end
             GET_LENGTH : begin
@@ -104,6 +106,7 @@ module rx_fsm#()(
             CRC_CHECK : begin
                 if(crc_val != switch_if.out[0].payload) begin
                     next_cache_addr = cache_addr -
+                    crc_error = 1;
                 end 
              end
             REQ_EN: begin
