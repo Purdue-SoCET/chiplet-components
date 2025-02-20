@@ -53,12 +53,11 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .overflow(overflow),
-        .crc_val(crc_val),
         .fifo_enable(enable),
         .req(req),
         .crc_error(crc_error),
         .switch_if(switch_if),
-        .bus_protocol_if (rx_cache_if)
+        .rx_cache_if (rx_cache_if)
     );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
@@ -136,7 +135,7 @@ module endpoint #(
             rx_bus_if.wen = rx_cache_if.wen;
             rx_bus_if.wdata = rx_cache_if.wdata;
             rx_bus_if.ren = rx_cache_if.ren;
-            rx_bus_if.addr = rx_cache_if.addr;
+            rx_bus_if.addr = rx_cache_if.addr[8:0];
             rx_cache_if.rdata = rx_bus_if.rdata;
             rx_cache_if.error = rx_bus_if.error;
             rx_cache_if.request_stall = rx_bus_if.request_stall;
@@ -182,7 +181,7 @@ module endpoint #(
             bus_if.request_stall = rx_bus_if.request_stall;
         end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
-            rx_fifo_if.addr = bus_if.addr;
+            rx_fifo_if.addr = bus_if.addr[8:0];
             bus_if.rdata = rx_fifo_if.rdata;
         end
     end

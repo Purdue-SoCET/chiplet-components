@@ -18,6 +18,7 @@ filesets:
             - "socet:chiplet:include"
             - "socet:bus-components:bus_protocol_if"
             - "socet:digital-lib:counter:0.0.1"
+            - "socet:digital-lib:crc:0.0.1"
 
     synth:
         depend:
