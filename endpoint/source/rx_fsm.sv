@@ -9,7 +9,7 @@ module rx_fsm#()(
     output word_t cache_addr,
     output node_id_t req,
     output logic crc_error,
-    switch_if.endpoint switch_if,
+    switch_if.endpoint switch_if
 );
     import chiplet_types_pkg::*;
 
@@ -23,7 +23,7 @@ module rx_fsm#()(
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     logic length_clear, length_done, stop_sending;
     logic count_enable;
-    word_t next_cache_addr;
+    word_t next_cache_addr, prev_cache_addr, next_prev_cache_addr;
     // pkt_id_t curr_pkt_id, next_curr_pkt_id;
     // long_hdr_t       long_hdr;
     // short_hdr_t      short_hdr;
@@ -45,13 +45,15 @@ module rx_fsm#()(
         if (!n_rst) begin
             state <= IDLE;
             curr_pkt_length <= 0;
-            cache_addr <= ;
+            cache_addr <= 0;
             // curr_pkt_id <= 0;
+            prev_cache_addr <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
             cache_addr <= next_cache_addr;
             // curr_pkt_id <= next_curr_pkt_id;
+            prev_cache_addr <= next_prev_cache_addr;
         end
     end
 
@@ -75,7 +77,7 @@ module rx_fsm#()(
                 if(crc_val != switch_if.out[0].payload) begin
                     next_state = IDLE;
                 end else begin
-                    next_state = REQ_EN
+                    next_state = REQ_EN;
                 end
             end
             REQ_EN: begin
@@ -94,18 +96,20 @@ module rx_fsm#()(
         length_clear = 0;
         next_cache_addr = cache_addr;
         crc_error = 0;
+        next_prev_cache_addr = prev_cache_addr;
+
         casez (state)
             IDLE : begin end
             GET_LENGTH : begin
                 next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
                 cache_enable = 1;
                 count_enable = switch_if.data_ready_out[0];
-                next_cache_addr = cache_addr + 
+                next_cache_addr = cache_addr + 4;
                 //TODO specify cache address
             end
             CRC_CHECK : begin
                 if(crc_val != switch_if.out[0].payload) begin
-                    next_cache_addr = cache_addr -
+                    next_cache_addr = prev_cache_addr;
                     crc_error = 1;
                 end 
              end

@@ -59,20 +59,15 @@ module endpoint #(
         .cache_addr(rx_cache_addr)
     );
 
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS), .RX(1'b1)) rx_cache(
+    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
         .clk(clk),
         .n_rst(n_rst),
-        .in_flit(switch_if.out[0]),
-        .data_ready(rx_cache_wen),
-        .write_addr(rx_cache_addr),
         .bus_if(rx_bus_if)
     );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
         .clk(clk),
         .n_rst(n_rst),
-        .in_flit(flit_t'('0)),
-        .data_ready(1'b0),
         .bus_if(tx_bus_if)
     );
 

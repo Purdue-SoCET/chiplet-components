@@ -1,13 +1,9 @@
 `include "chiplet_types_pkg.vh"
 
 module cache#(
-    parameter NUM_WORDS=128,
-    parameter RX = 0
+    parameter NUM_WORDS=128
 )(
     input logic clk, n_rst,
-    input chiplet_types_pkg::flit_t in_flit,
-    input logic data_ready,
-    input logic [31:0] write_addr,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
@@ -39,12 +35,8 @@ module cache#(
 
     always_comb begin
         next_cache = cache;
-        if (bus_if.wen || data_ready) begin
-            if(RX == 1) begin
-                next_cache[write_addr] = in_flit.payload;
-            end else begin 
-                next_cache[bus_if.addr[2+:ADDR_LEN]] = bus_if.wdata & byte_en;
-            end
+        if (bus_if.wen) begin
+            next_cache[bus_if.addr[2+:ADDR_LEN]] = bus_if.wdata & byte_en;
         end
     end
 endmodule
