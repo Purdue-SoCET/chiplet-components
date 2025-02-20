@@ -26,8 +26,9 @@ module endpoint #(
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid;
-    logic [4:0] req;
+    logic enable, overflow, crc_valid, rx_cache_wen;
+    node_id_t req;
+    word_t crc_val, rx_cache_addr;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -49,10 +50,20 @@ module endpoint #(
         .n_rst(n_rst),
         .switch_if(switch_if)
         .overflow(overflow),
-        .crc_valid(crc_valid),
-        .enable(enable),
+        .crc_val(crc_val),
+        .fifo_enable(enable),
         .req(req),
-        //TODO add appropriate outputs to fsm
+        .cache_enable(rx_cache_wen),
+        .cache_addr(rx_cache_addr)
+    );
+
+    cache #(.NUM_WORDS(CACHE_NUM_WORDS), .RX(1'b1)) rx_cache(
+        .clk(clk),
+        .n_rst(n_rst),
+        .in_flit(switch_if.out[0]),
+        .data_ready(rx_cache_wen),
+        .write_addr(rx_cache_addr),
+        .bus_if(rx_bus_if)
     );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
@@ -61,14 +72,6 @@ module endpoint #(
         .in_flit(flit_t'('0)),
         .data_ready(1'b0),
         .bus_if(tx_bus_if)
-    );
-
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS), .RX(1'b1)) rx_cache(
-        .clk(clk),
-        .n_rst(n_rst),
-        .in_flit(switch_if.out[0]),
-        .data_ready(switch_if.data_ready_out[0]),
-        .bus_if(rx_bus_if)
     );
 
     message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(

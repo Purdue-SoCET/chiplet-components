@@ -1,15 +1,17 @@
 `include "chiplet_types_pkg.vh"
 
-module req_fifo#() (
+module req_fifo#(
+    parameter DEPTH = 16
+) (
     input logic clk, n_rst,
     input logic crc_valid,
-    input logic [4:0] req,
+    input node_id_t req,
     output logic overflow,
     bus_protocol_if.peripheral_vital bus_if
 );
 
     logic ren, underrun, next_overflow;
-    logic [4:0] next_rdata, rdata, fifo_read, count;
+    node_id_t next_rdata, rdata, fifo_read, count;
 
     typedef enum logic [1:0]
     {
@@ -19,7 +21,7 @@ module req_fifo#() (
         REN
     };
 
-    socetlib_fifo #(.T(logic[4:0]), .DEPTH(16)) requestor_fifo (
+    socetlib_fifo #(.T(logic[4:0]), .DEPTH(DEPTH)) requestor_fifo (
         .CLK(clk),
         .nRST(n_rst),
         .WEN(crc_valid),

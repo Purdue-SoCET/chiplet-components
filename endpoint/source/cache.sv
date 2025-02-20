@@ -7,13 +7,12 @@ module cache#(
     input logic clk, n_rst,
     input chiplet_types_pkg::flit_t in_flit,
     input logic data_ready,
+    input logic [31:0] write_addr,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
 
     localparam ADDR_LEN = $clog2(NUM_WORDS);
-
-    logic [31:0] rx_addr, next_rx_addr;
 
     word_t byte_en;
 
@@ -23,10 +22,8 @@ module cache#(
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             cache <= '0;
-            rx_addr <= '0;
         end else begin
             cache <= next_cache;
-            rx_addr <= next_rx_addr;
         end
     end
 
@@ -42,11 +39,9 @@ module cache#(
 
     always_comb begin
         next_cache = cache;
-        next_rx_addr = rx_addr;
         if (bus_if.wen || data_ready) begin
             if(RX == 1) begin
-                next_cache[rx_addr] = in_flit.payload;
-                next_rx_addr += rx_addr + 8;
+                next_cache[write_addr] = in_flit.payload;
             end else begin 
                 next_cache[bus_if.addr[2+:ADDR_LEN]] = bus_if.wdata & byte_en;
             end
