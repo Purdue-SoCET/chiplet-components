@@ -39,11 +39,13 @@ void writeBus(uint32_t addr, uint32_t data) {
     dut->wen = 0;
 }
 
-void readBus(uint32_t addr) {
+uint32_t readBus(uint32_t addr) {
     dut->addr = addr;
     dut->ren = 1;
     tick();
+    uint32_t ret = dut->rdata;
     dut->ren = 0;
+    return ret;
 }
 
 void reset() {
@@ -102,6 +104,7 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     std::queue<uint32_t> flits;
     flits.push((uint32_t)(uint64_t)hdr);
     crc_t crc = crc_init();
+    crc = crc_update(crc, (uint32_t *)(uint64_t *)&hdr, 4);
     for (auto d : data) {
         flits.push((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                    (((uint64_t)hdr.req) << 32) | d);
@@ -173,6 +176,8 @@ void signalHandler(int signum) {
     std::cout << "Got signal " << signum << std::endl;
     std::cout << "Calling SystemVerilog 'final' block & exiting!" << std::endl;
 
+    manager->reportRemainingCheck();
+
     dut->final();
     trace->close();
 
@@ -223,36 +228,44 @@ int main(int argc, char **argv) {
         while (!manager->isComplete()) {
             tick();
         }
-        while (dut->rdata == 0) {
-            readBus(0x3400);
+        uint32_t header = SmallWrite(2, 1, 4, 0xCAFECAFE, 0);
+        while (readBus(0x3400) == 0) {}
+        ensure(readBus(0x3400), {{1}}, "num packets");
+        crc_t crc = crc_init();
+        ensure(readBus(0x3000), {{header}}, "header");
+        crc = crc_update(crc, &header, 4);
+        ensure(readBus(0x3004), {{data[0]}}, "body flit 1");
+        crc = crc_update(crc, &data[0], 4);
+        ensure(readBus(0x3008), {{data[1]}}, "body flit 2");
+        crc = crc_update(crc, &data[1], 4);
+        ensure(readBus(0x300C), {{data[2]}}, "body flit 3");
+        crc = crc_update(crc, &data[2], 4);
+        ensure(readBus(0x3010), {{data[3]}}, "body flit 4");
+        crc = crc_update(crc, &data[3], 4);
+        crc = crc_finalize(crc);
+        ensure(readBus(0x3014), {{crc}}, "crc");
+
+        // Random data test
+        data = {rand(), rand(), rand()};
+        sendSmallWrite(2, 1, data);
+        while (!manager->isComplete()) {
             tick();
         }
-        readBus(0x3000);
-        tick();
-        readBus(0x3400);
-        tick();
-        while (dut->rdata == 1) {
-            readBus(0x3400);
-            tick();
-        }
-        readBus(0x3004);
-        tick();
-        readBus(0x3400);
-        tick();
-        while (dut->rdata == 2) {
-            readBus(0x3400);
-            tick();
-        }
-        readBus(0x3008);
-        tick();
-        readBus(0x3400);
-        tick();
-        while (dut->rdata == 3) {
-            readBus(0x3400);
-            tick();
-        }
-        readBus(0x300C);
-        tick();
+        wait_for_propagate(100);
+        header = SmallWrite(2, 1, 3, 0xCAFECAFE, 0);
+        while (readBus(0x3400) == 0) {}
+        ensure(readBus(0x3400), {{2}}, "num packets");
+        crc = crc_init();
+        ensure(readBus(0x3018), {{header}}, "header");
+        crc = crc_update(crc, &header, 4);
+        ensure(readBus(0x301C), {{data[0]}}, "body flit 1");
+        crc = crc_update(crc, &data[0], 4);
+        ensure(readBus(0x3020), {{data[1]}}, "body flit 2");
+        crc = crc_update(crc, &data[1], 4);
+        ensure(readBus(0x3024), {{data[2]}}, "body flit 3");
+        crc = crc_update(crc, &data[2], 4);
+        crc = crc_finalize(crc);
+        ensure(readBus(0x3028), {{crc}}, "crc");
     }
 
     wait_for_propagate(100);

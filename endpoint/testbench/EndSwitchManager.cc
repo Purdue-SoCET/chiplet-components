@@ -82,14 +82,31 @@ void NetworkManager::tick() {
     if (this->to_be_sent[1].size()) {
         auto to_be_sent = this->to_be_sent[1].front().front();
         auto vc = 0;
-        if (this->buffer_occupancy[vc * 4 + 1] > 2) {
+        this->to_be_sent[1].front().pop();
+        if (this->to_be_sent[1].front().empty()) {
             this->to_be_sent[1].pop();
-            this->buffer_occupancy[vc * 4 + 1]--;
-            std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch "
-                      << 2 << std::endl;
-            dut->in_flit = to_be_sent;
-            dut->data_ready_in = 1;
         }
+        this->buffer_occupancy[vc * 4 + 1]--;
+        std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch " << 2
+                  << std::endl;
+        dut->in_flit = to_be_sent;
+        dut->data_ready_in = 1;
+    }
+}
+
+void NetworkManager::reportRemainingCheck() {
+    for (int sw = 0; sw < 2; sw++) {
+        printf("Remaining for switch %d\n", sw + 1);
+        if (this->to_be_sent[sw].size() != 0) {
+            printf("Switch %d still has %d packets to send!\n", sw, this->to_be_sent[sw].size());
+        }
+        for (auto packet : this->to_check[sw]) {
+            for (; !packet.empty(); packet.pop()) {
+                printf("%08llx, ", packet.front());
+            }
+            printf("\n");
+        }
+        printf("\n");
     }
 }
 
@@ -100,7 +117,9 @@ bool NetworkManager::isComplete() {
         to_be_sent += s.size();
     }
     for (auto s : this->to_check) {
-        to_check += s.size();
+        for (auto ss : s) {
+            to_check += ss.size();
+        }
     }
     return to_be_sent == 0 && to_check == 0;
 }

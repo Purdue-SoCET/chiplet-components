@@ -7,7 +7,7 @@
 #define FLIT_MASK 0x7FFFFFFFFF
 
 template <typename T>
-int ensure(T actual, const std::span<T> &expected, const char *test_name) {
+int ensure(T actual, std::span<const T> expected, const char *test_name) {
     extern uint64_t fails;
     extern uint64_t sim_time;
     bool found = false;

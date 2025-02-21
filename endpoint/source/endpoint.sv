@@ -26,10 +26,10 @@ module endpoint #(
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
     localparam REQ_FIFO_START_ADDR = 32'h3400;
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
-    
+
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
     logic enable, overflow, crc_valid, crc_error;
-    node_id_t req;
+    logic [6:0] metadata;
     word_t crc_val;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
@@ -44,7 +44,7 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .crc_valid(enable),
-        .req(req),
+        .metadata(metadata),
         .overflow(overflow),
         .bus_if(rx_fifo_if)
     );
@@ -54,7 +54,7 @@ module endpoint #(
         .n_rst(n_rst),
         .overflow(overflow),
         .fifo_enable(enable),
-        .req(req),
+        .metadata(metadata),
         .crc_error(crc_error),
         .switch_if(switch_if),
         .rx_cache_if (rx_cache_if)
@@ -122,25 +122,6 @@ module endpoint #(
         next_pkt_start_addr = tx_fsm_if.pkt_start_addr;
         msg_if.trigger_send = '0;
 
-        if (tx_cache_if.ren || tx_cache_if.wen) begin
-            tx_bus_if.wen = tx_cache_if.wen;
-            tx_bus_if.ren = tx_cache_if.ren;
-            tx_bus_if.addr = tx_cache_if.addr[8:0];
-            tx_cache_if.rdata = tx_bus_if.rdata;
-            tx_cache_if.error = tx_bus_if.error;
-            tx_cache_if.request_stall = tx_bus_if.request_stall;
-        end
-
-        if (rx_cache_if.wen) begin
-            rx_bus_if.wen = rx_cache_if.wen;
-            rx_bus_if.wdata = rx_cache_if.wdata;
-            rx_bus_if.ren = rx_cache_if.ren;
-            rx_bus_if.addr = rx_cache_if.addr[8:0];
-            rx_cache_if.rdata = rx_bus_if.rdata;
-            rx_cache_if.error = rx_bus_if.error;
-            rx_cache_if.request_stall = rx_bus_if.request_stall;
-        end
-
         // TODO: what's the best way to route this, I want to define maps,
         // send them to whereever they need to go, and have this logic there
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
@@ -184,6 +165,26 @@ module endpoint #(
             rx_fifo_if.addr = bus_if.addr[8:0];
             bus_if.rdata = rx_fifo_if.rdata;
         end
+
+        if (tx_cache_if.ren || tx_cache_if.wen) begin
+            tx_bus_if.wen = tx_cache_if.wen;
+            tx_bus_if.ren = tx_cache_if.ren;
+            tx_bus_if.addr = tx_cache_if.addr[8:0];
+            tx_cache_if.rdata = tx_bus_if.rdata;
+            tx_cache_if.error = tx_bus_if.error;
+            tx_cache_if.request_stall = tx_bus_if.request_stall;
+        end
+
+        if (rx_cache_if.wen) begin
+            rx_bus_if.wen = rx_cache_if.wen;
+            rx_bus_if.wdata = rx_cache_if.wdata;
+            rx_bus_if.ren = rx_cache_if.ren;
+            rx_bus_if.addr = rx_cache_if.addr[8:0];
+            rx_bus_if.strobe = '1;
+            rx_cache_if.rdata = rx_bus_if.rdata;
+            rx_cache_if.error = rx_bus_if.error;
+            rx_cache_if.request_stall = rx_bus_if.request_stall;
+        end
+
     end
-    
 endmodule

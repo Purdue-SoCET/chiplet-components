@@ -25,7 +25,7 @@ module switch_endpoint_wrapper #(
     output logic error, request_stall,
     // Switch side signals to write directly to switch
     input chiplet_types_pkg::flit_t in_flit,
-    output logic data_ready_in,
+    input logic data_ready_in,
     // Switch side signals to read directly from the switch
     output chiplet_types_pkg::flit_t out_flit,
     output data_ready_out,
@@ -75,7 +75,7 @@ module switch_endpoint_wrapper #(
     assign request_stall = bus_if.request_stall;
 
     assign sw_if.in[1] = in_flit;
-    assign data_ready_in = sw_if.data_ready_in[1];
+    assign sw_if.data_ready_in[1] = data_ready_in;
 
     assign out_flit = sw_if.out[1];
     assign data_ready_out = sw_if.data_ready_out[1];
