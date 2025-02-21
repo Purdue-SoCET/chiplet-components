@@ -13,7 +13,9 @@ void NetworkManager::queuePacketSend(uint8_t from, std::queue<uint32_t> flit) {
 
 // `from` is 1-indexed
 void NetworkManager::queuePacketCheck(uint8_t to, std::queue<uint32_t> flit) {
-    this->to_check[to - 1].push_back(flit);
+    if (to == 2) {
+        this->to_check[to - 1].push_back(flit);
+    }
 }
 
 void NetworkManager::reset() {
