@@ -14,9 +14,10 @@ module req_fifo#(
     localparam OVERRUN_ADDR = 32'h3404;
     localparam UNDERRUN_ADDR = 32'h3408;
     localparam REN_ADDR = 32'h340C;
+    localparam CLEAR_ADDR = 32'h3410;
 
-    logic ren, underrun, next_overflow;
-    node_id_t next_rdata, rdata, fifo_read, count;
+    logic ren, underrun, clear;
+    node_id_t fifo_read, count;
 
     socetlib_fifo #(.T(logic[4:0]), .DEPTH(DEPTH)) requestor_fifo (
         .CLK(clk),
@@ -24,7 +25,7 @@ module req_fifo#(
         .WEN(crc_valid),
         .REN(ren),
         .wdata(req),
-        .clear(0),
+        .clear(clear),
         .full(),
         .empty(),
         .underrun(underrun),
@@ -33,33 +34,28 @@ module req_fifo#(
         .rdata(fifo_read)
     );
 
-always_ff @(posedge clk, negedge n_rst) begin
-    if(!n_rst) begin
-        rdata <= '0;
-    end 
-    else begin
-        rdata <= next_rdata;
-    end
-end
-
 always_comb begin
-    next_rdata = '0;
     ren = 0;
-
+    clear = 0;
+    bus_if.rdata = 0;
     if(bus_if.ren) begin
         casez(bus_if.addr)
             COUNT_ADDR: begin
-                next_rdata = count;
+                bus_if.rdata = {27'd0, count};
             end
             OVERRUN_ADDR: begin
-                next_rdata = overflow;
+                bus_if.rdata = {31'd0,overflow};
             end
             UNDERRUN_ADDR: begin
-                next_rdata = underrun;
+                bus_if.rdata = {31'd0,underrun};
             end
             REN_ADDR: begin
-                ren = 1'b1;
-                next_rdata = fifo_read;
+                ren = 1;
+                bus_if.rdata = {27'd0, fifo_read};
+            end
+            CLEAR_ADDR: begin
+                clear = 1;
+                bus_if.rdata = {31'd0, clear};
             end
             default : begin end
         endcase

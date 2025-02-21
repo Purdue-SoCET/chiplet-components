@@ -39,6 +39,13 @@ void writeBus(uint32_t addr, uint32_t data) {
     dut->wen = 0;
 }
 
+void readBus(uint32_t addr) {
+    dut->addr = addr;
+    dut->ren = 1;
+    tick();
+    dut->ren = 0;
+}
+
 void reset() {
     dut->clk = 0;
     dut->n_rst = 1;
@@ -204,6 +211,49 @@ int main(int argc, char **argv) {
         while (!manager->isComplete()) {
             tick();
         }
+
+//**********************************************************
+// RX TEST CASES
+//********************************************************** 
+
+        resetAndInit();
+        std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
+        sendSmallWrite(2, 1, data);
+        while (!manager->isComplete()) {
+            tick();
+        }
+        while(dut->rdata == 0) {
+            readBus(0x3400);
+            tick();
+        }
+        readBus(0x3000);
+        tick();
+        readBus(0x3400);
+        tick();
+        while(dut->rdata == 1) {
+            readBus(0x3400);
+            tick();
+        }
+        readBus(0x3004);
+        tick();
+        readBus(0x3400);
+        tick();
+        while(dut->rdata == 2) {
+            readBus(0x3400);
+            tick();
+        }
+        readBus(0x3008);
+        tick();
+        readBus(0x3400);
+        tick();
+        while(dut->rdata == 3) {
+            readBus(0x3400);
+            tick();
+        }
+        readBus(0x300C);
+        tick();
+
+        
     }
 
     wait_for_propagate(100);

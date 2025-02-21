@@ -25,7 +25,7 @@ module endpoint #(
     localparam RX_CACHE_START_ADDR = 32'h3000;
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
     localparam REQ_FIFO_START_ADDR = 32'h3400;
-    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 16;
+    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
     
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
     logic enable, overflow, crc_valid, crc_error;
