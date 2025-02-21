@@ -89,7 +89,7 @@ assign res3_que_if.count_in = res3_if.count;
 assign res3_que_if.que_in = arb_if.rx_header;
 
 arb_counter_if send_data_if();
-arb_counter data_counter (.CLK(CLK),.nRST(nRST),.cnt_if(send_data_if));
+arb_counter data_counter (.CLK(CLK),.nRS    T(nRST),.cnt_if(send_data_if));
 assign send_data_if.en = arb_if.data_write;
 assign send_data_if.clear = '0;
 assign arb_if.send_data_cnt_full = send_data_if.overflow;

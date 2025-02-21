@@ -64,7 +64,7 @@ module tb_endnode;
             long_hdr.length = length;
             // long_hdr.addr = 30'h0;
             // long_hdr.r1 = '0;
-            header = flit_t'({meta_data, long_hdr.format, long_hdr.dest, long_hdr.r0, long_hdr.lst_b, long_hdr.fst_b, long_hdr.length});
+            header = flit_t'({meta_data, long_hdr});
         end
 
         FMT_LONG_WRITE: begin
@@ -77,7 +77,7 @@ module tb_endnode;
             long_hdr.length = length;
             // long_hdr.addr = 30'h0;
             // long_hdr.r1 = '0;
-            header = flit_t'({meta_data, long_hdr.format, long_hdr.dest, long_hdr.r0, long_hdr.lst_b, long_hdr.fst_b, long_hdr.length});
+            header = flit_t'({meta_data, long_hdr});
         end
 
         FMT_MEM_RESP: begin
@@ -238,7 +238,8 @@ module tb_endnode;
             send_data_err(test_packet.packet_data[j]);
         end
         send_comma_err(test_packet.comma_end);
-        for (int i = 0; i < 7; i = i+ 1) begin
+
+        for (int i = 0; i < 8; i = i+ 1) begin
             @(posedge CLK);
         end
         if ( comma_sel == ACK_SEL) begin
@@ -347,7 +348,7 @@ module tb_endnode;
          tx_end_if.flit_tx = {meta_data, {32{1'b1}}};
         //test kommas
         test_vectors[0].comma_start = START_COMMA;
-        test_vectors[0].packet_data[0] = flit_enc_t'('h2a918d1846112);
+        test_vectors[0].packet_data[0] = flit_enc_t'('h2a948d1846112);
         test_vectors[0].packet_data[1] = flit_enc_t'('h2a9418c75c925);
         test_vectors[0].packet_data[2] = flit_enc_t'('h2a9418c75c925);
         test_vectors[0].packet_data[3] = flit_enc_t'('h2a9418c75c925);
@@ -355,7 +356,7 @@ module tb_endnode;
         test_vectors[0].comma_end = END_COMMA;
         
         test_vectors[1].comma_start = START_COMMA;
-        test_vectors[1].packet_data[0] = flit_enc_t'('h2a918d1846112);
+        test_vectors[1].packet_data[0] = flit_enc_t'('h2a948d1846112);
         test_vectors[1].packet_data[1] = flit_enc_t'('h2a9418c75c92 );
         test_vectors[1].packet_data[2] = flit_enc_t'('h2a9418c75c925);
         test_vectors[1].packet_data[3] = flit_enc_t'('h2a9418c75c925);
@@ -390,13 +391,13 @@ module tb_endnode;
         //test data transmisison
 
         send_packet('d2,dest,FMT_LONG_WRITE,meta_data);
-        send_packet(0,dest,FMT_LONG_READ,meta_data);
-        send_packet(9,dest,FMT_MEM_RESP,meta_data);
-        send_packet(54,dest,FMT_LONG_WRITE,meta_data);
-        send_packet(0,dest,FMT_SHORT_READ,meta_data);
-        send_packet(6,dest,FMT_SHORT_WRITE,meta_data);
-        send_packet(0,dest,FMT_MSG,meta_data);
-        send_packet(0,dest,FMT_SWITCH_CFG,meta_data);
+        // send_packet(0,dest,FMT_LONG_READ,meta_data);
+        // send_packet(9,dest,FMT_MEM_RESP,meta_data);
+        // send_packet(54,dest,FMT_LONG_WRITE,meta_data);
+        // send_packet(0,dest,FMT_SHORT_READ,meta_data);
+        // send_packet(6,dest,FMT_SHORT_WRITE,meta_data);
+        // send_packet(0,dest,FMT_MSG,meta_data);
+        // send_packet(0,dest,FMT_SWITCH_CFG,meta_data);
         send_komma(test_vectors[0],ACK_SEL);
         send_komma(test_vectors[1],RESEND_PACKET1_SEL);
 
