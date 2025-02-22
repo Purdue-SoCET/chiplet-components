@@ -30,7 +30,6 @@ module endpoint #(
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
     logic enable, overflow, crc_valid, crc_error;
     logic [6:0] metadata;
-    word_t crc_val;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -122,8 +121,6 @@ module endpoint #(
         next_pkt_start_addr = tx_fsm_if.pkt_start_addr;
         msg_if.trigger_send = '0;
 
-        // TODO: what's the best way to route this, I want to define maps,
-        // send them to whereever they need to go, and have this logic there
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
             if (bus_if.ren) begin
                 bus_if.rdata = tx_fsm_if.pkt_start_addr[bus_if.addr[2+:$clog2(NUM_MSGS)]];
@@ -158,12 +155,14 @@ module endpoint #(
             rx_bus_if.wdata = bus_if.wdata;
             rx_bus_if.strobe = bus_if.strobe;
             bus_if.rdata = rx_bus_if.rdata;
-            //bus_if.error = rx_bus_if.wen;
+            bus_if.error = rx_bus_if.error;
             bus_if.request_stall = rx_bus_if.request_stall;
         end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
             rx_fifo_if.addr = bus_if.addr[8:0];
             bus_if.rdata = rx_fifo_if.rdata;
+        end else if (bus_if.wen || bus_if.ren) begin
+            bus_if.error = 1;
         end
 
         if (tx_cache_if.ren || tx_cache_if.wen) begin
@@ -185,6 +184,5 @@ module endpoint #(
             rx_cache_if.error = rx_bus_if.error;
             rx_cache_if.request_stall = rx_bus_if.request_stall;
         end
-
     end
 endmodule

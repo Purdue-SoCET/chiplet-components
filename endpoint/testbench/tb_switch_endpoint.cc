@@ -274,8 +274,6 @@ int main(int argc, char **argv) {
     // CRC error
     // TODO: long packet sent with wrong crc, should be killed in forward path and asked to be
     // resent
-    // TODO: try to put 4 packets on each switch
-    // TODO: randomize
 
     if (fails != 0) {
         std::cout << "\x1b[31mTotal failures\x1b[0m: " << fails << std::endl;

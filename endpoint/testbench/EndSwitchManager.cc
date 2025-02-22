@@ -27,9 +27,6 @@ void NetworkManager::reset() {
 void NetworkManager::tick() {
     static int packets_taken = 0;
     // Check outputs
-    if (/* need some register to see if there's data available */ false) {
-        // TODO: read and see if the data matches up
-    }
     dut->packet_sent = 0;
     dut->credit_granted = 0;
     if (dut->data_ready_out && this->to_check[1].size() > 0) {

@@ -24,14 +24,8 @@ module rx_fsm#()(
     logic count_enable, done, clear_crc, crc_update;
     word_t crc_val;
     logic [8:0] next_cache_addr, prev_cache_addr, next_prev_cache_addr;
-    // pkt_id_t curr_pkt_id, next_curr_pkt_id;
-    // long_hdr_t       long_hdr;
-    // short_hdr_t      short_hdr;
-    // msg_hdr_t        msg_hdr;
-    // resp_hdr_t       resp_hdr;
-    // switch_cfg_hdr_t switch_cfg_hdr;
 
-    socetlib_crc #() CRC_CHECKER(
+    socetlib_crc CRC_CHECKER(
         .CLK(clk),
         .nRST(n_rst),
         .clear(clear_crc),
@@ -41,7 +35,9 @@ module rx_fsm#()(
         .done(done)
     );
 
-    socetlib_counter #(.NBITS(PKT_LENGTH_WIDTH)) length_counter (
+    socetlib_counter #(
+        .NBITS(PKT_LENGTH_WIDTH)
+    ) length_counter (
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
@@ -56,13 +52,11 @@ module rx_fsm#()(
             state <= IDLE;
             curr_pkt_length <= 0;
             rx_cache_if.addr <= 0;
-            // curr_pkt_id <= 0;
             prev_cache_addr <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
             rx_cache_if.addr <= next_cache_addr;
-            // curr_pkt_id <= next_curr_pkt_id;
             prev_cache_addr <= next_prev_cache_addr;
         end
     end

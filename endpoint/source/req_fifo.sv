@@ -20,7 +20,10 @@ module req_fifo#(
     node_id_t fifo_read;
     logic [$clog2(DEPTH):0] count;
 
-    socetlib_fifo #(.T(logic[6:0]), .DEPTH(DEPTH)) requestor_fifo (
+    socetlib_fifo #(
+        .T(logic[6:0]),
+        .DEPTH(DEPTH)
+    ) requestor_fifo (
         .CLK(clk),
         .nRST(n_rst),
         .WEN(crc_valid),
@@ -35,33 +38,33 @@ module req_fifo#(
         .rdata(fifo_read)
     );
 
-always_comb begin
-    ren = 0;
-    clear = 0;
-    bus_if.rdata = 0;
-    if(bus_if.ren) begin
-        casez(bus_if.addr)
-            COUNT_ADDR: begin
-                bus_if.rdata = count;
-            end
-            OVERRUN_ADDR: begin
-                bus_if.rdata = overflow;
-            end
-            UNDERRUN_ADDR: begin
-                bus_if.rdata = underrun;
-            end
-            REN_ADDR: begin
-                ren = 1;
-                bus_if.rdata = fifo_read;
-            end
-            CLEAR_ADDR: begin
-                clear = 1;
-                bus_if.rdata = clear;
-            end
-            default : begin end
-        endcase
+    always_comb begin
+        ren = 0;
+        clear = 0;
+        bus_if.rdata = 0;
+        if(bus_if.ren) begin
+            casez(bus_if.addr)
+                COUNT_ADDR: begin
+                    bus_if.rdata = count;
+                end
+                OVERRUN_ADDR: begin
+                    bus_if.rdata = overflow;
+                end
+                UNDERRUN_ADDR: begin
+                    bus_if.rdata = underrun;
+                end
+                REN_ADDR: begin
+                    ren = 1;
+                    bus_if.rdata = fifo_read;
+                end
+                CLEAR_ADDR: begin
+                    clear = 1;
+                    bus_if.rdata = clear;
+                end
+                default : begin
+                    bus_if.error = 1;
+                end
+            endcase
+        end
     end
-end
-
-
 endmodule

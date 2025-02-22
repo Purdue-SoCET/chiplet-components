@@ -32,7 +32,9 @@ module tx_fsm#(
     resp_hdr_t       resp_hdr;
     switch_cfg_hdr_t switch_cfg_hdr;
 
-    socetlib_counter #(.NBITS(PKT_LENGTH_WIDTH)) length_counter (
+    socetlib_counter #(
+        .NBITS(PKT_LENGTH_WIDTH)
+    ) length_counter (
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
