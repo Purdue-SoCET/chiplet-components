@@ -1,0 +1,48 @@
+diff --git a/fifo/src/socetlib_fifo.sv b/fifo/src/socetlib_fifo.sv
+index 32ebc97..ae985f0 100644
+--- a/fifo/src/socetlib_fifo.sv
++++ b/fifo/src/socetlib_fifo.sv
+@@ -1,7 +1,7 @@
+ 
+ 
+ module socetlib_fifo #(
+-    parameter type T = logic [7:0], // type of a FIFO entry
++    parameter WIDTH = 8, // type of a FIFO entry
+     parameter DEPTH = 8 // # of FIFO entries
+ )(
+     input CLK,
+@@ -9,31 +9,21 @@ module socetlib_fifo #(
+     input WEN,
+     input REN,
+     input clear,
+-    input T wdata,
++    input logic [WIDTH-1:0] wdata,
+     output logic full,
+     output logic empty,
+     output logic underrun, 
+     output logic overrun,
+     output logic [$clog2(DEPTH+1)-1:0] count,
+-    output T rdata
++    output logic [WIDTH-1:0] rdata
+ );
+ 
+-    // Parameter checking
+-    //
+-    // Width can be any number of bits > 1, but depth must be a power-of-2 to accomodate addressing scheme
+-    // TODO: 
+-    generate
+-        if(DEPTH == 0 || (DEPTH & (DEPTH - 1)) != 0) begin
+-            $error("%m: DEPTH must be a power of 2 >= 1!");
+-        end
+-    endgenerate
+-    
+     localparam int ADDR_BITS = $clog2(DEPTH);
+ 
+     logic overrun_next, underrun_next;
+     logic [ADDR_BITS-1:0] write_ptr, write_ptr_next, read_ptr, read_ptr_next;
+     logic [$clog2(DEPTH+1)-1:0] count_next;
+-    T [DEPTH-1:0] fifo, fifo_next;
++    logic [DEPTH-1:0] [WIDTH-1:0] fifo, fifo_next;
+ 
+     always_ff @(posedge CLK, negedge nRST) begin
+         if(!nRST) begin
