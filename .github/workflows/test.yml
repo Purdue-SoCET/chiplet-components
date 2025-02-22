@@ -25,9 +25,6 @@ jobs:
           git clone --depth=1 git@github.com:Purdue-SoCET/bus-components.git
           ssh-add -D - <<< '${{ secrets.PRIVATE_SSH_KEY }}'
           ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
-          git clone --depth=1 git@github.com:Purdue-SoCET/digital-lib.git
-          pushd digital-lib
-          git checkout crc
-          popd
+          git clone --depth=1 --branch=crc git@github.com:Purdue-SoCET/digital-lib.git
           make buildsys_setup
           make versim_endpoint_src
