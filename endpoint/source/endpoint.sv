@@ -1,19 +1,22 @@
 `timescale 1ns / 10ps
+
 `include "chiplet_types_pkg.vh"
-`include "phy_manager_if.vh"
+`include "switch_if.vh"
 `include "message_table_if.sv"
 
 module endpoint #(
-    parameter NUM_MSGS=4
+    parameter NUM_MSGS=4,
+    parameter NODE_ID,
+    parameter DEPTH
 ) (
     input logic clk, n_rst,
-    phy_manager_if.rx_switch switch_if,
+    switch_if.endpoint switch_if,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
 
     localparam CACHE_NUM_WORDS = 128;
-    localparam ADDR_WIDTH = $clog2(CACHE_NUM_WORDS) + 2;
+    localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
     localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;
     localparam PKT_ID_ADDR_ADDR_LEN = NUM_MSGS * 4;
     localparam TX_SEND_ADDR = 32'h1004;
@@ -21,20 +24,39 @@ module endpoint #(
     localparam TX_CACHE_END_ADDR = TX_CACHE_START_ADDR + CACHE_ADDR_LEN;
     localparam RX_CACHE_START_ADDR = 32'h3000;
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
+    localparam REQ_FIFO_START_ADDR = 32'h3400;
+    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
 
-    logic [ADDR_WIDTH-1:0] [NUM_MSGS-1:0] next_pkt_start_addr;
-    node_id_t node_id;
+    logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
+    logic enable, overflow, crc_valid, crc_error;
+    logic [6:0] metadata;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_bus_if();
+    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_cache_if();
+    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
 
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
+    req_fifo #() requestor_fifo(
         .clk(clk),
         .n_rst(n_rst),
-        .bus_if(tx_bus_if)
+        .crc_valid(enable),
+        .metadata(metadata),
+        .overflow(overflow),
+        .bus_if(rx_fifo_if)
+    );
+
+    rx_fsm #() rx_fsm(
+        .clk(clk),
+        .n_rst(n_rst),
+        .overflow(overflow),
+        .fifo_enable(enable),
+        .metadata(metadata),
+        .crc_error(crc_error),
+        .switch_if(switch_if),
+        .rx_cache_if (rx_cache_if)
     );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
@@ -43,13 +65,23 @@ module endpoint #(
         .bus_if(rx_bus_if)
     );
 
+    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
+        .clk(clk),
+        .n_rst(n_rst),
+        .bus_if(tx_bus_if)
+    );
+
     message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
         .clk(clk),
         .n_rst(n_rst),
         .msg_if(msg_if)
     );
 
-    tx_fsm #(.NUM_MSGS(NUM_MSGS), .TX_SEND_ADDR(TX_SEND_ADDR)) tx(
+    tx_fsm #(
+        .NUM_MSGS(NUM_MSGS),
+        .TX_SEND_ADDR(TX_SEND_ADDR),
+        .DEPTH(DEPTH)
+    ) tx(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
@@ -59,8 +91,7 @@ module endpoint #(
     );
 
     // TODO:
-    assign node_id = 0;
-    assign tx_fsm_if.node_id = node_id;
+    assign tx_fsm_if.node_id = NODE_ID;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
@@ -90,17 +121,6 @@ module endpoint #(
         next_pkt_start_addr = tx_fsm_if.pkt_start_addr;
         msg_if.trigger_send = '0;
 
-        if (tx_cache_if.ren || tx_cache_if.wen) begin
-            tx_bus_if.wen = tx_cache_if.wen;
-            tx_bus_if.ren = tx_cache_if.ren;
-            tx_bus_if.addr = tx_cache_if.addr[8:0];
-            tx_cache_if.rdata = tx_bus_if.rdata;
-            tx_cache_if.error = tx_bus_if.error;
-            tx_cache_if.request_stall = tx_bus_if.request_stall;
-        end
-
-        // TODO: what's the best way to route this, I want to define maps,
-        // send them to whereever they need to go, and have this logic there
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
             if (bus_if.ren) begin
                 bus_if.rdata = tx_fsm_if.pkt_start_addr[bus_if.addr[2+:$clog2(NUM_MSGS)]];
@@ -135,8 +155,34 @@ module endpoint #(
             rx_bus_if.wdata = bus_if.wdata;
             rx_bus_if.strobe = bus_if.strobe;
             bus_if.rdata = rx_bus_if.rdata;
-            bus_if.error = rx_bus_if.wen;
+            bus_if.error = rx_bus_if.error;
             bus_if.request_stall = rx_bus_if.request_stall;
+        end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
+            rx_fifo_if.ren = bus_if.ren;
+            rx_fifo_if.addr = bus_if.addr[8:0];
+            bus_if.rdata = rx_fifo_if.rdata;
+        end else if (bus_if.wen || bus_if.ren) begin
+            bus_if.error = 1;
+        end
+
+        if (tx_cache_if.ren || tx_cache_if.wen) begin
+            tx_bus_if.wen = tx_cache_if.wen;
+            tx_bus_if.ren = tx_cache_if.ren;
+            tx_bus_if.addr = tx_cache_if.addr[8:0];
+            tx_cache_if.rdata = tx_bus_if.rdata;
+            tx_cache_if.error = tx_bus_if.error;
+            tx_cache_if.request_stall = tx_bus_if.request_stall;
+        end
+
+        if (rx_cache_if.wen) begin
+            rx_bus_if.wen = rx_cache_if.wen;
+            rx_bus_if.wdata = rx_cache_if.wdata;
+            rx_bus_if.ren = rx_cache_if.ren;
+            rx_bus_if.addr = rx_cache_if.addr[8:0];
+            rx_bus_if.strobe = '1;
+            rx_cache_if.rdata = rx_bus_if.rdata;
+            rx_cache_if.error = rx_bus_if.error;
+            rx_cache_if.request_stall = rx_bus_if.request_stall;
         end
     end
 endmodule

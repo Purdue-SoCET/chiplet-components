@@ -35,7 +35,6 @@ module cache#(
 
     always_comb begin
         next_cache = cache;
-
         if (bus_if.wen) begin
             next_cache[bus_if.addr[2+:ADDR_LEN]] = bus_if.wdata & byte_en;
         end
