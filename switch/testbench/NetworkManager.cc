@@ -35,7 +35,7 @@ void NetworkManager::reportRemainingCheck() {
         }
         for (auto packet : this->to_check[sw]) {
             for (; !packet.empty(); packet.pop()) {
-                printf("%08llx, ", packet.front());
+                printf("%08x, ", packet.front());
             }
             printf("\n");
         }
