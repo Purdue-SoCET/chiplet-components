@@ -1,0 +1,20 @@
+name: Test integration
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        uses: v0xnihili/install-verilator-action@main
+      - name: Install verilator
+        run: verilator --version
+      - name: Install fusesoc
+        run: |
+          pip install fusesoc==2.3
+          fusesoc --version
+      - name: Run tests
+        run: |
+          make versim_endpoint_src
