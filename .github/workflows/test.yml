@@ -12,18 +12,6 @@ jobs:
         with:
           packages: verilator
           version: 1.0
-      - name: Clone digital-lib
-        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
-        with:
-          owner: 'Purdue-SoCET'
-          repository: 'digital-lib'
-          access-token: ${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}
-      - name: Clone bus-components
-        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
-        with:
-          owner: 'Purdue-SoCET'
-          repository: 'bus-components'
-          access-token: ${{ secrets.PRIVATE_SSH_KEY }}
       - name: Install verilator
         run: verilator --version
       - name: Install fusesoc
@@ -32,8 +20,10 @@ jobs:
           fusesoc --version
       - name: Run tests
         run: |
-          pushd digital-lib
-          git checkout crc
-          popd
+          eval `ssh-agent -s`
+          ssh-add - <<< '${{ secrets.PRIVATE_SSH_KEY }}'
+          ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
+          git clone --depth=1 --branch=crc lib git@github.com:Purdue-SoCET/digital-lib.git
+          git clone --depth=1 git@github.com:Purdue-SoCET/bus-components.git
           make buildsys_setup
           make versim_endpoint_src
