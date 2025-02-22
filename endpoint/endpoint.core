@@ -97,6 +97,17 @@ targets:
                     - --timing
                     - -Wall
 
+    fpga:
+        filesets:
+            - rtl
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: endpoint
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
+
     syn:
         <<: *default
         filesets_append:
