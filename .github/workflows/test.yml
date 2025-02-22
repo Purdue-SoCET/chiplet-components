@@ -22,9 +22,9 @@ jobs:
         run: |
           eval `ssh-agent -s`
           ssh-add - <<< '${{ secrets.PRIVATE_SSH_KEY }}'
-          ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
-
           git clone --depth=1 git@github.com:Purdue-SoCET/bus-components.git
+          ssh-add -D - <<< '${{ secrets.PRIVATE_SSH_KEY }}'
+          ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
           git clone --depth=1 git@github.com:Purdue-SoCET/digital-lib.git
           pushd digital-lib
           git checkout crc
