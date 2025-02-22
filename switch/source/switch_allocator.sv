@@ -1,5 +1,6 @@
 `include "switch_pkg.sv"
 `include "pipeline_if.sv"
+`include "switch_allocator_if.sv"
 
 module switch_allocator#(
     parameter int NUM_BUFFERS,

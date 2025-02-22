@@ -1,3 +1,5 @@
+`include "arbiter_if.sv"
+
 // Round robin arbiter
 module arbiter#(
     parameter int WIDTH
