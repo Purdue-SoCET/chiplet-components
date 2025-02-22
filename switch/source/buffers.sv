@@ -47,10 +47,11 @@ module buffers #(
         end
     end
 
+    genvar i;
     generate
-        for (genvar i = 0; i < NUM_BUFFERS; i++) begin
+        for (i = 0; i < NUM_BUFFERS; i++) begin : g_buffer
             socetlib_fifo #(
-                .T(flit_t),
+                .WIDTH($bits(flit_t)),
                 .DEPTH(DEPTH)
             ) FIFO (
                 .CLK(CLK),

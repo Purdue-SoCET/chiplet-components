@@ -2,6 +2,7 @@
 
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
+`include "switch_reg_bank_if.sv"
 
 import chiplet_types_pkg::*;
 
@@ -16,22 +17,39 @@ module switch #(
     input logic clk, n_rst,
     switch_if.switch sw_if
 );
-    logic reg_bank_claim;
-
+    // Interfaces
     pipeline_if #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS)
     ) pipe_if();
-
-    // Buffers
     buffers_if #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .NUM_VCS(NUM_VCS),
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
     ) buf_if();
+    arbiter_if #(
+        .WIDTH(2*NUM_BUFFERS)
+    ) rc_a_if();
+    switch_allocator_if #(
+        .NUM_BUFFERS(2*NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .NUM_VCS(NUM_VCS)
+    ) sa_if();
+    crossbar_if #(
+         .NUM_IN(2*NUM_BUFFERS),
+         .NUM_OUT(NUM_OUTPORTS),
+         .NUM_VCS(NUM_VCS)
+    ) cb_if();
+    switch_reg_bank_if #(
+        .NUM_BUFFERS(NUM_BUFFERS),
+        .NUM_OUTPORTS(NUM_OUTPORTS),
+        .TOTAL_NODES(TOTAL_NODES),
+        .TABLE_SIZE(32) // TODO: parameterize
+    ) rb_if();
 
+    // Buffers
     // Use single buffer to make signal routing easier, internally is split
     // into {vc1, vc0}
     buffers #(
@@ -65,10 +83,6 @@ module switch #(
     assign buf_if.pipeline_failed = (pipe_if.pipe_valid && pipe_if.pipe_failed) << pipe_if.pipe_ingress_port;
 
     // Stage 1: Route compute
-    arbiter_if #(
-        .WIDTH(2*NUM_BUFFERS)
-    ) rc_a_if();
-
     arbiter #(
         .WIDTH(2*NUM_BUFFERS)
     ) RC_ARBITER (
@@ -87,20 +101,22 @@ module switch #(
         .rb_if(rb_if)
     );
 
-    // Connect buffers to arbiter
-    assign rc_a_if.bid = buf_if.req_pipeline;
-    // Connect arbiter to route compute
-    assign pipe_if.rc_valid = rc_a_if.valid;
-    assign pipe_if.rc_metadata = buf_if.rdata[rc_a_if.select].metadata;
-    assign pipe_if.rc_dest = buf_if.rdata[rc_a_if.select].payload[27:23];
-    assign pipe_if.rc_ingress_port = rc_a_if.select;
-    assign buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
-    // Connect switch allocator to register bank
-    assign rb_if.reg_bank_claim = pipe_if.rc_valid &&
-        buf_if.rdata[pipe_if.rc_ingress_port].payload[31:28] == FMT_SWITCH_CFG &&
-        buf_if.rdata[pipe_if.rc_ingress_port].payload[27:23] == NODE;
-    assign rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
-    assign buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
+    always_comb begin
+        // Connect buffers to arbiter
+        rc_a_if.bid = buf_if.req_pipeline;
+        // Connect arbiter to route compute
+        pipe_if.rc_valid = rc_a_if.valid;
+        pipe_if.rc_metadata = buf_if.rdata[rc_a_if.select].metadata;
+        pipe_if.rc_dest = buf_if.rdata[rc_a_if.select].payload[27:23];
+        pipe_if.rc_ingress_port = rc_a_if.select;
+        buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
+        // Connect switch allocator to register bank
+        rb_if.reg_bank_claim = pipe_if.rc_valid &&
+            buf_if.rdata[pipe_if.rc_ingress_port].payload[31:28] == FMT_SWITCH_CFG &&
+            buf_if.rdata[pipe_if.rc_ingress_port].payload[27:23] == NODE;
+        rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
+        buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
+    end
 
     // Stage 2: VC allocation
     vc_allocator #(
@@ -116,12 +132,6 @@ module switch #(
     );
 
     // Stage 3: Switch allocation
-    switch_allocator_if #(
-        .NUM_BUFFERS(2*NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .NUM_VCS(NUM_VCS)
-    ) sa_if();
-
     switch_allocator #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
@@ -137,12 +147,6 @@ module switch #(
     assign sa_if.valid = buf_if.active;
 
     // Stage 4: Crossbar traversal
-    crossbar_if #(
-         .T(flit_t),
-         .NUM_IN(2*NUM_BUFFERS),
-         .NUM_OUT(NUM_OUTPORTS),
-         .NUM_VCS(NUM_VCS)
-    ) cb_if();
     crossbar #(
         .NUM_IN(2*NUM_BUFFERS),
         .NUM_OUT(NUM_OUTPORTS),
@@ -167,13 +171,6 @@ module switch #(
 
     // Stage 5: Claim things going to this node and forward things to reg bank
     // as necessary
-    switch_reg_bank_if #(
-        .NUM_BUFFERS(NUM_BUFFERS),
-        .NUM_OUTPORTS(NUM_OUTPORTS),
-        .TOTAL_NODES(TOTAL_NODES),
-        .TABLE_SIZE(32) // TODO: parameterize
-    ) rb_if();
-
     switch_reg_bank #(
         .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),

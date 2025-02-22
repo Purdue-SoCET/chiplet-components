@@ -13,7 +13,6 @@ filesets:
             - "source/vc_allocator.sv"
             - "source/buffers.sv"
             - "source/arbiter.sv"
-            - "source/switch_tracker.sv"
             - "include/switch_pkg.sv" : {is_include_file: true}
             - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
@@ -28,6 +27,11 @@ filesets:
             - "socet:digital-lib:fifo"
             - "socet:digital-lib:counter"
             # - "socet:bus-components:bus_protocol_if"
+
+    tracker:
+        files:
+            - "source/switch_tracker.sv"
+        file_type: systemVerilogSource
 
     synth:
         depend:
@@ -59,6 +63,12 @@ filesets:
             - "testbench/tb_switch_correctness.cc": {file_type: cppSource}
         file_type: systemVerilogSource
 
+    fpga:
+        files:
+            - "fpga/fpga_switch_wrapper.sv"
+            - fpga/pinmap.tcl : { file_type: tclSource }
+        file_type: systemVerilogSource
+
     synfiles:
         depend:
             - "socet:chiplet:synfiles"
@@ -74,6 +84,7 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
+            - tracker
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:
@@ -98,6 +109,7 @@ targets:
         filesets_append:
             - tb
             - measure_tb
+            - tracker
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:
@@ -122,6 +134,7 @@ targets:
         filesets_append:
             - tb
             - correctness_tb
+            - tracker
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:
@@ -139,6 +152,18 @@ targets:
                     - -trace-fst
                 make_options:
                     - -j
+
+    fpga:
+        filesets:
+            - rtl
+            - fpga
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: fpga_switch_wrapper
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
 
     lint:
         <<: *default
