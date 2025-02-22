@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: verilator
+          packages: verilator g++-13
           version: 1.0
       - name: Install verilator
         run: verilator --version
