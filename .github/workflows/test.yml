@@ -22,7 +22,7 @@ jobs:
         run: |
           eval `ssh-agent -s`
           ssh-add - <<< '${{ secrets.PRIVATE_SSH_KEY }}'
-          ssh-add - <<< '${{ secrets.DIGITAL_LIB_SECRET_KEY }}'
+          ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
           fusesoc library add digital-lib git@github.com:Purdue-SoCET/digital-lib.git
           fusesoc library add bus-components git@github.com:Purdue-SoCET/bus-components.git
           pushd fusesoc_libraries/digital-lib
