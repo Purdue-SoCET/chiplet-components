@@ -11,6 +11,7 @@ package chiplet_types_pkg;
     typedef logic [WORD_W-1:0] word_t;
     typedef logic [4:0] node_id_t;
     typedef logic [1:0] pkt_id_t;
+    typedef logic [6:0] fifo_type;
 
     typedef enum logic [3:0] {
         FMT_LONG_READ   = 4'h0,

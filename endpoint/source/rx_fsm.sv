@@ -1,7 +1,7 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 
-module rx_fsm#()(
+module rx_fsm (
     input logic clk, n_rst,
     input logic overflow, 
     output logic fifo_enable,

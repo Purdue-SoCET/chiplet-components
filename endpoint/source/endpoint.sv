@@ -39,7 +39,7 @@ module endpoint #(
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
 
-    req_fifo #() requestor_fifo(
+    req_fifo requestor_fifo(
         .clk(clk),
         .n_rst(n_rst),
         .crc_valid(enable),
@@ -48,7 +48,7 @@ module endpoint #(
         .bus_if(rx_fifo_if)
     );
 
-    rx_fsm #() rx_fsm(
+    rx_fsm rx_fsm(
         .clk(clk),
         .n_rst(n_rst),
         .overflow(overflow),

@@ -5,7 +5,7 @@ module req_fifo#(
 ) (
     input logic clk, n_rst,
     input logic crc_valid,
-    input [6:0] metadata,
+    input logic [6:0] metadata,
     output logic overflow,
     bus_protocol_if.peripheral_vital bus_if
 );

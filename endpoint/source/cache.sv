@@ -1,6 +1,6 @@
 `include "chiplet_types_pkg.vh"
 
-module cache#(
+module cache #(
     parameter NUM_WORDS=128
 )(
     input logic clk, n_rst,
