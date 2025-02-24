@@ -14,11 +14,11 @@ socetlib_crc  crc (.CLK(CLK),.nRST(nRST),.clear(crc_clear),
 
 logic cntr_clear, cntr_enable, overflow_flag_cntr; 
 logic [7:0] count_out;
+wrap_dec_8b_10b_if dec_if();
 socetlib_counter #(.NBITS(8)) cnt (.CLK(CLK),.nRST(nRST),.clear(cntr_clear),
                  .count_enable(cntr_enable),.overflow_val(dec_if.curr_packet_size),.count_out(count_out),
                  .overflow_flag(overflow_flag_cntr));
 
-wrap_dec_8b_10b_if dec_if();
 assign dec_if.enc_flit = mngrx_if.enc_flit_rx;
 assign dec_if.done = mngrx_if.done_uart_rx;
 assign dec_if.comma_length_sel = mngrx_if.comma_length_sel_rx;

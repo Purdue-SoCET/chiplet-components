@@ -43,9 +43,11 @@ end
 
 genvar i;
 //instantiate 5 decoders for input data
+generate
 for (i = 0; i < PORTCOUNT; i= i +1) begin : enc_8b10b_block
     dec_8b10b dec (.data_in(dec_if.enc_flit[((i + 1) * 10 - 1):(i * 10)]),.data_out(flit_data[((i + 1) * 8 - 1):(i * 8)]),.err(err_dec[i]));
 end
+endgenerate
 
 //get payload size
 logic n_payload_size;
@@ -86,9 +88,9 @@ always_comb begin
             endcase
         end
         SELECT_COMMA_2_FLIT: begin
-            n_flit.vc = flit_data.payload[7];
-            n_flit.id = flit_data.payload[6:5];
-            n_flit.req = flit_data.payload[4:0];
+            n_flit.metadata.vc = flit_data.payload[7];
+            n_flit.metadata.id = flit_data.payload[6:5];
+            n_flit.metadata.req = flit_data.payload[4:0];
             case(dec_if.enc_flit.word[19:10])
                 ACK_COMMA: begin
                     n_comma_sel = ACK_SEL;

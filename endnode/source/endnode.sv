@@ -1,6 +1,6 @@
 `timescale 1ns / 10ps
 
-module endnode #() (
+module endnode(
     input logic CLK, nRST, endnode_if.eif end_if
 );
     import phy_types_pkg::*;
@@ -8,7 +8,7 @@ module endnode #() (
     localparam PORTCOUNT = 5;
     localparam EXPECTED_BAUD_RATE = 1000000;
     localparam FREQUENCY = 10000000;
-    logic err_store;
+    logic err_store, next_err_store;
     phy_manager_tx_if phy_tx_if();
     phy_manager_rx_if phy_rx_if();
     // uart_rx_if uart_rx_if();
@@ -46,7 +46,7 @@ module endnode #() (
     
     always_comb begin
         if (phy_rx_if.comma_sel == ACK_SEL && phy_rx_if.done_out) begin
-            end_if.flit_rx = {phy_rx_if.flit.vc, phy_rx_if.flit.id,phy_rx_if.flit.req, KOMMA_PACKET,node_id_t'(phy_rx_if.flit.req), 19'b0,ACK_SEL};
+            end_if.flit_rx = {phy_rx_if.flit.metadata.vc, phy_rx_if.flit.metadata.id,phy_rx_if.flit.metadata.req, KOMMA_PACKET,node_id_t'(phy_rx_if.flit.metadata.req), 19'b0,ACK_SEL};
         end
         else begin
             end_if.flit_rx = phy_rx_if.flit;
@@ -76,7 +76,7 @@ module endnode #() (
     assign phy_tx_if.flit = end_if.flit_tx;
     assign phy_tx_if.done = end_if.done_tx;
     assign phy_tx_if.packet_done = end_if.packet_done_tx;
-    assign phy_tx_if.rx_header = {end_if.flit_tx.vc, end_if.flit_tx.id, end_if.flit_tx.req};
+    assign phy_tx_if.rx_header = {end_if.flit_tx.metadata.vc, end_if.flit_tx.metadata.id, end_if.flit_tx.metadata.req};
     // assign phy_tx_if.data_write = end_if.start_tx;
     assign end_if.get_data = phy_tx_if.get_data;
     assign phy_tx_if.grtcred0_write = end_if.grtcred_tx[0];
@@ -108,15 +108,21 @@ module endnode #() (
     always_ff @(posedge CLK, negedge nRST) begin
         if (~nRST) begin
             err_store <= '0;
+        end else begin
+            err_store <= next_err_store;
         end
+    end
+
+    always_comb begin
+        next_err_store = err_store;
         if (phy_rx_if.packet_done) begin
-            err_store <= '0;
+            next_err_store = 0;
         end
         else if (err_store =='1)begin
-            err_store <= '1;
+            next_err_store = 1;
         end
         else begin
-            err_store <= phy_rx_if.err_out;
+            next_err_store = phy_rx_if.err_out;
         end
     end
     // //tx to switch conneciton

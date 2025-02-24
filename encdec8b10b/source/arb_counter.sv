@@ -44,7 +44,7 @@ module arb_counter #(parameter NBITS = 4)
          else begin 
             n_count = count;
         end
-        if (n_count == $pow(2,NBITS) - 1) begin
+        if (n_count == ((1'b1 << NBITS) - 1)) begin
             cnt_if.overflow = '1;
         end
         // no overflow val just countering till 2** nbits

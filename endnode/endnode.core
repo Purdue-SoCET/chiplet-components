@@ -28,6 +28,12 @@ filesets:
             # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
 
+    fpga:
+        files:
+            - "fpga/fpga_endnode_wrapper.sv"
+            - fpga/pinmap.tcl : { file_type: tclSource }
+        file_type: systemVerilogSource
+
     synfiles:
         depend:
             - "socet:chiplet:synfiles"
@@ -65,6 +71,18 @@ targets:
                     - --coverage
                 make_options:
                     - -j
+
+    fpga:
+        filesets:
+            - rtl
+            - fpga
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: fpga_endnode_wrapper
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
 
     lint:
         <<: *default

@@ -24,9 +24,11 @@ always_ff @(posedge CLK, negedge nRST) begin
 end
 
 genvar i;
+generate
 for (i = 0; i < PORTCOUNT; i= i +1) begin : enc_8b10b_block
     enc_8b10b enc (.data_in(enc_if.flit[((i + 1) * 8 - 1):(i * 8)]),.data_out(flit_norm[((i + 1) * 10 - 1):(i * 10)]));
 end
+endgenerate
 
 //comma selection
 always_comb begin
