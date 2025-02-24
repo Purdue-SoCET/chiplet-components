@@ -10,7 +10,7 @@
 
 template <typename T>
 int ensure(T actual, const std::span<T> &expected, const char *test_name, bool print_on_success) {
-    extern int fails;
+    extern uint64_t fails;
     extern uint64_t sim_time;
     bool found = false;
     int i = 0;
