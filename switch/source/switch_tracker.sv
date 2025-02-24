@@ -65,6 +65,8 @@ module switch_tracker#(
     logic [NUM_VCS*NUM_BUFFERS-1:0] not_idle_negedge;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] outport_enabled_negedge;
 
+    logic [NUM_OUTPORTS-1:0] delay_speculative_success;
+
     generate
         for (genvar i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
             socetlib_counter #(
@@ -204,9 +206,12 @@ module switch_tracker#(
                     v_outport_packet_len[i][j] = {};
                 end
             end
+            delay_speculative_success <= 0;
         end else begin
             for (int i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
-                if (not_idle_negedge[i]) begin
+                // num_flits_sent[i] == 0 represents a register bank claim,
+                // don't count it
+                if (not_idle_negedge[i] && num_flits_sent[i] != 0) begin
                     v_latency[i].push_back(latency[i]);
                     v_active_time[i].push_back(active_time[i]);
                     v_flits_sent[i].push_back(num_flits_sent[i]);
@@ -214,7 +219,7 @@ module switch_tracker#(
             end
             for (int i = 0; i < NUM_OUTPORTS; i++) begin
                 for (int j = 0; j < NUM_VCS; j++) begin
-                    if (outport_enabled_negedge[i][j] && !speculative_success[i]) begin
+                    if (outport_enabled_negedge[i][j] && !delay_speculative_success[i]) begin
                         v_outport_active[i][j].push_back(outport_total_len[i][j]);
                         v_outport_credit_blocked[i][j].push_back(outport_credit_blocked_len[i][j]);
                         v_outport_vc_blocked[i][j].push_back(outport_vc_blocked_len[i][j]);
@@ -222,6 +227,7 @@ module switch_tracker#(
                     end
                 end
             end
+            delay_speculative_success <= speculative_success;
         end
     end
 

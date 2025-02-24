@@ -9,9 +9,9 @@ Usage:
 
 def print_buffer(latency, active_time, flits_per_packet):
     time_spent_in_pipe = [x - y for x, y in zip(latency, active_time)]
-    cycles_per_flit  = [x / y for x, y in zip(latency, flits_per_packet) if y > 0]
+    cycles_per_flit  = [x / y for x, y in zip(latency, flits_per_packet)]
     transfer_rate  = [x * 4 / y for x, y in zip(flits_per_packet, latency)]
-    crossbar_cycles_per_flit  = [x / (y * 4) for x, y in zip(active_time, flits_per_packet) if y > 0]
+    crossbar_cycles_per_flit  = [x / (y * 4) for x, y in zip(active_time, flits_per_packet)]
     crossbar_transfer_rate = [1 / x for x in crossbar_cycles_per_flit]
 
     avg_latency = numpy.average(latency)
@@ -40,11 +40,11 @@ def print_buffer(latency, active_time, flits_per_packet):
     print(f"Average crossbar transfer rate: {avg_crossbar_transfer_rate:.2f} +- {crossbar_cycles_per_flit_stdev:.2f}B/cycle")
 
 def print_outport(outport_active_len, outport_packet_len, outport_credit_blocked_len, outport_vc_blocked_len):
-    outport_transfer_rate = [x * 4 / y for x, y in zip(outport_packet_len, outport_active_len) if y > 0]
-    outport_credit_constrained = [x / y for x, y in zip(outport_credit_blocked_len, outport_active_len) if y > 0]
-    outport_vc_constrained = [x / y for x, y in zip(outport_vc_blocked_len, outport_active_len) if y > 0]
+    outport_transfer_rate = [x * 4 / y for x, y in zip(outport_packet_len, outport_active_len)]
+    outport_credit_constrained = [x / y for x, y in zip(outport_credit_blocked_len, outport_active_len)]
+    outport_vc_constrained = [x / y for x, y in zip(outport_vc_blocked_len, outport_active_len)]
     outport_total_constrained_len = [x + y for x, y in zip(outport_credit_blocked_len, outport_vc_blocked_len)]
-    outport_total_constrained = [(x + y) / z for x, y, z in zip(outport_credit_blocked_len, outport_vc_blocked_len, outport_active_len) if z > 0]
+    outport_total_constrained = [(x + y) / z for x, y, z in zip(outport_credit_blocked_len, outport_vc_blocked_len, outport_active_len)]
     outport_transfer_rate_wo_overhead = [w * 4 / (x - y - z) for w, x, y, z in zip(outport_packet_len, outport_active_len, outport_credit_blocked_len, outport_vc_blocked_len)]
 
     avg_packet_len = numpy.average(outport_packet_len)

@@ -17,3 +17,6 @@ for ((buffer_size=4; buffer_size <= 128; buffer_size *= 2)); do
         mv $file $new
     done
 done
+
+sed -i switch/testbench/switch_measure_wrapper.sv -e "s/localparam BUFFER_SIZE.*/localparam BUFFER_SIZE = 8;/"
+sed -i switch/testbench/NetworkManager.h -e "s/define BUFFER_SIZE.*/define BUFFER_SIZE 8/"
