@@ -131,6 +131,10 @@ module switch #(
         .rb_if(rb_if)
     );
 
+    // Connect VC allocator to buffer
+    assign buf_if.final_vc = pipe_if.sa_final_vc;
+    assign buf_if.vc_granted = pipe_if.sa_valid << pipe_if.sa_ingress_port;
+
     // Stage 3: Switch allocation
     switch_allocator #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
@@ -163,11 +167,13 @@ module switch #(
     assign cb_if.sel = sa_if.select;
     assign cb_if.enable = sa_if.enable;
     assign cb_if.empty = buf_if.empty;
+    assign cb_if.buffer_vc = buf_if.buffer_vc;
     assign buf_if.REN = cb_if.in_pop;
     // Connect crossbar to IO
     assign cb_if.packet_sent = sw_if.packet_sent[NUM_OUTPORTS-1:0];
     assign cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
     assign sw_if.out = cb_if.out;
+    assign sw_if.data_ready_out = cb_if.valid;
 
     // Stage 5: Claim things going to this node and forward things to reg bank
     // as necessary
@@ -182,6 +188,4 @@ module switch #(
         .n_rst(n_rst),
         .rb_if(rb_if)
     );
-
-    assign sw_if.data_ready_out = cb_if.valid;
 endmodule

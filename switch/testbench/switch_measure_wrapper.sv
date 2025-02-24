@@ -1,3 +1,5 @@
+`include "switch_tracker.sv"
+
 `define CONNECT(to, from, in_port, out_port)                                                    \
     assign to.in[in_port] = from.out[out_port];                                                 \
     assign to.data_ready_in[in_port] = from.data_ready_out[out_port];                           \

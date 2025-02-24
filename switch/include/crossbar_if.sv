@@ -16,6 +16,7 @@ interface crossbar_if #(
     // Values to be muxed in
     flit_t [NUM_IN-1:0] in;
     logic [NUM_IN-1:0] empty;
+    logic [NUM_IN-1:0] [$clog2(NUM_VCS)-1:0] buffer_vc;
     // Select lines for each output
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] [SELECT_SIZE-1:0] sel;
     // Output lines
@@ -29,7 +30,7 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] credit_granted;
 
     modport crossbar(
-        input in, empty, sel, enable, packet_sent, credit_granted,
+        input in, empty, buffer_vc, sel, enable, packet_sent, credit_granted,
         output out, in_pop, valid
     );
 

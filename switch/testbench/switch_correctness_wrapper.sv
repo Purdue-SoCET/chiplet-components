@@ -1,3 +1,5 @@
+`include "switch_tracker.sv"
+
 module switch_wrapper(
     input logic clk, nrst,
     // Flit sent in from endpoint

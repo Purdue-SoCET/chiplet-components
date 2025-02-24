@@ -36,6 +36,7 @@ interface pipeline_if #(
     // Switch allocator outputs
     logic pipe_valid;
     logic [INGRESS_SIZE-1:0] pipe_ingress_port;
+    logic [$clog2(NUM_VCS)-1:0] pipe_vc;
     logic pipe_failed;
 
     modport rc(
@@ -50,7 +51,8 @@ interface pipeline_if #(
 
     modport sa(
         input sa_valid, sa_ingress_port, sa_egress_port, sa_final_vc,
-        output pipe_valid, pipe_ingress_port, pipe_failed
+        input vc_valid, vc_ingress_port, vc_egress_port,
+        output pipe_valid, pipe_ingress_port, pipe_vc, pipe_failed
     );
 endinterface
 

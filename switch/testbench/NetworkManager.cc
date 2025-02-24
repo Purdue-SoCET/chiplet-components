@@ -46,7 +46,6 @@ void NetworkManager::tick() {
     for (int i = 0; i < 4; i++) {
         dut->packet_sent[i] = 0;
         if (dut->data_ready_out[i] && this->to_check[i].size() > 0) {
-            // std::cout << "Checking data from switch " << i + 1 << std::endl;
             std::vector<uint64_t> expected;
             for (auto possible_packets : this->to_check[i]) {
                 expected.push_back(possible_packets.front() & FLIT_MASK);

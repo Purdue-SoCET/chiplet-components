@@ -30,7 +30,7 @@ filesets:
 
     tracker:
         files:
-            - "source/switch_tracker.sv"
+            - "source/switch_tracker.sv" : {is_include_file: true}
         file_type: systemVerilogSource
 
     synth:

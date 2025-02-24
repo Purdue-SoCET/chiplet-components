@@ -108,6 +108,8 @@ module buffers #(
 
     always_comb begin
         buf_if.req_pipeline = '0;
+        buf_if.active = '0;
+        buf_if.buffer_vc = '0;
         next_overflow_val = overflow_val;
         next_state_table = state_table;
 
@@ -128,6 +130,9 @@ module buffers #(
                     end
                 end
                 ACTIVE : begin
+                    if (buf_if.vc_granted[i]) begin
+                        next_state_table[i].vc = buf_if.final_vc;
+                    end
                     if (buf_if.pipeline_failed[i]) begin
                         next_state_table[i].state = PIPELINE;
                     end else if (buf_if.REN[i] && count_out[i] + 1 == overflow_val[i]) begin
@@ -142,6 +147,7 @@ module buffers #(
 
             buf_if.req_pipeline[i] = state_table[i].state == PIPELINE;
             buf_if.active[i] = state_table[i].state == ACTIVE;
+            buf_if.buffer_vc[i] = state_table[i].vc;
         end
     end
 endmodule
