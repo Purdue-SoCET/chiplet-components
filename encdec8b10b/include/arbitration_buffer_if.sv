@@ -8,16 +8,16 @@ interface arbitration_buffer_if;
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
     logic CLK, nRST;
-    logic ack_write, nack_write, rs0_write, rs1_write, rs2_write, rs3_write, data_write;
-    logic ack_cnt_full, nack_cnt_full, rs0_cnt_full, rs1_cnt_full, rs2_cnt_full, rs3_cnt_full, send_data_cnt_full;
-    logic start, done, packet_done;
+    logic ack_write,grtcred0_write,grtcred1_write, data_write;
+    logic ack_cnt_full,grtcred_0_full,grtcred_1_full, send_data_cnt_full;
+    logic start, done, packet_done,send_new_data;
     logic get_data;
     comma_sel_t comma_sel;
     logic [7:0] comma_header_out,rx_header;
     modport arb(
-        input CLK, nRST, ack_write, nack_write, rs0_write, rs1_write, rs2_write, rs3_write, data_write,
-        input  done, packet_done,rx_header,
-        output start,ack_cnt_full, nack_cnt_full, rs0_cnt_full, rs1_cnt_full, rs2_cnt_full, rs3_cnt_full, send_data_cnt_full,
+        input CLK, nRST, ack_write, data_write,
+        input  done, packet_done,rx_header, grtcred0_write,grtcred1_write,send_new_data,
+        output start,ack_cnt_full,grtcred_0_full, grtcred_1_full, send_data_cnt_full,
         output get_data,
         output comma_sel,
         output comma_header_out

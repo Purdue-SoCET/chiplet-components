@@ -1,13 +1,14 @@
 `ifndef CHIPLET_TYPES_PKG_VH
 `define CHIPLET_TYPES_PKG_VH
 `timescale 1ns / 10ps
+`include "phy_types_pkg.vh"
 package chiplet_types_pkg;
     // Word
     parameter WORD_W    = 32;
     parameter WBYTES    = WORD_W/8;
     parameter PKT_MAX_LENGTH = 131; // long write: head+address+128 words+crc
     parameter PKT_LENGTH_WIDTH = $clog2(PKT_MAX_LENGTH);
-
+    import phy_types_pkg::*;
     typedef logic [WORD_W-1:0] word_t;
     typedef logic [4:0] node_id_t;
     typedef logic [1:0] pkt_id_t;
@@ -19,7 +20,8 @@ package chiplet_types_pkg;
         FMT_MSG         = 4'h3,
         FMT_SWITCH_CFG  = 4'h4,
         FMT_SHORT_READ  = 4'h8,
-        FMT_SHORT_WRITE = 4'h9
+        FMT_SHORT_WRITE = 4'h9,
+        KOMMA_PACKET    = 4'ha
     } format_e;
 
     // Long Header
@@ -66,6 +68,14 @@ package chiplet_types_pkg;
     } switch_cfg_hdr_t;
 
     typedef struct packed {
+        format_e        format;
+        node_id_t       dest;
+        logic [18:0]    r;
+        comma_sel_t     comma_sel;
+    } comma_header_t;
+
+    // Flit Format
+    typedef struct packed {
         logic           vc;
         pkt_id_t        id;
         node_id_t       req;
@@ -82,11 +92,13 @@ package chiplet_types_pkg;
         short_hdr_t short_hdr;
         resp_hdr_t resp_hdr;
         msg_hdr_t msg_hdr;
+        comma_header_t comma_hdr;
     begin
         long_hdr = long_hdr_t'(flit);
         short_hdr = short_hdr_t'(flit);
         resp_hdr = resp_hdr_t'(flit);
         msg_hdr = msg_hdr_t'(flit);
+        comma_hdr = comma_header_t'(flit);
         casez (long_hdr.format)
             FMT_LONG_READ : begin
                 expected_num_flits = 3; // header + address + crc
@@ -112,6 +124,9 @@ package chiplet_types_pkg;
             FMT_SHORT_WRITE : begin
                 expected_num_flits = 2 + // header + crc
                     (|short_hdr.length ? short_hdr.length : 16); // data
+            end
+            KOMMA_PACKET: begin
+                expected_num_flits = 1;
             end
             default : expected_num_flits = 0;
         endcase

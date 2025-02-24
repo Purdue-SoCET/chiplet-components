@@ -43,20 +43,28 @@ module endnode #() (
     assign phy_rx_if.done_uart_rx = end_if.done_in_rx;// &&  phy_rx_if.comma_sel == DATA_SEL;
     assign phy_rx_if.comma_length_sel_rx = end_if.comma_length_sel_in_rx;
     assign phy_rx_if.uart_err_rx = end_if.err_in_rx;
-
-    //comma to switch response
-    assign end_if.nack_recieved = phy_rx_if.comma_sel == NACK_SEL;
-    assign end_if.rs0_recieved = phy_rx_if.comma_sel == RESEND_PACKET0_SEL;
-    assign end_if.rs1_recieved = phy_rx_if.comma_sel == RESEND_PACKET1_SEL;
-    assign end_if.rs2_recieved = phy_rx_if.comma_sel == RESEND_PACKET2_SEL;
-    assign end_if.rs3_recieved = phy_rx_if.comma_sel == RESEND_PACKET3_SEL;
-    assign end_if.ack_recieved = phy_rx_if.comma_sel == ACK_SEL;
-                
+    
+    always_comb begin
+        if (phy_rx_if.comma_sel == ACK_SEL && phy_rx_if.done_out) begin
+            end_if.flit_rx = {phy_rx_if.flit.vc, phy_rx_if.flit.id,phy_rx_if.flit.req, KOMMA_PACKET,node_id_t'(phy_rx_if.flit.req), 19'b0,ACK_SEL};
+        end
+        else begin
+            end_if.flit_rx = phy_rx_if.flit;
+        end
+    end
+    // //comma to switch response
+    // assign end_if.nack_recieved = phy_rx_if.comma_sel == NACK_SEL;
+    // assign end_if.rs0_recieved = phy_rx_if.comma_sel == RESEND_PACKET0_SEL;
+    // assign end_if.rs1_recieved = phy_rx_if.comma_sel == RESEND_PACKET1_SEL;
+    // assign end_if.rs2_recieved = phy_rx_if.comma_sel == RESEND_PACKET2_SEL;
+    // assign end_if.rs3_recieved = phy_rx_if.comma_sel == RESEND_PACKET3_SEL;
+    // assign end_if.ack_recieved = phy_rx_if.comma_sel == ACK_SEL;
+    
     //rx to switch connections
     assign end_if.done_rx = phy_rx_if.done_out;
     assign end_if.err_rx = err_store;
     assign end_if.crc_corr_rx = phy_rx_if.crc_corr;
-    assign end_if.flit_rx = phy_rx_if.flit;
+    // assign end_if.flit_rx = phy_rx_if.flit;
     //phy rx to tx
     
     // //uart_tx connections
@@ -68,24 +76,33 @@ module endnode #() (
     assign phy_tx_if.flit = end_if.flit_tx;
     assign phy_tx_if.done = end_if.done_tx;
     assign phy_tx_if.packet_done = end_if.packet_done_tx;
-    assign phy_tx_if.rx_header = {phy_rx_if.flit.vc, phy_rx_if.flit.id, phy_rx_if.flit.req};
-    assign phy_tx_if.data_write = end_if.start_tx;
+    assign phy_tx_if.rx_header = {end_if.flit_tx.vc, end_if.flit_tx.id, end_if.flit_tx.req};
+    // assign phy_tx_if.data_write = end_if.start_tx;
     assign end_if.get_data = phy_tx_if.get_data;
+    assign phy_tx_if.grtcred0_write = end_if.grtcred_tx[0];
+    assign phy_tx_if.grtcred1_write = end_if.grtcred_tx[1];
+    assign end_if.grtcred_rx[0] = phy_rx_if.comma_sel == GRTCRED0_SEL && phy_rx_if.done_out;
+    assign end_if.grtcred_rx[1] = phy_rx_if.comma_sel == GRTCRED1_SEL   &&phy_rx_if.done_out;
+    assign phy_tx_if.new_flit = end_if.send_next_flit_tx;
+
+    comma_header_t komma_hdr;
     always_comb begin
+        komma_hdr = comma_header_t'(end_if.flit_tx.payload);
         phy_tx_if.ack_write = '0;
-        phy_tx_if.nack_write = '0;
-        phy_tx_if.rs0_write = '0;
-        phy_tx_if.rs1_write = '0;
-        phy_tx_if.rs2_write = '0;
-        phy_tx_if.rs3_write = '0;
-        if (phy_rx_if.packet_done) begin // maybe need to take into consideration end of packet comma
-            phy_tx_if.ack_write = ~err_store && ~ phy_tx_if.ack_cnt_full;
-            phy_tx_if.nack_write = ~err_store && phy_tx_if.ack_cnt_full;
-            phy_tx_if.rs0_write =  err_store && phy_rx_if.flit.id == 'd0;
-            phy_tx_if.rs1_write =  err_store && phy_rx_if.flit.id == 'd1;
-            phy_tx_if.rs2_write =  err_store && phy_rx_if.flit.id == 'd2;
-            phy_tx_if.rs3_write =  err_store && phy_rx_if.flit.id == 'd3;
+        phy_tx_if.data_write = '0;
+        if (komma_hdr.format == KOMMA_PACKET && end_if.start_tx) begin 
+            case(komma_hdr.comma_sel) 
+                ACK_SEL: begin
+                    phy_tx_if.ack_write = '1;
+                end
+                default: begin
+                end
+            endcase
         end
+        else if (end_if.start_tx) begin
+            phy_tx_if.data_write = '1;
+        end
+
     end
 
     always_ff @(posedge CLK, negedge nRST) begin

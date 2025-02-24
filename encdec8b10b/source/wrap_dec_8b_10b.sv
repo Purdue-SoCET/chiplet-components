@@ -17,7 +17,8 @@ flit_t n_flit;
 comma_sel_t n_comma_sel;
 logic [PORTCOUNT-1 :0] err_dec;
 logic [6:0] n_curr_packet_size;
-logic done_out_n, err_in_order;
+logic done_out_n, err_in_order,err_in_comma;
+logic [1:0] n_grt_cred;
 typedef enum logic [1:0] {LOOK_FOR_START_PACKET, LOOK_FOR_DATA_PACKET, LOOK_FOR_END_PACKET} counter_fsm;
 counter_fsm seen_start_comma, n_seen_start_comma;
 
@@ -55,8 +56,8 @@ resp_hdr_t resp_hdr;
 
 //comma selection
 always_comb begin
-    n_flit = '0;
-    done_out_n = '0;
+    n_flit = dec_if.flit;
+    err_in_comma = '0;
     n_comma_sel = dec_if.comma_sel;
     long_hdr = long_hdr_t'({flit_data.payload, 32'd0});
     short_hdr = short_hdr_t'(flit_data.payload);
@@ -66,7 +67,6 @@ always_comb begin
         done_out_n = '1;
         case (dec_if.comma_length_sel) 
         SELECT_COMMA_1_FLIT: begin
-            done_out_n = '0;
             case(dec_if.enc_flit.word[9:0])
                 START_COMMA:  begin 
                     n_comma_sel = START_PACKET_SEL;
@@ -74,7 +74,14 @@ always_comb begin
                 END_COMMA:  begin 
                     n_comma_sel = END_PACKET_SEL;
                 end
+                GRTCRED0_COMMA: begin
+                    n_comma_sel = GRTCRED0_SEL;
+                end
+                GRTCRED1_COMMA: begin 
+                    n_comma_sel = GRTCRED1_SEL;
+                end
                 default: begin
+                    err_in_comma = '1;
                 end
             endcase
         end
@@ -83,25 +90,11 @@ always_comb begin
             n_flit.id = flit_data.payload[6:5];
             n_flit.req = flit_data.payload[4:0];
             case(dec_if.enc_flit.word[19:10])
-                RESEND_PACKET0_COMMA:  begin 
-                    n_comma_sel = RESEND_PACKET0_SEL;
-                end
-                RESEND_PACKET1_COMMA:  begin 
-                    n_comma_sel = RESEND_PACKET1_SEL;
-                end
-                RESEND_PACKET2_COMMA: begin     
-                    n_comma_sel = RESEND_PACKET2_SEL;
-                end
-                RESEND_PACKET3_COMMA: begin     
-                    n_comma_sel = RESEND_PACKET3_SEL;
-                end
-                NACK_COMMA: begin
-                    n_comma_sel = NACK_SEL;
-                end
                 ACK_COMMA: begin
                     n_comma_sel = ACK_SEL;
                 end
                 default: begin
+                    err_in_comma = '1;
                 end
             endcase
         end

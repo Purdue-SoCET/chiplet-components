@@ -5,10 +5,10 @@ description: "Include files required for working with the chiplet protocol"
 filesets:
     rtl:
         files:
+            - "source/phy_types_pkg.vh" : {is_include_file: true}
             - "source/chiplet_types_pkg.vh" : {is_include_file: true}
             - "source/phy_manager_if.vh" : {is_include_file: true}
             - "source/switch_if.vh" : {is_include_file: true}
-            - "source/phy_types_pkg.vh" : {is_include_file: true}
         file_type: systemVerilogSource
 
 targets:

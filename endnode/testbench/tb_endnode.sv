@@ -151,7 +151,10 @@ module tb_endnode;
     tx_end_if.packet_done_tx = '1;
     @(posedge CLK);
     tx_end_if.packet_done_tx = '0;
-    wait_tx_send_komma();
+    while(tx_if.done != '1) begin
+        @(posedge CLK);
+    end
+    // wait_tx_send_komma();
     end
     endtask
 
@@ -160,10 +163,12 @@ module tb_endnode;
     input flit_t flit_out;
     begin
         tx_end_if.flit_tx = flit_out;
+        tx_end_if.send_next_flit_tx = '1;
         @(posedge CLK);
-        while (tx_end_if.get_data == '0) begin
-            @(posedge CLK);
-        end
+        tx_end_if.send_next_flit_tx = '0;
+        // while (tx_end_if.get_data == '0) begin
+        //     @(posedge CLK);
+        // end
         wait_tx_send_header(meta_data,header);    end
     endtask
 
@@ -173,11 +178,13 @@ module tb_endnode;
     begin
         // tx_end_if.comma_sel_tx = DATA_SEL;
         tx_end_if.flit_tx = flit_t'({meta_data,flit}); 
+        tx_end_if.send_next_flit_tx = '1;
         @(posedge CLK);
+        tx_end_if.send_next_flit_tx = '0;
         tx_end_if.flit_tx = '0;
-        while (tx_end_if.get_data == '0) begin
-            @(posedge CLK);
-        end
+        // while (tx_end_if.get_data == '0) begin
+        //     @(posedge CLK);
+        // end
         wait_tx_send_data(meta_data);
     end
     endtask
@@ -194,7 +201,7 @@ module tb_endnode;
     endtask
 
     task wait_tx_send_komma; begin
-    for(int i =0; i < 38; i = i + 1) begin
+    while(tx_end_if.get_data != '1) begin
     @(posedge CLK);
     end
     end
@@ -203,7 +210,7 @@ module tb_endnode;
     task wait_tx_send_data;
     input logic [7:0]  meta_data;
      begin
-        while (tx_if.done != '1) begin
+        while (tx_end_if.get_data != '1) begin
             @(posedge CLK);
             if (rx_end_if.done_rx) begin
                 assert(flit_t'({ meta_data,32'h8675309}) == rx_end_if.flit_rx)
@@ -218,7 +225,7 @@ module tb_endnode;
     input flit_t header;
      begin
         @(posedge CLK);
-        while (tx_if.done != '1) begin
+        while (rx_end_if.done_rx != '1) begin
             @(posedge CLK);
             if (rx_end_if.done_rx == '1) begin
                 assert(flit_t'({ meta_data,header}) == rx_end_if.flit_rx)
@@ -243,34 +250,21 @@ module tb_endnode;
             @(posedge CLK);
         end
         if ( comma_sel == ACK_SEL) begin
-            while (rx_end_if.ack_recieved == '0) begin
+            while (rx_end_if.flit_rx[31:28] != KOMMA_PACKET) begin
                 @(posedge CLK);
             end
         end
-        else if (comma_sel == RESEND_PACKET0_COMMA) begin
-            while (rx_end_if.rs0_recieved == '0) begin
-                @(posedge CLK);
-            end
-        end
-        
-        else if (comma_sel == RESEND_PACKET1_COMMA) begin
-            while (rx_end_if.rs1_recieved== '0) begin
+        else if (comma_sel == GRTCRED0_COMMA) begin
+            while (rx_end_if.grtcred_rx[0] == '0) begin
                 @(posedge CLK);
             end
         end
         
-        else if (comma_sel == RESEND_PACKET2_COMMA) begin
-            while (rx_end_if.rs2_recieved== '0) begin
+        else if (comma_sel == GRTCRED1_COMMA) begin
+            while (rx_end_if.grtcred_rx[1]== '0) begin
                 @(posedge CLK);
             end
         end
-        
-        else if (comma_sel == RESEND_PACKET3_COMMA) begin
-            while (rx_end_if.rs3_recieved== '0) begin
-                @(posedge CLK);
-            end
-        end
-        // assert (comma_sel == )
     end
     endtask
 
@@ -346,6 +340,7 @@ module tb_endnode;
         reset_dut;
         uart_tx_rx_if.uart_in = 'h1f; 
          tx_end_if.flit_tx = {meta_data, {32{1'b1}}};
+        tx_end_if.send_next_flit_tx  ='0;
         //test kommas
         test_vectors[0].comma_start = START_COMMA;
         test_vectors[0].packet_data[0] = flit_enc_t'('h2a948d1846112);
@@ -391,15 +386,65 @@ module tb_endnode;
         //test data transmisison
 
         send_packet('d2,dest,FMT_LONG_WRITE,meta_data);
-        // send_packet(0,dest,FMT_LONG_READ,meta_data);
-        // send_packet(9,dest,FMT_MEM_RESP,meta_data);
-        // send_packet(54,dest,FMT_LONG_WRITE,meta_data);
-        // send_packet(0,dest,FMT_SHORT_READ,meta_data);
-        // send_packet(6,dest,FMT_SHORT_WRITE,meta_data);
-        // send_packet(0,dest,FMT_MSG,meta_data);
-        // send_packet(0,dest,FMT_SWITCH_CFG,meta_data);
-        send_komma(test_vectors[0],ACK_SEL);
-        send_komma(test_vectors[1],RESEND_PACKET1_SEL);
+        send_packet(0,dest,FMT_LONG_READ,meta_data);
+        send_packet(9,dest,FMT_MEM_RESP,meta_data);
+        send_packet(54,dest,FMT_LONG_WRITE,meta_data);
+        send_packet(0,dest,FMT_SHORT_READ,meta_data);
+        send_packet(6,dest,FMT_SHORT_WRITE,meta_data);
+        send_packet(0,dest,FMT_MSG,meta_data);
+        send_packet(0,dest,FMT_SWITCH_CFG,meta_data);
+        send_packet(0,dest,KOMMA_PACKET,meta_data);
+        //send ack
+        @(posedge CLK);
+        tx_end_if.grtcred_tx[0] = '1;
+        @(posedge CLK);
+        tx_end_if.grtcred_tx[0] = '0;
+        while( tx_if.done != '1) begin
+            @(posedge CLK);
+        end
+        while (rx_end_if.grtcred_rx[0] != '1) begin
+            @(negedge CLK);
+        end
+        assert(rx_end_if.grtcred_rx[0] == '1)
+                else $display("mistake with expected grt_cred_0 %d",rx_end_if.grtcred_rx[0]);
+
+
+        @(posedge CLK);
+        tx_end_if.grtcred_tx[1] = '1;
+        @(posedge CLK);
+        tx_end_if.grtcred_tx[1] = '0;
+        while( tx_if.done != '1) begin
+            @(posedge CLK);
+        end
+        while (rx_end_if.grtcred_rx[1] != '1) begin
+            @(negedge CLK);
+        end
+        assert(rx_end_if.grtcred_rx[1] == '1)
+                else $display("mistake with expected grt_cred_0 %d",rx_end_if.grtcred_rx[1]);
+
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        
+        tx_end_if.flit_tx = {meta_data,KOMMA_PACKET,meta_data[4:0],19'b0,ACK_SEL};
+        tx_end_if.start_tx = '1;
+        @(posedge CLK);
+        tx_end_if.start_tx = '0;
+        while (rx_end_if.done_rx != '1) begin
+            @(negedge CLK);
+        end
+        assert (rx_end_if.flit_rx =={meta_data,KOMMA_PACKET,meta_data[4:0],19'b0,ACK_SEL} )
+            else $display("mistake with ACK COMMA");
+        // send_komma(test_vectors[0],ACK_SEL);
+        // send_komma(test_vectors[1],RESEND_PACKET1_SEL);
 
         $finish;
     end

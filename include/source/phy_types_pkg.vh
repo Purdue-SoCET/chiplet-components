@@ -6,7 +6,7 @@ package phy_types_pkg;
 
     //comma length io for uart
     typedef enum logic [1:0] {
-        NADA = '0,
+        NADA = '0, //for debug purposes on final version can be removed
         SELECT_COMMA_1_FLIT = 'd1,
         SELECT_COMMA_2_FLIT = 'd2,
         SELECT_COMMA_DATA = 'd3
@@ -16,12 +16,9 @@ package phy_types_pkg;
     typedef enum logic [3:0] {
         START_PACKET_SEL,
         END_PACKET_SEL,
-        RESEND_PACKET0_SEL,
-        RESEND_PACKET1_SEL,
-        RESEND_PACKET2_SEL,
-        RESEND_PACKET3_SEL,
+        GRTCRED0_SEL,
+        GRTCRED1_SEL,
         ACK_SEL,
-        NACK_SEL,
         DATA_SEL,
         NADA_SEL // for debug purposes
     } comma_sel_t;
@@ -30,12 +27,9 @@ package phy_types_pkg;
     typedef enum logic [9:0] {
         START_COMMA = 10'b1100001011,
         END_COMMA = 10'b1100000110,
-        RESEND_PACKET0_COMMA = 10'b1100001010,
-        RESEND_PACKET1_COMMA = 10'b1100001100,
-        RESEND_PACKET2_COMMA = 10'b1100001101,
-        RESEND_PACKET3_COMMA = 10'b1100000101,
-        ACK_COMMA = 10'b1100001001,
-        NACK_COMMA  = 10'b1100000111
+        GRTCRED0_COMMA = 10'b1100001010,
+        GRTCRED1_COMMA = 10'b1100001100,
+        ACK_COMMA = 10'b1100001001
     } comma_t;
 
     //encoded word
