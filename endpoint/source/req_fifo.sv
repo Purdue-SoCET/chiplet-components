@@ -21,7 +21,7 @@ module req_fifo#(
     logic [$clog2(DEPTH):0] count;
 
     socetlib_fifo #(
-        .T(logic[6:0]),
+        .WIDTH(7),
         .DEPTH(DEPTH)
     ) requestor_fifo (
         .CLK(clk),
