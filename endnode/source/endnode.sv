@@ -82,7 +82,7 @@ module endnode #() (
     assign phy_tx_if.grtcred0_write = end_if.grtcred_tx[0];
     assign phy_tx_if.grtcred1_write = end_if.grtcred_tx[1];
     assign end_if.grtcred_rx[0] = phy_rx_if.comma_sel == GRTCRED0_SEL && phy_rx_if.done_out;
-    assign end_if.grtcred_rx[1] = phy_rx_if.comma_sel == GRTCRED1_SEL   &&phy_rx_if.done_out;
+    assign end_if.grtcred_rx[1] = phy_rx_if.comma_sel == GRTCRED1_SEL && phy_rx_if.done_out;
     assign phy_tx_if.new_flit = end_if.send_next_flit_tx;
 
     comma_header_t komma_hdr;

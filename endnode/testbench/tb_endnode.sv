@@ -328,7 +328,7 @@ module tb_endnode;
     
     assign tx_if.data = tx_end_if.data_out_tx;
     assign tx_if.comma_sel = tx_end_if.comma_sel_tx_out;
-    assign tx_if.start = tx_end_if.start_out_tx;
+    assign txvc _if.start = tx_end_if.start_out_tx;
     assign tx_end_if.done_tx = tx_if.done;
     test_packet_t [2:0]test_vectors;
     
@@ -433,7 +433,7 @@ module tb_endnode;
         @(posedge CLK);
         @(posedge CLK);
         @(posedge CLK);
-        
+
         tx_end_if.flit_tx = {meta_data,KOMMA_PACKET,meta_data[4:0],19'b0,ACK_SEL};
         tx_end_if.start_tx = '1;
         @(posedge CLK);
