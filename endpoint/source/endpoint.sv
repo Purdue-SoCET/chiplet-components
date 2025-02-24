@@ -115,6 +115,11 @@ module endpoint #(
         tx_cache_if.rdata = 32'hBAD1BAD1;
         tx_cache_if.error = 0;
         tx_cache_if.request_stall = 0;
+        rx_cache_if.rdata = 32'hBAD1BAD1;
+        rx_cache_if.error = 0;
+        rx_cache_if.request_stall = 0;
+        rx_fifo_if.ren = 0;
+        rx_fifo_if.addr = 0;
         bus_if.rdata = 32'hBAD1BAD1;
         bus_if.error = 0;
         bus_if.request_stall = 0;
