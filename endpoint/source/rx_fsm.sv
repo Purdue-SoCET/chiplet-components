@@ -61,7 +61,7 @@ module rx_fsm#()(
         end
     end
 
-    assign metadata = {switch_if.out[0].id, switch_if.out[0].req};
+    assign metadata = {switch_if.out[0].metadata.id, switch_if.out[0].metadata.req};
     assign rx_cache_if.wdata = switch_if.out[0].payload;
 
     // Next state logic
@@ -132,7 +132,7 @@ module rx_fsm#()(
                 crc_update = !done;
                 if (done) begin
                     sw_if.packet_sent[0] = 1;
-                    sw_if.credit_granted[0][switch_if.out[0].vc] = 1;
+                    sw_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
                     count_enable = 1;
                     rx_cache_if.wen = 1;
                     rx_cache_if.wdata = switch_if.out[0].payload;
@@ -142,7 +142,7 @@ module rx_fsm#()(
             BODY : begin end
             CRC_CHECK : begin
                 sw_if.packet_sent[0] = 1;
-                sw_if.credit_granted[0][switch_if.out[0].vc] = 1;
+                sw_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
                 if(crc_val != switch_if.out[0].payload) begin
                     next_cache_addr = prev_cache_addr;
                     crc_error = 1;

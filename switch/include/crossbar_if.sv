@@ -4,7 +4,6 @@
 `include "switch_pkg.sv"
 
 interface crossbar_if #(
-    parameter type T,
     parameter int NUM_IN,
     parameter int NUM_OUT,
     parameter int NUM_VCS
@@ -15,12 +14,13 @@ interface crossbar_if #(
 
     logic [NUM_OUT-1:0] packet_sent;
     // Values to be muxed in
-    T [NUM_IN-1:0] in;
+    flit_t [NUM_IN-1:0] in;
     logic [NUM_IN-1:0] empty;
+    logic [NUM_IN-1:0] [$clog2(NUM_VCS)-1:0] buffer_vc;
     // Select lines for each output
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] [SELECT_SIZE-1:0] sel;
     // Output lines
-    T [NUM_OUT-1:0] out;
+    flit_t [NUM_OUT-1:0] out;
     logic [NUM_OUT-1:0] valid;
     // Enables the output
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] enable;
@@ -30,7 +30,7 @@ interface crossbar_if #(
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] credit_granted;
 
     modport crossbar(
-        input in, empty, sel, enable, packet_sent, credit_granted,
+        input in, empty, buffer_vc, sel, enable, packet_sent, credit_granted,
         output out, in_pop, valid
     );
 

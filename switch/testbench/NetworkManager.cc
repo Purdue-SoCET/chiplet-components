@@ -4,8 +4,6 @@
 #include <span>
 #include <string>
 
-#define BUFFER_SIZE 8
-
 extern Vswitch_wrapper *dut;
 
 // `from` is 1-indexed
@@ -48,14 +46,14 @@ void NetworkManager::tick() {
     for (int i = 0; i < 4; i++) {
         dut->packet_sent[i] = 0;
         if (dut->data_ready_out[i] && this->to_check[i].size() > 0) {
-            std::cout << "Checking data from switch " << i + 1 << std::endl;
             std::vector<uint64_t> expected;
             for (auto possible_packets : this->to_check[i]) {
                 expected.push_back(possible_packets.front() & FLIT_MASK);
             }
             std::string test_name = "Expected output from test ";
-            test_name += std::to_string(i);
-            int found = ensure<uint64_t>(dut->out[i] & FLIT_MASK, expected, test_name.c_str());
+            test_name += std::to_string(i + 1);
+            int found =
+                ensure<uint64_t>(dut->out[i] & FLIT_MASK, expected, test_name.c_str(), false);
             if (found >= 0) {
                 this->to_check[i][found].pop();
                 if (this->to_check[i][found].empty()) {
@@ -81,8 +79,8 @@ void NetworkManager::tick() {
             this->buffer_occupancy[vc * 4 + i] > (BUFFER_SIZE / 4)) {
             this->to_be_sent[i].pop();
             this->buffer_occupancy[vc * 4 + i]--;
-            std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch "
-                      << i + 1 << std::endl;
+            // std::cout << "Putting data 0x" << std::hex << to_be_sent << std::dec << " on switch "
+            //           << i + 1 << std::endl;
             dut->in_flit[i] = to_be_sent;
             dut->data_ready_in[i] = 1;
         }

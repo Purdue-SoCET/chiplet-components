@@ -13,6 +13,7 @@ interface switch_reg_bank_if #(
     import chiplet_types_pkg::*;
     import switch_pkg::*;
 
+    logic reg_bank_claim;
     flit_t in_flit;
     logic [NUM_OUTPORTS-1:0] dateline;
     route_lut_t [TABLE_SIZE-1:0] route_lut;
@@ -20,6 +21,14 @@ interface switch_reg_bank_if #(
     modport reg_bank(
         input in_flit,
         output dateline, route_lut
+    );
+
+    modport rc(
+        input route_lut, reg_bank_claim
+    );
+
+    modport vc(
+        input dateline
     );
 endinterface
 

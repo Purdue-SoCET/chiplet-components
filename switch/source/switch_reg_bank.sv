@@ -17,6 +17,9 @@ module switch_reg_bank #(
     import chiplet_types_pkg::*;
     import switch_pkg::*;
 
+    localparam LUT_TOP_ADDR = 8'h10;
+    localparam DATELINE_ADDR = 8'h11;
+
     switch_cfg_hdr_t switch_cfg;
     logic [14:0] cfg_data;
 
@@ -41,12 +44,9 @@ module switch_reg_bank #(
         cfg_data = {switch_cfg.data_hi, switch_cfg.data_lo};
 
         if(switch_cfg.format == FMT_SWITCH_CFG) begin
-            // TODO: claiming here will likely make the vc allocator on
-            // the other side of the link become unsynchronized
-            if(switch_cfg.addr <= 8'h10) begin
+            if(switch_cfg.addr <= LUT_TOP_ADDR) begin
                 next_route_lut[switch_cfg.addr] = route_lut_t'(cfg_data);
-            end
-            else if(switch_cfg.addr == 8'h15) begin
+            end else if(switch_cfg.addr == DATELINE_ADDR) begin
                 next_dateline = cfg_data[NUM_OUTPORTS-1:0];
             end
         end

@@ -14,7 +14,7 @@ module crossbar#(
 );
     flit_t [NUM_OUT-1:0] next_out;
     logic [NUM_OUT-1:0] valid, next_valid;
-    logic [NUM_OUT-1:0] [$clog2(NUM_VCS)-1:0] outport_vc, next_outport_vc;
+    logic [NUM_OUT-1:0] [$clog2(NUM_VCS)-1:0] buffer_vc, outport_vc, next_outport_vc;
     logic [NUM_OUT-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability, next_buffer_availability;
 
     // I have no idea how to clean this up
@@ -54,7 +54,12 @@ module crossbar#(
         next_outport_vc = outport_vc;
 
         for (int i = 0; i < NUM_OUT; i++) begin
+            buffer_vc[i] = cb_if.buffer_vc[cb_if.sel[i][outport_vc[i]]];
             next_out[i] = cb_if.in[cb_if.sel[i][outport_vc[i]]];
+            // Use the VC from the buffers since it could have been
+            // speculatively allocated, so we can't rely on outport_vc being
+            // accurate
+            next_out[i].metadata.vc = outport_vc[i];
 
             if (cb_if.enable[i][outport_vc[i]] && !cb_if.empty[cb_if.sel[i][outport_vc[i]]] && buffer_availability[i][outport_vc[i]] > BUFFER_SIZE/4) begin
                 if (cb_if.packet_sent[i]) begin
@@ -69,7 +74,9 @@ module crossbar#(
             end
 
             if (!next_valid[i]) begin
-                next_outport_vc[i] = cb_if.enable[i][1];
+                if (i != 0 || !cb_if.enable[i][outport_vc[i]]) begin
+                    next_outport_vc[i] = cb_if.enable[i][1];
+                end
             end
 
             for (int j = 0; j < NUM_VCS; j++) begin

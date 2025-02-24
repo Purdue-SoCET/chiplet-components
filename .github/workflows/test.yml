@@ -27,5 +27,6 @@ jobs:
           ssh-add - <<< '${{ secrets.DIGITAL_LIB_PRIVATE_KEY }}'
           git clone --depth=1 --branch=crc git@github.com:Purdue-SoCET/digital-lib.git
           make buildsys_setup
+          ./apply_patches.sh digital-lib
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:endpoint
-          CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:switch
+          CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target correctness --tool verilator socet:chiplet:switch

@@ -1,21 +1,22 @@
-`define BIND_SWITCH_TRACKER(name)                                                               \
-    bind switch switch_tracker #(                                                               \
-        .NUM_OUTPORTS(NUM_OUTPORTS),                                                            \
-        .NUM_BUFFERS(NUM_BUFFERS),                                                              \
-        .NUM_VCS(NUM_VCS),                                                                      \
-        .BUFFER_SIZE(BUFFER_SIZE),                                                              \
-        .TOTAL_NODES(TOTAL_NODES),                                                              \
-        .NODE(NODE)                                                                             \
-    ) TRACK_``name (                                                                            \
-        .clk(clk),                                                                              \
-        .nrst(n_rst),                                                                           \
-        .not_idle(buf_if.req_routing | buf_if.req_vc | buf_if.req_switch | buf_if.req_crossbar),\
-        .is_active(buf_if.req_crossbar),                                                        \
-        .packet_sent(buf_if.REN),                                                               \
-        .outport_enabled(cb_if.enable),                                                         \
-        .buffer_availability(CB.buffer_availability),                                           \
-        .outport_selected_vc(CB.outport_vc),                                                    \
-        .outport_packet_sent(cb_if.packet_sent)                                                 \
+`define BIND_SWITCH_TRACKER                                                         \
+    bind switch switch_tracker #(                                                   \
+        .NUM_OUTPORTS(NUM_OUTPORTS),                                                \
+        .NUM_BUFFERS(NUM_BUFFERS),                                                  \
+        .NUM_VCS(NUM_VCS),                                                          \
+        .BUFFER_SIZE(BUFFER_SIZE),                                                  \
+        .TOTAL_NODES(TOTAL_NODES),                                                  \
+        .NODE(NODE)                                                                 \
+    ) TRACK_SWITCH (                                                                \
+        .clk(clk),                                                                  \
+        .nrst(n_rst),                                                               \
+        .not_idle(buf_if.req_pipeline | buf_if.active),                             \
+        .is_active(buf_if.active),                                                  \
+        .packet_sent(buf_if.REN),                                                   \
+        .outport_enabled(cb_if.enable),                                             \
+        .buffer_availability(CB.buffer_availability),                               \
+        .outport_selected_vc(CB.outport_vc),                                        \
+        .outport_packet_sent(cb_if.packet_sent),                                    \
+        .speculative_success(SWALLOC.speculative_success << pipe_if.sa_egress_port) \
     );
 
 module switch_tracker#(
@@ -43,7 +44,8 @@ module switch_tracker#(
     input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] outport_enabled,
     input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability,
     input logic [NUM_OUTPORTS-1:0] [$clog2(NUM_VCS)-1:0] outport_selected_vc,
-    input logic [NUM_OUTPORTS-1:0] outport_packet_sent
+    input logic [NUM_OUTPORTS-1:0] outport_packet_sent,
+    input logic [NUM_OUTPORTS-1:0] speculative_success
 );
     int v_latency [NUM_VCS*NUM_BUFFERS-1:0] [$];
     int v_active_time [NUM_VCS*NUM_BUFFERS-1:0] [$];
@@ -62,6 +64,8 @@ module switch_tracker#(
 
     logic [NUM_VCS*NUM_BUFFERS-1:0] not_idle_negedge;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] outport_enabled_negedge;
+
+    logic [NUM_OUTPORTS-1:0] delay_speculative_success;
 
     generate
         for (genvar i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
@@ -202,9 +206,12 @@ module switch_tracker#(
                     v_outport_packet_len[i][j] = {};
                 end
             end
+            delay_speculative_success <= 0;
         end else begin
             for (int i = 0; i < NUM_VCS*NUM_BUFFERS; i++) begin
-                if (not_idle_negedge[i]) begin
+                // num_flits_sent[i] == 0 represents a register bank claim,
+                // don't count it
+                if (not_idle_negedge[i] && num_flits_sent[i] != 0) begin
                     v_latency[i].push_back(latency[i]);
                     v_active_time[i].push_back(active_time[i]);
                     v_flits_sent[i].push_back(num_flits_sent[i]);
@@ -212,7 +219,7 @@ module switch_tracker#(
             end
             for (int i = 0; i < NUM_OUTPORTS; i++) begin
                 for (int j = 0; j < NUM_VCS; j++) begin
-                    if (outport_enabled_negedge[i][j]) begin
+                    if (outport_enabled_negedge[i][j] && !delay_speculative_success[i]) begin
                         v_outport_active[i][j].push_back(outport_total_len[i][j]);
                         v_outport_credit_blocked[i][j].push_back(outport_credit_blocked_len[i][j]);
                         v_outport_vc_blocked[i][j].push_back(outport_vc_blocked_len[i][j]);
@@ -220,6 +227,7 @@ module switch_tracker#(
                     end
                 end
             end
+            delay_speculative_success <= speculative_success;
         end
     end
 

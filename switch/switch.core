@@ -13,15 +13,13 @@ filesets:
             - "source/vc_allocator.sv"
             - "source/buffers.sv"
             - "source/arbiter.sv"
-            - "source/switch_tracker.sv"
             - "include/switch_pkg.sv" : {is_include_file: true}
             - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
-            - "include/route_compute_if.sv" : {is_include_file: true}
             - "include/switch_allocator_if.sv" : {is_include_file: true}
             - "include/switch_reg_bank_if.sv" : {is_include_file: true}
-            - "include/vc_allocator_if.sv" : {is_include_file: true}
             - "include/arbiter_if.sv" : {is_include_file: true}
+            - "include/pipeline_if.sv" : {is_include_file: true}
             # - "source/cache.sv"
         file_type: systemVerilogSource
         depend:
@@ -30,6 +28,11 @@ filesets:
             - "socet:digital-lib:counter"
             # - "socet:bus-components:bus_protocol_if"
 
+    tracker:
+        files:
+            - "source/switch_tracker.sv" : {is_include_file: true}
+        file_type: systemVerilogSource
+
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
@@ -37,17 +40,34 @@ filesets:
 
     tb:
         files:
-            - "testbench/switch_wrapper.sv"
-            - "testbench/tb_switch.cc": {file_type: cppSource}
             - "testbench/NetworkManager.cc": {file_type: cppSource}
             - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
             - "testbench/crc.c": {file_type: cppSource}
             - "testbench/crc.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/packet.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/utility.cc": {file_type: cppSource}
             - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
-            # - "data/file.txt": { file_type: user }
         file_type: systemVerilogSource
         depend:
             - "socet:digital-lib:edge_detector"
+
+    measure_tb:
+        files:
+            - "testbench/switch_measure_wrapper.sv"
+            - "testbench/tb_switch_measure.cc": {file_type: cppSource}
+        file_type: systemVerilogSource
+
+    correctness_tb:
+        files:
+            - "testbench/switch_correctness_wrapper.sv"
+            - "testbench/tb_switch_correctness.cc": {file_type: cppSource}
+        file_type: systemVerilogSource
+
+    fpga:
+        files:
+            - "fpga/fpga_switch_wrapper.sv"
+            - fpga/pinmap.tcl : { file_type: tclSource }
+        file_type: systemVerilogSource
 
     synfiles:
         depend:
@@ -64,6 +84,7 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
+            - tracker
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:
@@ -82,11 +103,74 @@ targets:
                 make_options:
                     - -j
 
+    measure:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+            - measure_tb
+            - tracker
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
+        tools:
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --trace-structs
+                    - --main
+                    - --timing
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
+                make_options:
+                    - -j
+
+    correctness:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+            - correctness_tb
+            - tracker
+        toplevel:
+            - "tool_verilator? (switch_wrapper)"
+        tools:
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --trace-structs
+                    - --main
+                    - --timing
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
+                make_options:
+                    - -j
+
+    fpga:
+        filesets:
+            - rtl
+            - fpga
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: fpga_switch_wrapper
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
+
     lint:
         <<: *default
         default_tool: verilator
         filesets_append:
             - tb
+            - correctness_tb
         toplevel:
             - "tool_verilator? (switch_wrapper)"
         tools:

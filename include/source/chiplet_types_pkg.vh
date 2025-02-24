@@ -65,11 +65,15 @@ package chiplet_types_pkg;
         logic [6:0]     data_lo;
     } switch_cfg_hdr_t;
 
-    // Flit Format
     typedef struct packed {
         logic           vc;
         pkt_id_t        id;
         node_id_t       req;
+    } flit_metadata_t;
+
+    // Flit Format
+    typedef struct packed {
+        flit_metadata_t metadata;
         word_t          payload;
     } flit_t;
 

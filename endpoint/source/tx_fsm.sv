@@ -129,9 +129,9 @@ module tx_fsm#(
             SEND_PKT : begin
                 switch_if.data_ready_in[0] = !stop_sending && !length_done;
                 tx_cache_if.ren = 1;
-                flit.vc = 0;
-                flit.id = curr_pkt_id;
-                flit.req = tx_if.node_id;
+                flit.metadata.vc = 0;
+                flit.metadata.id = curr_pkt_id;
+                flit.metadata.req = tx_if.node_id;
                 flit.payload = tx_bus_if.rdata;
             end
             default : begin end

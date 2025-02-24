@@ -6,16 +6,20 @@
 
 #define FLIT_MASK 0x7FFFFFFFFF
 
+#define DATELINE_ADDR 0x11
+
 template <typename T>
-int ensure(T actual, const std::span<T> &expected, const char *test_name) {
+int ensure(T actual, const std::span<T> &expected, const char *test_name, bool print_on_success) {
     extern uint64_t fails;
     extern uint64_t sim_time;
     bool found = false;
     int i = 0;
     for (i = 0; i < expected.size(); i++) {
         if (actual == expected[i]) {
-            std::cout << "[PASS] "
-                      << "Time " << sim_time << "\t" << test_name << std::endl;
+            if (print_on_success) {
+                std::cout << "[PASS] "
+                          << "Time " << sim_time << "\t" << test_name << std::endl;
+            }
             found = true;
             break;
         }
@@ -32,3 +36,11 @@ int ensure(T actual, const std::span<T> &expected, const char *test_name) {
     }
     return i;
 }
+
+void reset();
+
+void signalHandler(int);
+
+void tick(bool limit);
+
+void wait_for_propagate(uint32_t waits);

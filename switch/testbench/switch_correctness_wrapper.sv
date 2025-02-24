@@ -1,12 +1,4 @@
-`define POSEDGE(name, sig)                      \
-    logic name;                                 \
-    socetlib_edge_detector DETECT_``name`` (    \
-        .CLK(clk),                              \
-        .nRST(nrst),                            \
-        .signal(sig),                           \
-        .pos_edge(name),                        \
-        .neg_edge()                             \
-    );
+`include "switch_tracker.sv"
 
 module switch_wrapper(
     input logic clk, nrst,
@@ -43,11 +35,11 @@ module switch_wrapper(
 
     assign sw_if1.in = {sw_if4.out[1], in_flit[0]};
     assign sw_if1.data_ready_in = {sw_if4.data_ready_out[1], data_ready_in[0]};
-    assign sw_if1.credit_granted[0] = sw_if1.packet_sent[0] << sw_if1.out[0].vc;
+    assign sw_if1.credit_granted[0] = sw_if1.packet_sent[0] << sw_if1.out[0].metadata.vc;
     assign sw_if1.credit_granted[1] = {sw_if3.buffer_available[1][1], sw_if3.buffer_available[1][0]};
     assign sw_if1.packet_sent = {sw_if3.data_ready_in[1] & sw_if1.data_ready_out[1], data_ready_out[0] & packet_sent[0]};
 
-    `BIND_SWITCH_TRACKER(switch1)
+    `BIND_SWITCH_TRACKER
 
     // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-
 
@@ -72,7 +64,7 @@ module switch_wrapper(
 
     assign sw_if2.in = {sw_if4.out[2], in_flit[1]};
     assign sw_if2.data_ready_in = {sw_if4.data_ready_out[2], data_ready_in[1]};
-    assign sw_if2.credit_granted[0] = sw_if2.packet_sent[0] << sw_if2.out[0].vc;
+    assign sw_if2.credit_granted[0] = sw_if2.packet_sent[0] << sw_if2.out[0].metadata.vc;
     assign sw_if2.credit_granted[1] = {sw_if3.buffer_available[2][1], sw_if3.buffer_available[2][0]};
     assign sw_if2.packet_sent = {sw_if3.data_ready_in[2] & sw_if2.data_ready_out[1], data_ready_out[1] & packet_sent[1]};
 
@@ -99,7 +91,7 @@ module switch_wrapper(
 
     assign sw_if3.in = {sw_if2.out[1], sw_if1.out[1], in_flit[2]};
     assign sw_if3.data_ready_in = {sw_if2.data_ready_out[1], sw_if1.data_ready_out[1], data_ready_in[2]};
-    assign sw_if3.credit_granted[0] = sw_if3.packet_sent[0] << sw_if3.out[0].vc;
+    assign sw_if3.credit_granted[0] = sw_if3.packet_sent[0] << sw_if3.out[0].metadata.vc;
     assign sw_if3.credit_granted[1] = {sw_if4.buffer_available[1][1], sw_if4.buffer_available[1][0]};
     assign sw_if3.packet_sent = {sw_if4.data_ready_in[1] & sw_if3.data_ready_out[1], data_ready_out[2] & packet_sent[2]};
 
@@ -126,7 +118,7 @@ module switch_wrapper(
 
     assign sw_if4.in = {sw_if3.out[1], in_flit[3]};
     assign sw_if4.data_ready_in = {sw_if3.data_ready_out[1], data_ready_in[3]};
-    assign sw_if4.credit_granted[0] = sw_if4.packet_sent[0] << sw_if4.out[0].vc;
+    assign sw_if4.credit_granted[0] = sw_if4.packet_sent[0] << sw_if4.out[0].metadata.vc;
     assign sw_if4.credit_granted[1] = {sw_if1.buffer_available[1][1], sw_if1.buffer_available[1][0]};
     assign sw_if4.credit_granted[2] = {sw_if2.buffer_available[1][1], sw_if2.buffer_available[1][0]};
     assign sw_if4.packet_sent = {sw_if2.data_ready_in[1] & sw_if4.data_ready_out[2], sw_if1.data_ready_in[1] & sw_if4.data_ready_out[1], data_ready_out[3] & packet_sent[3]};
