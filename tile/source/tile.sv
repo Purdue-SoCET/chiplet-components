@@ -3,10 +3,12 @@
 module tile #(
     parameter NUM_LINKS,
     parameter int BUFFER_SIZE,
+    parameter PORT_COUNT
 ) (
     input clk, n_rst,
+    input logic [PORT_COUNT-1:0] uart_rx,
+    output logic [PORT_COUNT-1:0] uart_tx,
     bus_protocol_if.peripheral_vital bus_if
-    // TODO: uart interface
 );
     parameter NUM_VCS = 2;
     parameter BUFFER_SIZE = 8;
