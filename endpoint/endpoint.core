@@ -19,11 +19,18 @@ filesets:
             - "socet:bus-components:bus_protocol_if"
             - "socet:digital-lib:counter:0.0.1"
             - "socet:digital-lib:crc:0.0.1"
+            - "socet:digital-lib:fifo"
 
     synth:
         depend:
             - "ece337:tech:AMI_05_LIB"
             - "socet:chiplet:endpoint_syn"
+
+    fpga:
+        files:
+            - "fpga/fpga_endpoint_wrapper.sv"
+            - fpga/pinmap.tcl : { file_type: tclSource }
+        file_type: systemVerilogSource
 
     tb:
         files:
@@ -96,6 +103,18 @@ targets:
                 verilator_options:
                     - --timing
                     - -Wall
+
+    fpga:
+        filesets:
+            - rtl
+            - fpga
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: fpga_endpoint_wrapper
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
 
     syn:
         <<: *default

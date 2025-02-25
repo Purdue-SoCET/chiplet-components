@@ -5,10 +5,11 @@ module req_fifo#(
 ) (
     input logic clk, n_rst,
     input logic crc_valid,
-    input [6:0] metadata,
+    input logic [6:0] metadata,
     output logic overflow,
     bus_protocol_if.peripheral_vital bus_if
 );
+    import chiplet_types_pkg::*;
 
     localparam COUNT_ADDR = 32'h00;
     localparam OVERRUN_ADDR = 32'h04;
@@ -17,7 +18,7 @@ module req_fifo#(
     localparam CLEAR_ADDR = 32'h10;
 
     logic ren, underrun, clear;
-    node_id_t fifo_read;
+    logic [6:0] fifo_read;
     logic [$clog2(DEPTH):0] count;
 
     socetlib_fifo #(
@@ -42,6 +43,8 @@ module req_fifo#(
         ren = 0;
         clear = 0;
         bus_if.rdata = 0;
+        bus_if.error = 0;
+        bus_if.request_stall = 0;
         if(bus_if.ren) begin
             casez(bus_if.addr)
                 COUNT_ADDR: begin

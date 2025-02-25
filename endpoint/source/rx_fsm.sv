@@ -1,7 +1,7 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 
-module rx_fsm#()(
+module rx_fsm (
     input logic clk, n_rst,
     input logic overflow, 
     output logic fifo_enable,
@@ -111,6 +111,8 @@ module rx_fsm#()(
         count_enable = 0;
         fifo_enable = 0;
         rx_cache_if.wen = 0;
+        rx_cache_if.ren = 0;
+        rx_cache_if.strobe = 4'hF;
         rx_cache_if.wdata = 0;
         length_clear = 0;
         next_cache_addr = rx_cache_if.addr;
@@ -118,8 +120,8 @@ module rx_fsm#()(
         clear_crc = 0;
         crc_update = 0;
         next_prev_cache_addr = prev_cache_addr;
-        sw_if.packet_sent[0] = 0;
-        sw_if.credit_granted[0] = 0;
+        switch_if.packet_sent[0] = 0;
+        switch_if.credit_granted[0] = 0;
 
         casez (state)
             IDLE : begin
@@ -141,8 +143,8 @@ module rx_fsm#()(
             end
             BODY : begin end
             CRC_CHECK : begin
-                sw_if.packet_sent[0] = 1;
-                sw_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
+                switch_if.packet_sent[0] = 1;
+                switch_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
                 if(crc_val != switch_if.out[0].payload) begin
                     next_cache_addr = prev_cache_addr;
                     crc_error = 1;
