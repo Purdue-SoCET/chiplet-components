@@ -26,7 +26,7 @@ interface switch_reg_bank_if #(
     );
 
     modport rc(
-        input route_lut, reg_bank_claim
+        input route_lut, reg_bank_claim, node_id
     );
 
     modport vc(

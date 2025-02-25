@@ -7,6 +7,7 @@
 #define FLIT_MASK 0x7FFFFFFFFF
 
 #define DATELINE_ADDR 0x11
+#define NODE_ID_ADDR 0x12
 
 template <typename T>
 int ensure(T actual, const std::span<T> &expected, const char *test_name, bool print_on_success) {

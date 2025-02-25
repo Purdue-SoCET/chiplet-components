@@ -5,7 +5,6 @@
 `include "switch_reg_bank_if.sv"
 
 module switch_reg_bank #(
-    parameter NODE,
     parameter NUM_BUFFERS,
     parameter NUM_OUTPORTS,
     parameter TABLE_SIZE,
@@ -43,7 +42,7 @@ module switch_reg_bank #(
     always_comb begin
         next_dateline = rb_if.dateline;
         next_route_lut = rb_if.route_lut;
-        next_node_id = node_id;
+        next_node_id = rb_if.node_id;
 
         switch_cfg = switch_cfg_hdr_t'(rb_if.in_flit.payload);
         cfg_data = {switch_cfg.data_hi, switch_cfg.data_lo};
