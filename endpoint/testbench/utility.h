@@ -5,6 +5,7 @@
 #include <span>
 
 #define FLIT_MASK 0x7FFFFFFFFF
+#define NODE_ID_ADDR 0x12
 
 template <typename T>
 int ensure(T actual, std::span<const T> expected, const char *test_name) {

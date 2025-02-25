@@ -6,7 +6,6 @@
 
 module endpoint #(
     parameter NUM_MSGS=4,
-    parameter NODE_ID,
     parameter DEPTH
 ) (
     input logic clk, n_rst,
@@ -90,8 +89,7 @@ module endpoint #(
         .msg_if(msg_if)
     );
 
-    // TODO:
-    assign tx_fsm_if.node_id = NODE_ID;
+    assign tx_fsm_if.node_id = switch_if.node_id;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin

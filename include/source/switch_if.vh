@@ -17,17 +17,17 @@ interface switch_if #(
     logic [NUM_BUFFERS-1:0] [NUM_VCS-1:0] buffer_available;
     logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] credit_granted;
     logic [NUM_OUTPORTS-1:0] packet_sent;
-    //logic [NUM_BUFFERS-1:0] buffer_full;
+    node_id_t node_id;
 
     //TODO 
     modport switch(
         input in, credit_granted, data_ready_in, packet_sent, 
-        output out, buffer_available, data_ready_out
+        output out, buffer_available, data_ready_out, node_id
     );
 
     modport endpoint(
         output in, credit_granted, data_ready_in, packet_sent,
-        input out, buffer_available, data_ready_out
+        input out, buffer_available, data_ready_out, node_id
     );
 endinterface
 

@@ -44,8 +44,7 @@ module switch_endpoint_wrapper #(
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
         .BUFFER_SIZE(8),
-        .TOTAL_NODES(4),
-        .NODE(1) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch1 (
         .clk(clk),
         .n_rst(n_rst),
@@ -56,7 +55,6 @@ module switch_endpoint_wrapper #(
 
     endpoint #(
         .NUM_MSGS(4),
-        .NODE_ID(1),
         .DEPTH(8)
     ) endpoint1 (
         .clk(clk),

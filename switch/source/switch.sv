@@ -185,4 +185,5 @@ module switch #(
         .n_rst(n_rst),
         .rb_if(rb_if)
     );
+    assign sw_if.node_id = rb_if.node_id;
 endmodule

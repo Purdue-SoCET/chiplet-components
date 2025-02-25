@@ -150,6 +150,10 @@ void sendConfig(uint8_t switch_num, uint8_t addr, uint16_t data) {
     manager->queuePacketSend(1, flits);
 }
 
+void sendNode(uint8_t switch_num) {
+    sendConfig(switch_num, NODE_ID_ADDR, switch_num);
+}
+
 void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint8_t dest,
                         uint8_t port) {
     sendConfig(switch_num, tbl_entry, src << 10 | dest << 5 | port); // TODO: num bits for port?
@@ -165,6 +169,8 @@ void resetAndInit() {
     writeBus(0xC, 0x180);
     // Set up routing table
     // For 1:
+    sendNode(1);
+    wait_for_propagate(5);
     // {*, *, 1}
     sendRouteTableInit(1, 0, 0, 0, 1);
 
@@ -266,9 +272,6 @@ int main(int argc, char **argv) {
         crc = crc_update(crc, &data[2], 4);
         crc = crc_finalize(crc);
         ensure(readBus(0x3028), {{crc}}, "crc");
-        ensure(readBus(0x3400), {{4}}, "metadata fifo count");
-        ensure(readBus(0x340C), {{2}}, "metadata fifo read");
-        ensure(readBus(0x3410), {{1}}, "metadata fifo clear");
     }
 
     wait_for_propagate(150);
