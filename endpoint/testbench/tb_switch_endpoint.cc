@@ -266,9 +266,12 @@ int main(int argc, char **argv) {
         crc = crc_update(crc, &data[2], 4);
         crc = crc_finalize(crc);
         ensure(readBus(0x3028), {{crc}}, "crc");
+        ensure(readBus(0x3400), {{4}}, "metadata fifo count");
+        ensure(readBus(0x340C), {{2}}, "metadata fifo read");
+        ensure(readBus(0x3410), {{1}}, "metadata fifo clear");
     }
 
-    wait_for_propagate(100);
+    wait_for_propagate(150);
 
     // Test error checking
     // CRC error
