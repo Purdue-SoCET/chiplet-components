@@ -144,7 +144,7 @@ module rx_fsm (
             BODY : begin end
             CRC_CHECK : begin
                 switch_if.packet_sent[0] = 1;
-                switch_if.credit_granted[0][switch_if.out[0].vc] = 1;
+                switch_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
                 if(crc_val != switch_if.out[0].payload) begin
                     next_cache_addr = prev_cache_addr;
                     crc_error = 1;
