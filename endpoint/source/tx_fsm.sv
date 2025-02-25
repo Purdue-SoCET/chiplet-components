@@ -26,11 +26,6 @@ module tx_fsm#(
     logic length_clear, length_done, stop_sending;
     flit_t flit;
     pkt_id_t curr_pkt_id, next_curr_pkt_id;
-    long_hdr_t       long_hdr;
-    short_hdr_t      short_hdr;
-    msg_hdr_t        msg_hdr;
-    resp_hdr_t       resp_hdr;
-    switch_cfg_hdr_t switch_cfg_hdr;
 
     socetlib_counter #(
         .NBITS(PKT_LENGTH_WIDTH)
@@ -70,6 +65,7 @@ module tx_fsm#(
 
     // Next state logic
     always_comb begin
+        next_state = state;
         next_curr_pkt_id = curr_pkt_id;
         casez (state)
             IDLE : begin
@@ -107,11 +103,6 @@ module tx_fsm#(
         tx_cache_if.burst_type = '0;
         tx_cache_if.burst_length = 0;
         tx_cache_if.secure_transfer = 0;
-        long_hdr = long_hdr_t'(tx_bus_if.rdata);
-        short_hdr = short_hdr_t'(tx_bus_if.rdata);
-        msg_hdr = msg_hdr_t'(tx_bus_if.rdata);
-        resp_hdr = resp_hdr_t'(tx_bus_if.rdata);
-        switch_cfg_hdr = switch_cfg_hdr_t'(tx_bus_if.rdata);
         next_curr_pkt_length = curr_pkt_length;
         switch_if.data_ready_in[0] = 0;
         flit = flit_t'(0);
@@ -124,7 +115,7 @@ module tx_fsm#(
             end
             START_SEND_PKT : begin
                 tx_cache_if.ren = 1;
-                next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
+                next_curr_pkt_length = expected_num_flits(tx_cache_if.rdata);
             end
             SEND_PKT : begin
                 switch_if.data_ready_in[0] = !stop_sending && !length_done;
