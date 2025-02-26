@@ -4,15 +4,14 @@
 `include "chiplet_types_pkg.vh"
 
 interface arbiter_if #(
-    parameter int WIDTH,
-    parameter int NUM_BUFFERS
+    parameter int WIDTH
 );
     import chiplet_types_pkg::*;
 
     logic [WIDTH-1:0] bid;
     logic valid;
     logic [$clog2(WIDTH)-1:0] select;
-    flit_t [NUM_BUFFERS-1:0] rdata;
+    flit_t [WIDTH-1:0] rdata;
     flit_t flit;
 
     modport arbiter(

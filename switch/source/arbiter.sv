@@ -10,6 +10,7 @@ module arbiter#(
     logic [$clog2(WIDTH)-1:0] next_select;
     logic [WIDTH-1:0] left, right;
     logic found;
+    flit_t next_flit;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if (!nRST) begin

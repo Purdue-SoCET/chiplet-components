@@ -30,8 +30,7 @@ module switch #(
         .DEPTH(BUFFER_SIZE) // How many flits should each buffer hold
     ) buf_if();
     arbiter_if #(
-        .WIDTH(2*NUM_BUFFERS),
-        .NUM_BUFFERS(NUM_BUFFERS)
+        .WIDTH(2*NUM_BUFFERS)
     ) rc_a_if();
     switch_allocator_if #(
         .NUM_BUFFERS(2*NUM_BUFFERS),
@@ -107,8 +106,9 @@ module switch #(
         rc_a_if.bid = buf_if.req_pipeline;
         // Connect arbiter to route compute
         pipe_if.rc_valid = rc_a_if.valid;
-        pipe_if.rc_metadata = a_if.flit.metadata;
-        pipe_if.rc_dest = a_if.flit.payload[27:23];
+        rc_a_if.rdata = buf_if.rdata;
+        pipe_if.rc_metadata = rc_a_if.flit.metadata;
+        pipe_if.rc_dest = rc_a_if.flit.payload[27:23];
         pipe_if.rc_ingress_port = rc_a_if.select;
         buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
         // Connect switch allocator to register bank
