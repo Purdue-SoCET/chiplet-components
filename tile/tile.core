@@ -7,8 +7,11 @@ filesets:
         files:
             - "source/tile.sv"
         file_type: systemVerilogSource
-        # depend:
-        #     - "fusesoc:core:name"
+        depend:
+            - "socet:chiplet:endpoint"
+            - "socet:chiplet:switch"
+            - "socet:chiplet:uart"
+            - "socet:chiplet:endnode"
 
     synth:
         depend:

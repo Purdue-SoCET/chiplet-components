@@ -4,7 +4,6 @@
 `include "phy_types_pkg.vh"
 
 interface endnode_if;
-    parameter COUNTER_SIZE = 4;
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
     //rx uart sig

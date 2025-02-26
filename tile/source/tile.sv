@@ -2,8 +2,8 @@
 
 module tile #(
     parameter NUM_LINKS,
-    parameter int BUFFER_SIZE,
-    parameter PORT_COUNT
+    parameter BUFFER_SIZE = 8,
+    parameter PORT_COUNT = 5
 ) (
     input clk, n_rst,
     input logic [PORT_COUNT-1:0] uart_rx,
@@ -11,8 +11,69 @@ module tile #(
     bus_protocol_if.peripheral_vital bus_if
 );
     parameter NUM_VCS = 2;
-    parameter BUFFER_SIZE = 8;
 
+    // Physical layer
+    genvar i;
+    generate
+        for (i = 0; i < NUM_LINKS; i++) begin : g_phy_layer
+            uart_rx_if #(
+                .PORTCOUNT(PORT_COUNT)
+            ) rx_if();
+            uart_tx_if #(
+                .PORTCOUNT(PORT_COUNT)
+            ) tx_if();
+
+            assign rx_if.uart_in = uart_rx;
+            assign uart_tx = tx_if.uart_out;
+
+            always_comb begin
+                tx_if.data = end_if.data_out_tx;
+                tx_if.comma_sel = end_if.comma_sel_tx_out;
+                tx_if.start = end_if.start_out_tx;
+            end
+
+            uart_baud #(
+                .PORTCOUNT(PORT_COUNT)
+            ) uart (
+                .CLK(clk),
+                .nRST(n_rst),
+                .rx_if(rx_if),
+                .tx_if(tx_if)
+            );
+
+            // Upper physical layer
+            endnode_if end_if();
+            endnode #(
+                .PORTCOUNT(PORT_COUNT)
+            ) endnode(
+                .CLK(clk),
+                .nRST(n_rst),
+                .end_if(end_if)
+            );
+
+            always_comb begin
+                end_if.enc_flit_rx = rx_if.data;
+                end_if.done_in_rx = rx_if.done;
+                end_if.comma_length_sel_in_rx = rx_if.comma_sel;
+                end_if.err_in_rx = rx_if.rx_err;
+                end_if.start_tx = sw_if.data_ready_out[i];
+                end_if.flit_tx = sw_if.out[i];
+                end_if.done_tx = tx_if.done;
+                end_if.packet_done_tx = 0 /* TODO */;
+                end_if.send_next_flit_tx = 0 /* TODO */;
+                end_if.grtcred_tx = sw_if.buffer_available[i];
+                sw_if.packet_sent[i] = end_if.get_data;
+                sw_if.data_ready_in[i] = end_if.done_rx;
+                // TODO: end_if.err_rx;
+                // TODO: end_if.crc_corr_rx;
+                sw_if.in[i] = end_if.flit_rx;
+                // TODO: end_if.crc_fail_cnt;
+                sw_if.credit_granted[i] = end_if.grtcred_rx;
+            end
+        end
+    endgenerate
+
+    // Data link layer
     switch_if #(
         .NUM_OUTPORTS(NUM_LINKS),
         .NUM_BUFFERS(NUM_LINKS),
@@ -24,17 +85,16 @@ module tile #(
         .NUM_BUFFERS(NUM_LINKS),
         .NUM_VCS(NUM_VCS),
         .BUFFER_SIZE(BUFFER_SIZE),
-        .TOTAL_NODES(4),
-        .NODE(1) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch (
         .clk(clk),
         .n_rst(n_rst),
         .sw_if(sw_if)
     );
 
+    // Upper data link layer
     endpoint #(
         .NUM_MSGS(4),
-        .NODE_ID(1),
         .DEPTH(BUFFER_SIZE)
     ) endpoint1 (
         .clk(clk),

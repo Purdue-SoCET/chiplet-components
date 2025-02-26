@@ -1,13 +1,14 @@
 `timescale 1ns / 10ps
 
-module endnode(
+module endnode #(
+    parameter PORTCOUNT = 5,
+    parameter EXPECTED_BAUD_RATE = 1000000,
+    parameter FREQUENCY = 10000000
+)(
     input logic CLK, nRST, endnode_if.eif end_if
 );
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
-    localparam PORTCOUNT = 5;
-    localparam EXPECTED_BAUD_RATE = 1000000;
-    localparam FREQUENCY = 10000000;
     logic err_store, next_err_store;
     phy_manager_tx_if phy_tx_if();
     phy_manager_rx_if phy_rx_if();
@@ -23,13 +24,15 @@ module endnode(
         (.CLK(CLK),
         .nRST(nRST),
         .mngrx_if(phy_rx_if));
-    socetlib_counter #(.NBITS(16)) crc_counter
-        (.CLK(CLK),
-         .nRST(nRST),
-         .count_enable(~phy_rx_if.crc_corr && packet_done),
-         .overflow_val('d65535),
-         .count_out(end_if.crc_fail_cnt)
-        );
+    socetlib_counter #(.NBITS(16)) crc_counter (
+        .CLK(CLK),
+        .nRST(nRST),
+        .count_enable(~phy_rx_if.crc_corr && phy_rx_if.packet_done),
+        .overflow_val('d65535),
+        .count_out(end_if.crc_fail_cnt),
+        .clear(0),
+        .overflow_flag()
+    );
     // uart_baud #(.PORTCOUNT(PORTCOUNT),.FREQUENCY(FREQUENCY),.EXPECTED_BAUD_RATE(EXPECTED_BAUD_RATE)) uarts
     //     (.CLK(CLK),
     //     .nRST(nRST),
