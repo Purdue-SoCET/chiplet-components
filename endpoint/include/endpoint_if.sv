@@ -5,8 +5,6 @@
 
 interface endpoint_if #(
     parameter NUM_VCS=2
-) (
-    switch_if switch_if
 );
     import chiplet_types_pkg::*;
 
@@ -18,15 +16,6 @@ interface endpoint_if #(
     logic [NUM_VCS-1:0] credit_granted;
     logic packet_sent;
     node_id_t node_id;
-
-    assign endpoint_if.out = sw_if.out[0];
-    assign endpoint_if.buffer_available = sw_if.buffer_available[0];
-    assign endpoint_if.data_ready_out = sw_if.data_ready_out[0];
-    assign endpoint_if.node_id = sw_if.node_id;
-    assign sw_if.in[0] = endpoint_if.in;
-    assign sw_if.credit_granted[0] = endpoint_if.credit_granted;
-    assign sw_if.data_ready_in[0] = endpoint_if.data_ready_in;
-    assign sw_if.packet_sent[0] = endpoint_if.packet_sent;
 
     modport endpoint(
         input out, buffer_available, data_ready_out, node_id,

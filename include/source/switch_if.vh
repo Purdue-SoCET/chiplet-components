@@ -2,6 +2,7 @@
 `define SWITCH_VH
 
 `include "chiplet_types_pkg.vh"
+`include "endpoint_if.sv"
 
 interface switch_if #(
     parameter int NUM_OUTPORTS,

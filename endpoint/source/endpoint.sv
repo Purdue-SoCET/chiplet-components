@@ -3,6 +3,7 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 `include "message_table_if.sv"
+`include "endpoint_if.sv"
 
 module endpoint #(
     parameter NUM_MSGS=4,
