@@ -9,7 +9,7 @@ module tx_fsm#(
 )(
     input logic clk, n_rst,
     tx_fsm_if.tx_fsm tx_if,
-    switch_if.endpoint switch_if,
+    endpoint_if.tx_fsm endpoint_if,
     bus_protocol_if.protocol tx_cache_if,
     message_table_if.endpoint msg_if
 );
@@ -33,7 +33,7 @@ module tx_fsm#(
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
-        .count_enable(switch_if.data_ready_in[0]),
+        .count_enable(endpoint_if.data_ready_in),
         .overflow_val(curr_pkt_length),
         .count_out(length),
         .overflow_flag(length_done)
@@ -44,8 +44,8 @@ module tx_fsm#(
     ) send_counter (
         .CLK(clk),
         .nRST(n_rst),
-        .clear(switch_if.buffer_available[0][0]),
-        .count_enable(switch_if.data_ready_in[0]),
+        .clear(endpoint_if.buffer_available[0]),
+        .count_enable(endpoint_if.data_ready_in),
         .overflow_val(3*DEPTH/4),
         .count_out(),
         .overflow_flag(stop_sending)
@@ -106,7 +106,7 @@ module tx_fsm#(
         tx_cache_if.burst_length = 0;
         tx_cache_if.secure_transfer = 0;
         next_curr_pkt_length = curr_pkt_length;
-        switch_if.data_ready_in[0] = 0;
+        endpoint_if.data_ready_in = 0;
         flit = flit_t'(0);
         length_clear = 0;
 
@@ -118,11 +118,11 @@ module tx_fsm#(
             START_SEND_PKT : begin
                 tx_cache_if.ren = 1;
                 if (!tx_cache_if.request_stall) begin
-                    next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
+                    next_curr_pkt_length = expected_num_flits(tx_cache_if.rdata);
                 end
             end
             SEND_PKT : begin
-                switch_if.data_ready_in[0] = !stop_sending && !length_done;
+                endpoint_if.data_ready_in = !stop_sending && !length_done;
                 tx_cache_if.ren = 1;
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
@@ -132,6 +132,6 @@ module tx_fsm#(
             default : begin end
         endcase
 
-        switch_if.in[0] = flit;
+        endpoint_if.in = flit;
     end
 endmodule

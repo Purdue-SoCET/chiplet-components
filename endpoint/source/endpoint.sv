@@ -9,7 +9,7 @@ module endpoint #(
     parameter DEPTH
 ) (
     input logic clk, n_rst,
-    switch_if.endpoint switch_if,
+    endpoint_if endpoint_if,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
@@ -57,7 +57,7 @@ module endpoint #(
         .fifo_enable(enable),
         .metadata(metadata),
         .crc_error(crc_error),
-        .switch_if(switch_if),
+        .endpoint_if(endpoint_if),
         .rx_cache_if (rx_cache_if)
     );
 
@@ -87,12 +87,12 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
-        .switch_if(switch_if),
+        .endpoint_if(endpoint_if),
         .tx_cache_if(tx_cache_if),
         .msg_if(msg_if)
     );
 
-    assign tx_fsm_if.node_id = switch_if.node_id;
+    assign tx_fsm_if.node_id = endpoint_if.node_id;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
