@@ -85,7 +85,9 @@ module tx_fsm#(
                 end
             end
             START_SEND_PKT : begin
-                next_state = SEND_PKT;
+                if (!tx_cache_if.request_stall) begin
+                    next_state = SEND_PKT;
+                end
             end
             SEND_PKT : begin
                 if (length_done) begin
@@ -124,7 +126,9 @@ module tx_fsm#(
             end
             START_SEND_PKT : begin
                 tx_cache_if.ren = 1;
-                next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
+                if (!tx_cache_if.request_stall) begin
+                    next_curr_pkt_length = expected_num_flits(tx_bus_if.rdata);
+                end
             end
             SEND_PKT : begin
                 switch_if.data_ready_in[0] = !stop_sending && !length_done;
