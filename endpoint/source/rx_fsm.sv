@@ -76,10 +76,10 @@ module rx_fsm (
                 next_state = CRC_WAIT;
             end
             CRC_WAIT : begin
-                if(done && !length_done) begin
+                if(done && !rx_cache_if.request_stall && !length_done) begin
                     next_state = BODY;
                 end
-                else if(done && length_done) begin
+                else if(done && !rx_cache_if.request_stall && length_done) begin
                     next_state = CRC_CHECK;
                 end
             end
@@ -93,7 +93,7 @@ module rx_fsm (
             CRC_CHECK : begin
                 if(crc_val != endpoint_if.out.payload) begin
                     next_state = IDLE;
-                end else begin
+                end else if (!rx_cache_if.request_stall) begin
                     next_state = REQ_EN;
                 end
             end
@@ -131,11 +131,11 @@ module rx_fsm (
             end
             CRC_WAIT : begin
                 crc_update = !done;
-                if (done) begin
+                rx_cache_if.wen = 1;
+                if (done && !rx_cache_if.request_stall) begin
                     endpoint_if.packet_sent = 1;
                     endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
                     count_enable = 1;
-                    rx_cache_if.wen = 1;
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
             end
@@ -143,11 +143,11 @@ module rx_fsm (
             CRC_CHECK : begin
                 endpoint_if.packet_sent = 1;
                 endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
+                rx_cache_if.wen = 1;
                 if(crc_val != endpoint_if.out.payload) begin
                     next_cache_addr = prev_cache_addr;
                     crc_error = 1;
-                end else begin
-                    rx_cache_if.wen = 1;
+                end else if (!rx_cache_if.request_stall) begin
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
              end

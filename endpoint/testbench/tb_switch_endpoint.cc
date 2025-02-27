@@ -170,7 +170,7 @@ void resetAndInit() {
     // Set up routing table
     // For 1:
     sendNode(1);
-    wait_for_propagate(5);
+    wait_for_propagate(50);
     // {*, *, 1}
     sendRouteTableInit(1, 0, 0, 0, 1);
 
