@@ -6,8 +6,8 @@ module tile #(
     parameter PORT_COUNT = 5
 ) (
     input clk, n_rst,
-    input logic [PORT_COUNT-1:0] uart_rx,
-    output logic [PORT_COUNT-1:0] uart_tx,
+    input logic [NUM_LINKS-1:0] [PORT_COUNT-1:0] uart_rx,
+    output logic [NUM_LINKS-1:0] [PORT_COUNT-1:0] uart_tx,
     bus_protocol_if.peripheral_vital bus_if
 );
     parameter NUM_VCS = 2;
@@ -23,8 +23,8 @@ module tile #(
                 .PORTCOUNT(PORT_COUNT)
             ) tx_if();
 
-            assign rx_if.uart_in = uart_rx;
-            assign uart_tx = tx_if.uart_out;
+            assign rx_if.uart_in = uart_rx[i];
+            assign uart_tx[i] = tx_if.uart_out;
 
             always_comb begin
                 tx_if.data = end_if.data_out_tx;
@@ -56,33 +56,33 @@ module tile #(
                 end_if.done_in_rx = rx_if.done;
                 end_if.comma_length_sel_in_rx = rx_if.comma_sel;
                 end_if.err_in_rx = rx_if.rx_err;
-                end_if.start_tx = sw_if.data_ready_out[i];
+                end_if.start_tx = sw_if.data_ready_out[i + 1];
                 end_if.flit_tx = sw_if.out[i];
                 end_if.done_tx = tx_if.done;
                 end_if.packet_done_tx = 0 /* TODO */;
-                end_if.send_next_flit_tx = 0 /* TODO */;
-                end_if.grtcred_tx = sw_if.buffer_available[i];
-                sw_if.packet_sent[i] = end_if.get_data;
-                sw_if.data_ready_in[i] = end_if.done_rx;
+                end_if.send_next_flit_tx = sw_if.data_ready_out[i + 1] /* TODO */;
+                end_if.grtcred_tx = sw_if.buffer_available[i + 1];
+                sw_if.packet_sent[i + 1] = end_if.get_data;
+                sw_if.data_ready_in[i + 1] = end_if.done_rx;
                 // TODO: end_if.err_rx;
                 // TODO: end_if.crc_corr_rx;
-                sw_if.in[i] = end_if.flit_rx;
+                sw_if.in[i + 1] = end_if.flit_rx;
                 // TODO: end_if.crc_fail_cnt;
-                sw_if.credit_granted[i] = end_if.grtcred_rx;
+                sw_if.credit_granted[i + 1] = end_if.grtcred_rx;
             end
         end
     endgenerate
 
     // Data link layer
     switch_if #(
-        .NUM_OUTPORTS(NUM_LINKS),
-        .NUM_BUFFERS(NUM_LINKS),
+        .NUM_OUTPORTS(NUM_LINKS + 1),
+        .NUM_BUFFERS(NUM_LINKS + 1),
         .NUM_VCS(NUM_VCS)
     ) sw_if ();
 
     switch #(
-        .NUM_OUTPORTS(NUM_LINKS),
-        .NUM_BUFFERS(NUM_LINKS),
+        .NUM_OUTPORTS(NUM_LINKS + 1),
+        .NUM_BUFFERS(NUM_LINKS + 1),
         .NUM_VCS(NUM_VCS),
         .BUFFER_SIZE(BUFFER_SIZE),
         .TOTAL_NODES(4)
