@@ -113,7 +113,7 @@ module rx_fsm (
         rx_cache_if.wen = 0;
         rx_cache_if.ren = 0;
         rx_cache_if.strobe = 4'hF;
-        rx_cache_if.wdata = 0;
+        //rx_cache_if.wdata = 0;
         length_clear = 0;
         next_cache_addr = rx_cache_if.addr;
         crc_error = 0;
@@ -133,11 +133,11 @@ module rx_fsm (
             CRC_WAIT : begin
                 crc_update = !done;
                 if (done) begin
-                    sw_if.packet_sent[0] = 1;
-                    sw_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
+                    switch_if.packet_sent[0] = 1;
+                    switch_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
                     count_enable = 1;
                     rx_cache_if.wen = 1;
-                    rx_cache_if.wdata = switch_if.out[0].payload;
+                    //rx_cache_if.wdata = switch_if.out[0].payload;
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
             end
@@ -150,7 +150,7 @@ module rx_fsm (
                     crc_error = 1;
                 end else begin
                     rx_cache_if.wen = 1;
-                    rx_cache_if.wdata = switch_if.out[0].payload;
+                    //rx_cache_if.wdata = switch_if.out[0].payload;
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
              end
