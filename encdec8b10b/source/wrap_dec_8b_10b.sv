@@ -16,7 +16,7 @@ flit_t flit_data;
 flit_t n_flit;
 comma_sel_t n_comma_sel;
 logic [PORTCOUNT-1 :0] err_dec;
-logic [6:0] n_curr_packet_size;
+logic [PKT_LENGTH_WIDTH-1:0] n_curr_packet_size;
 logic done_out_n, err_in_order,err_in_comma;
 logic [1:0] n_grt_cred;
 typedef enum logic [1:0] {LOOK_FOR_START_PACKET, LOOK_FOR_DATA_PACKET, LOOK_FOR_END_PACKET} counter_fsm;
@@ -122,15 +122,15 @@ always_comb begin
                 err_in_order = '1;
             end
         end
-        LOOK_FOR_DATA_PACKET:
+        LOOK_FOR_DATA_PACKET: begin
             if (dec_if.comma_length_sel == SELECT_COMMA_DATA && dec_if.done) begin
                 n_seen_start_comma = LOOK_FOR_END_PACKET;
             end
             else if ( (dec_if.comma_length_sel == SELECT_COMMA_1_FLIT || dec_if.comma_length_sel == SELECT_COMMA_2_FLIT) && dec_if.done) begin
                 err_in_order = '1;
             end
-
-        LOOK_FOR_END_PACKET:
+        end
+        LOOK_FOR_END_PACKET: begin
             if (dec_if.comma_length_sel == SELECT_COMMA_1_FLIT && dec_if.done && dec_if.enc_flit.word[9:0] == END_COMMA) begin
                 n_seen_start_comma = LOOK_FOR_START_PACKET;
             end
@@ -140,6 +140,8 @@ always_comb begin
                 end
                 err_in_order = '1;
             end
+        end
+        default : begin end
     endcase
 end
 
