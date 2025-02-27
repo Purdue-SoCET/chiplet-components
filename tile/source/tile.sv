@@ -57,7 +57,7 @@ module tile #(
                 end_if.comma_length_sel_in_rx = rx_if.comma_sel;
                 end_if.err_in_rx = rx_if.rx_err;
                 end_if.start_tx = sw_if.data_ready_out[i + 1];
-                end_if.flit_tx = sw_if.out[i];
+                end_if.flit_tx = sw_if.out[i + 1];
                 end_if.done_tx = tx_if.done;
                 end_if.packet_done_tx = 0 /* TODO */;
                 end_if.send_next_flit_tx = sw_if.data_ready_out[i + 1] /* TODO */;
