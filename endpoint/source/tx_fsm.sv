@@ -127,7 +127,7 @@ module tx_fsm#(
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
-                flit.payload = tx_bus_if.rdata;
+                flit.payload = tx_cache_if.rdata;
             end
             default : begin end
         endcase
