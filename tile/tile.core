@@ -20,10 +20,15 @@ filesets:
 
     tb:
         files:
-            - "testbench/tb_tile.sv"
-            - "waves/tile.do": { file_type: user }
-            - "waves/tile.gtkw": { file_type: user }
-            # - "data/file.txt": { file_type: user }
+            - "testbench/NetworkManager.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/crc.c": {file_type: cSource}
+            - "testbench/crc.h": {file_type: cSource, is_include_file : true}
+            - "testbench/tb_tile.cc": {file_type: cppSource}
+            - "testbench/packet.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/utility.cc": {file_type: cppSource}
+            - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/tile_wrapper.sv"
         file_type: systemVerilogSource
 
     synfiles:
@@ -41,29 +46,24 @@ targets:
         default_tool: verilator
         filesets_append:
             - tb
-        toplevel: tb_tile
+        toplevel:
+            - "tool_verilator? (tile_wrapper)"
         tools:
-            modelsim:
-                vsim_options:
-                    - -vopt
-                    - -voptargs='+acc'
-                    - -t ps
-                    - -do waves/tile.do
-                    - -onfinish stop
-                    - -do "set PrefSource(OpenOnFinish) 0 ; set PrefMain(LinePrefix) \"\" ; set PrefMain(colorizeTranscript) 1"
-                    - -coverage
-                vlog_options:
-                    - +cover
             verilator:
                 verilator_options:
                     - --cc
                     - --trace
+                    - --trace-structs
                     - --main
                     - --timing
                     - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -Wno-UNOPTFLAT
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
                 make_options:
                     - -j
-
     lint:
         <<: *default
         default_tool: verilator
