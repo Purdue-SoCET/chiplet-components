@@ -1,5 +1,4 @@
 `include "chiplet_types_pkg.vh"
-`include "switch_if.vh"
 
 module rx_fsm (
     input logic clk, n_rst,
@@ -7,7 +6,7 @@ module rx_fsm (
     output logic fifo_enable,
     output logic [6:0] metadata,
     output logic crc_error,
-    switch_if.endpoint switch_if,
+    endpoint_if.rx_fsm endpoint_if,
     bus_protocol_if.protocol rx_cache_if
 );
     import chiplet_types_pkg::*;
@@ -30,7 +29,7 @@ module rx_fsm (
         .nRST(n_rst),
         .clear(clear_crc),
         .update(crc_update),
-        .in(switch_if.out[0].payload),
+        .in(endpoint_if.out.payload),
         .crc_out(crc_val),
         .done(done)
     );
@@ -61,15 +60,15 @@ module rx_fsm (
         end
     end
 
-    assign metadata = {switch_if.out[0].metadata.id, switch_if.out[0].metadata.req};
-    assign rx_cache_if.wdata = switch_if.out[0].payload;
+    assign metadata = {endpoint_if.out.metadata.id, endpoint_if.out.metadata.req};
+    assign rx_cache_if.wdata = endpoint_if.out.payload;
 
     // Next state logic
     always_comb begin
         next_state = state;
         casez (state)
             IDLE : begin
-                if(switch_if.data_ready_out[0]) begin
+                if(endpoint_if.data_ready_out) begin
                     next_state = HEADER;
                 end
             end
@@ -77,24 +76,24 @@ module rx_fsm (
                 next_state = CRC_WAIT;
             end
             CRC_WAIT : begin
-                if(done && !length_done) begin
+                if(done && !rx_cache_if.request_stall && !length_done) begin
                     next_state = BODY;
                 end
-                else if(done && length_done) begin
+                else if(done && !rx_cache_if.request_stall && length_done) begin
                     next_state = CRC_CHECK;
                 end
             end
             BODY : begin
-                if(switch_if.data_ready_out[0] && length_done) begin
+                if(endpoint_if.data_ready_out && length_done) begin
                     next_state = CRC_CHECK;
-                end else if (switch_if.data_ready_out[0]) begin
+                end else if (endpoint_if.data_ready_out) begin
                     next_state = CRC_WAIT;
                 end
             end
             CRC_CHECK : begin
-                if(crc_val != switch_if.out[0].payload) begin
+                if(crc_val != endpoint_if.out.payload) begin
                     next_state = IDLE;
-                end else begin
+                end else if (!rx_cache_if.request_stall) begin
                     next_state = REQ_EN;
                 end
             end
@@ -120,37 +119,35 @@ module rx_fsm (
         clear_crc = 0;
         crc_update = 0;
         next_prev_cache_addr = prev_cache_addr;
-        switch_if.packet_sent[0] = 0;
-        switch_if.credit_granted[0] = 0;
+        endpoint_if.packet_sent = 0;
+        endpoint_if.credit_granted = 0;
 
         casez (state)
             IDLE : begin
                 clear_crc = 1;
              end
             HEADER : begin
-                next_curr_pkt_length = expected_num_flits(switch_if.out[0].payload);
+                next_curr_pkt_length = expected_num_flits(endpoint_if.out.payload);
             end
             CRC_WAIT : begin
                 crc_update = !done;
-                if (done) begin
-                    switch_if.packet_sent[0] = 1;
-                    switch_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
+                rx_cache_if.wen = 1;
+                if (done && !rx_cache_if.request_stall) begin
+                    endpoint_if.packet_sent = 1;
+                    endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
                     count_enable = 1;
-                    rx_cache_if.wen = 1;
-                    //rx_cache_if.wdata = switch_if.out[0].payload;
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
             end
             BODY : begin end
             CRC_CHECK : begin
-                switch_if.packet_sent[0] = 1;
-                switch_if.credit_granted[0][switch_if.out[0].metadata.vc] = 1;
-                if(crc_val != switch_if.out[0].payload) begin
+                endpoint_if.packet_sent = 1;
+                endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
+                rx_cache_if.wen = 1;
+                if(crc_val != endpoint_if.out.payload) begin
                     next_cache_addr = prev_cache_addr;
                     crc_error = 1;
-                end else begin
-                    rx_cache_if.wen = 1;
-                    //rx_cache_if.wdata = switch_if.out[0].payload;
+                end else if (!rx_cache_if.request_stall) begin
                     next_cache_addr = rx_cache_if.addr + 4;
                 end
              end

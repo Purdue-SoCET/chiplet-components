@@ -5,7 +5,6 @@
 `include "pipeline_if.sv"
 
 module route_compute #(
-    parameter node_id_t NODE,
     parameter NUM_OUTPORTS,
     parameter TOTAL_NODES
 ) (
@@ -43,7 +42,7 @@ module route_compute #(
         req = pipe_if.rc_metadata.req;
         dest = pipe_if.rc_dest;
 
-        if (dest == NODE) begin
+        if (dest == rb_if.node_id) begin
             next_vc_egress_port = '0;
         end else begin
             for(int i = 0; i < 32; i++) begin

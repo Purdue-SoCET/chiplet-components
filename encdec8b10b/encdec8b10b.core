@@ -5,15 +5,28 @@ description: ""
 filesets:
     rtl:
         files:
+            - "include/arb_counter_if.sv" 
+            - "include/arb_que_if.sv"
+            - "include/arbitration_buffer_if.sv" 
+            - "include/phy_manager_rx_if.sv" 
+            - "include/phy_manager_tx_if.sv" 
+            - "include/wrap_dec_8b_10b_if.sv" 
+            - "include/wrap_enc_8b_10b_if.sv" 
             - "source/enc_8b10b.sv"
             - "source/dec_8b10b.sv"
             - "source/wrap_dec_8b_10b.sv"
             - "source/wrap_enc_8b_10b.sv"
-            - "include/wrap_dec_8b_10b_if.sv" : {is_include_file: true}
-            - "include/wrap_enc_8b_10b_if.sv" : {is_include_file: true}
+            - "source/arb_counter.sv"
+            - "source/arb_que.sv"
+            - "source/phy_manager_rx.sv"
+            - "source/phy_manager_tx.sv"
+            - "source/arbitration_buffer.sv"
+
+
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include:0.0.1"
+            - "socet:digital-lib:crc:0.0.1"
 
     synth:
         depend:

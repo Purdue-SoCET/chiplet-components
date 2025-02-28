@@ -17,14 +17,16 @@ interface switch_reg_bank_if #(
     flit_t in_flit;
     logic [NUM_OUTPORTS-1:0] dateline;
     route_lut_t [TABLE_SIZE-1:0] route_lut;
+    node_id_t node_id;
+
 
     modport reg_bank(
         input in_flit,
-        output dateline, route_lut
+        output dateline, route_lut, node_id
     );
 
     modport rc(
-        input route_lut, reg_bank_claim
+        input route_lut, reg_bank_claim, node_id
     );
 
     modport vc(

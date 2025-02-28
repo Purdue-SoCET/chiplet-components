@@ -152,13 +152,13 @@ always_comb begin
             case(bit_sent_count)
             4'd3: rx_if.comma_sel = SELECT_COMMA_1_FLIT;
             4'd5: rx_if.comma_sel = SELECT_COMMA_2_FLIT;
-            4'd11: rx_if.comma_sel = SELECT_COMMA_1_FLIT;
+            4'd11: rx_if.comma_sel = SELECT_COMMA_DATA;
             default: begin
             end
             endcase
         end
         ERROR: begin
-            rx_if.rx_err = 1'b1;
+            rx_if.rx_err = 1'b1;    
         end
         default: begin 
             rx_if.comma_sel = NADA;

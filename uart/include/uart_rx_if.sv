@@ -3,11 +3,12 @@
 
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"
-interface uart_rx_if;
-    parameter PORTCOUNT = 5;
+interface uart_rx_if #(
+    parameter PORTCOUNT = 5
+);
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
-    logic [(PORTCOUNT -1):0] uart_in;
+    logic [PORTCOUNT -1:0] uart_in;
     flit_enc_t data;
     comma_length_sel_t comma_sel;
     logic done, rx_err;

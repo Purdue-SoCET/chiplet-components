@@ -150,6 +150,10 @@ void sendConfig(uint8_t switch_num, uint8_t addr, uint16_t data) {
     manager->queuePacketSend(1, flits);
 }
 
+void sendNode(uint8_t switch_num) {
+    sendConfig(switch_num, NODE_ID_ADDR, switch_num);
+}
+
 void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint8_t dest,
                         uint8_t port) {
     sendConfig(switch_num, tbl_entry, src << 10 | dest << 5 | port); // TODO: num bits for port?
@@ -165,6 +169,8 @@ void resetAndInit() {
     writeBus(0xC, 0x180);
     // Set up routing table
     // For 1:
+    sendNode(1);
+    wait_for_propagate(50);
     // {*, *, 1}
     sendRouteTableInit(1, 0, 0, 0, 1);
 
@@ -268,7 +274,7 @@ int main(int argc, char **argv) {
         ensure(readBus(0x3028), {{crc}}, "crc");
     }
 
-    wait_for_propagate(100);
+    wait_for_propagate(150);
 
     // Test error checking
     // CRC error
