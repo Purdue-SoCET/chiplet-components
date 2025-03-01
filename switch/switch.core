@@ -66,10 +66,12 @@ filesets:
     fpga:
         files:
             - "fpga/fpga_switch_wrapper.sv"
+            - "fpga/fpga_phy_wrapper.sv"
             - fpga/pinmap.tcl : { file_type: tclSource }
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"
+            - "socet:chiplet:encdec8b10b"
             - "socet:chiplet:uart"
             - "socet:chiplet:endpoint"
 

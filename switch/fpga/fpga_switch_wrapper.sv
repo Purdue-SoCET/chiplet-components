@@ -40,14 +40,21 @@ module fpga_switch_wrapper(
                 assign uart_tx[i][j] = tx_if.uart_out;
 
                 always_comb begin
-                    // tx_if.data = sw_if.out[i + 1];
                     tx_if.comma_sel = SELECT_COMMA_DATA;
-                    tx_if.start = sw_if.data_ready_out[j + 1];
-                    sw_if.data_ready_in[j + 1] = rx_if.done;
-                    // sw_if.in[i + 1] = rx_if.data;
                 end
 
-                uart #(
+                fpga_phy_wrapper #(
+                    .LINK_ID(j)
+                ) phy_wrapper (
+                    .sw_if_out(sw_if.out[j+1]),
+                    .sw_if_data_ready_out(sw_if.data_ready_out[j+1]),
+                    .sw_if_in(sw_if.in[j+1]),
+                    .sw_if_data_ready_in(sw_if.data_ready_in[j+1]),
+                    .rx_if(rx_if),
+                    .tx_if(tx_if)
+                );
+
+                uart_baud #(
                     .PORTCOUNT(1),
                     .EXPECTED_BAUD_RATE(9600)
                 ) uart (
