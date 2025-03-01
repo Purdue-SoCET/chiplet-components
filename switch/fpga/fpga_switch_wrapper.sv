@@ -43,9 +43,7 @@ module fpga_switch_wrapper(
                     tx_if.comma_sel = SELECT_COMMA_DATA;
                 end
 
-                fpga_phy_wrapper #(
-                    .LINK_ID(j)
-                ) phy_wrapper (
+                fpga_phy_wrapper phy_wrapper (
                     .sw_if_out(sw_if.out[j+1]),
                     .sw_if_data_ready_out(sw_if.data_ready_out[j+1]),
                     .sw_if_in(sw_if.in[j+1]),
@@ -77,8 +75,14 @@ module fpga_switch_wrapper(
 
             bus_protocol_if bus_if();
 
-            assign bus_if.wen = int_gpio[3];
-            assign bus_if.ren = int_gpio[4];
+            if (i == 0) begin
+                fpga_endpoint_uart_fsm endpoint_uart_fsm (
+                    .clk(clk),
+                    .n_rst(n_rst),
+                    .serial_in(int_gpio[0]),
+                    .bus_if(bus_if)
+                );
+            end
 
             switch #(
                 .NUM_OUTPORTS(NUM_LINKS + 1),

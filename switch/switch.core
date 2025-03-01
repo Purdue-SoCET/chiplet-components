@@ -67,6 +67,7 @@ filesets:
         files:
             - "fpga/fpga_switch_wrapper.sv"
             - "fpga/fpga_phy_wrapper.sv"
+            - "fpga/fpga_endpoint_uart_fsm.sv"
             - fpga/pinmap.tcl : { file_type: tclSource }
         file_type: systemVerilogSource
         depend:

@@ -1,6 +1,4 @@
-module fpga_phy_wrapper #(
-    parameter LINK_ID
-) (
+module fpga_phy_wrapper(
     input flit_t sw_if_out,
     input logic sw_if_data_ready_out,
     output flit_t sw_if_in,
