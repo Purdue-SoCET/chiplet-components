@@ -34,7 +34,9 @@ arb_counter grtcred1_cnt (.CLK(CLK),.nRST(nRST),.cnt_if(grtcred_1_if));
 assign grtcred_1_if.en = arb_if.grtcred1_write;
 assign grtcred_1_if.clear = '0;
 assign arb_if.grtcred_1_full = grtcred_1_if.overflow;
-
+logic flit_cnt_flag;
+logic flit_cnt_en;
+socetlib_counter#(.NBITS(9)) flit_cnt(.CLK(CLK),.nRST(nRST),.clear('0),.overflow_val(packet_size),.count_enable(flit_cnt_en),.overflow_flag(flit_cnt_flag),.count_out()); 
 // arb_counter_if send_data_if();
 // arb_counter data_counter (.CLK(CLK),.nRST(nRST),.cnt_if(send_data_if));
 // assign send_data_if.en = arb_if.data_write;
@@ -43,16 +45,19 @@ assign arb_if.grtcred_1_full = grtcred_1_if.overflow;
 logic send_data, send_data_n;
 
 logic send_data_arb,send_data_arb_n;
+logic [8:0] packet_size, n_size_of_packet;
 always_ff @(posedge CLK, negedge nRST) begin
     if (!nRST) begin
         state <= IDLE;
         send_data_arb <= 'b0;
         send_data <= '0;
+        packet_size <= '0;
     end
     else begin
         state <= n_state;
         send_data_arb <= send_data_arb_n;
         send_data <= send_data_n;
+        packet_size <= n_size_of_packet;
     end
 end
 
@@ -85,7 +90,7 @@ always_comb begin
         end
     end
     STALL_DATA_SEND: begin
-        if (arb_if.packet_done ) begin
+        if (flit_cnt_flag) begin
             n_state = SENDING_END;
         end
         else if (arb_if.send_new_data) begin
@@ -97,8 +102,16 @@ always_comb begin
     end
     endcase
 end
-
+// long_hdr_t long_hdr;
+// resp_hdr_t resp_hdr;
+// msg_hdr_t msg_hdr;
+// short_hdr_t short_hdr;
+// assign long_hdr = long_hdr_t'(word_t'(arb_if.flit_data));
+// assign resp_hdr = resp_hdr_t'(word_t'(arb_if.flit_data));
+// assign msg_hdr = msg_hdr_t'(word_t'(arb_if.flit_data));
+// assign short_hdr = short_hdr_t'(word_t'(arb_if.flit_data));
 always_comb begin
+
     arb_if.comma_sel = NADA_SEL;
     arb_if.get_data = '0;
     grtcred_0_if.dec = '0;
@@ -106,6 +119,8 @@ always_comb begin
     grtcred_1_if.dec = '0;
     ack_que_if.dec ='0;
     arb_if.start = '0;
+    flit_cnt_en = '0;
+    n_size_of_packet = packet_size;
     // send_data_if.dec = '0;
     arb_if.comma_header_out = '0;
     send_data_arb_n = send_data_arb;
@@ -145,7 +160,40 @@ always_comb begin
     end
     SENDING_START: begin
         if(arb_if.done) begin
-            arb_if.get_data = '1;
+            n_size_of_packet = n_size_of_packet(arb_if.flit_data);
+            // case (long_hdr.format)
+            //     FMT_LONG_READ : begin
+            //         n_size_of_packet = 3; // header + address + crc
+            //     end
+            //     FMT_LONG_WRITE : begin
+            //         n_size_of_packet = 3 + // header + address + crc
+            //             (|long_hdr.length ? long_hdr.length : 128); // data
+            //     end
+            //     FMT_MEM_RESP : begin
+            //         n_size_of_packet = 2 + // header + crc
+            //             (|resp_hdr.length ? resp_hdr.length : 128); // data
+            //     end
+            //     FMT_MSG : begin
+            //         n_size_of_packet = 2 + // header + crc
+            //             (|msg_hdr.length ? msg_hdr.length : 128); // data
+            //     end
+            //     FMT_SWITCH_CFG : begin
+            //         n_size_of_packet = 1;
+            //     end
+            //     FMT_SHORT_READ : begin
+            //         n_size_of_packet = 2; // header + crc
+            //     end
+            //     FMT_SHORT_WRITE : begin
+            //         n_size_of_packet = 2 + // header + crc
+            //             (|short_hdr.length ? short_hdr.length : 16); // data
+            //     end
+            //     KOMMA_PACKET: begin
+            //         n_size_of_packet = 1;
+            //     end
+            //     default:
+            //         n_size_of_packet = '0;
+            // endcase
+            // arb_if.get_data = '1;
             // arb_if.comma_sel = DATA_SEL;
             // arb_if.start = '1;
         end
@@ -172,10 +220,11 @@ always_comb begin
     end
     STALL_DATA_SEND: begin
         if (~ arb_if.packet_done && arb_if.send_new_data) begin
+            flit_cnt_en = '1;
             arb_if.start = '1;
             arb_if.comma_sel = DATA_SEL;
         end
-        else if (arb_if.packet_done) begin
+        else if (flit_cnt_flag) begin
             arb_if.start = '1;
             arb_if.comma_sel = END_PACKET_SEL; 
         end

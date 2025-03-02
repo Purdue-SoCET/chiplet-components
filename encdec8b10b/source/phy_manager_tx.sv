@@ -40,7 +40,7 @@ module phy_manager_tx #(
     assign arb_if.data_write = phy_if.data_write;
     assign arb_if.rx_header = phy_if.rx_header;
     assign arb_if.send_new_data = phy_if.new_flit;
-
+    assign arb_if.flit_data = phy_if.flit.payload;
     assign phy_if.get_data = arb_if.get_data;
     //add in logic for these later could be bugy prevents bugs
     assign phy_if.ack_cnt_full = arb_if.ack_cnt_full;

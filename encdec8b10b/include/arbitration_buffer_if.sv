@@ -14,8 +14,9 @@ interface arbitration_buffer_if;
     logic get_data;
     comma_sel_t comma_sel;
     logic [7:0] comma_header_out,rx_header;
+    word_t flit_data;
     modport arb(
-        input CLK, nRST, ack_write, data_write,
+        input CLK, nRST, ack_write, data_write, flit_data,
         input  done, packet_done,rx_header, grtcred0_write,grtcred1_write,send_new_data,
         output start,ack_cnt_full,grtcred_0_full, grtcred_1_full, send_data_cnt_full,
         output get_data,
