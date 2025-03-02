@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.111 (w)1999-2020 BSI
-[*] Sat Mar  1 23:43:56 2025
+[*] Sun Mar  2 17:35:43 2025
 [*]
 [dumpfile] "/home/asicfab/a/lsimoni/chiplet-components/tmp/build/socet_chiplet_tile_1.0.0/sim-verilator/tile.fst"
-[dumpfile_mtime] "Sat Mar  1 22:30:45 2025"
-[dumpfile_size] 96424
+[dumpfile_mtime] "Sun Mar  2 17:30:47 2025"
+[dumpfile_size] 90940
 [savefile] "/home/asicfab/a/lsimoni/chiplet-components/tile/scripts/tile.gtkw"
 [timestart] 0
-[size] 1280 563
+[size] 1270 553
 [pos] -1 -1
-*-11.000000 870 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-11.000000 4170 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.tile_wrapper.
 [treeopen] TOP.tile_wrapper.tile_1.
@@ -17,7 +17,8 @@
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].end_if.
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.
-[treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.arb_buff.
+[treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.enc_if.
+[treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.enc_if.flit.
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[0].tx_if.
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[1].endnode.phy_tx.
 [treeopen] TOP.tile_wrapper.tile_1.g_phy_layer[1].tx_if.
@@ -29,7 +30,7 @@
 [treeopen] TOP.tile_wrapper.tile_2.g_phy_layer[0].endnode.phy_rx_if.
 [treeopen] TOP.tile_wrapper.tile_2.sw_if.
 [sst_width] 464
-[signals_width] 253
+[signals_width] 286
 [sst_expanded] 1
 [sst_vpaned_height] 261
 @22
@@ -71,9 +72,15 @@ TOP.tile_wrapper.tile_1.g_phy_layer[1].end_if.send_next_flit_tx
 TOP.tile_wrapper.tile_1.g_phy_layer[1].end_if.done_tx
 TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.arb_buff.send_data
 TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.arb_if.send_new_data
+@29
 TOP.tile_wrapper.tile_1.g_phy_layer[0].end_if.send_next_flit_tx
+@28
 TOP.tile_wrapper.tile_1.g_phy_layer[0].end_if.get_data
 @100000028
 TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.arb_buff.state[2:0]
+@22
+TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.enc_if.flit.payload[31:0]
+@100000028
+TOP.tile_wrapper.tile_1.g_phy_layer[0].endnode.phy_tx.enc_if.comma_sel[3:0]
 [pattern_trace] 1
 [pattern_trace] 0

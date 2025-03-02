@@ -59,15 +59,11 @@ module tile #(
                 end_if.start_tx = sw_if.data_ready_out[i + 1];
                 end_if.flit_tx = sw_if.out[i + 1];
                 end_if.done_tx = tx_if.done;
-                end_if.packet_done_tx = 0 /* TODO */;
                 end_if.send_next_flit_tx = sw_if.data_ready_out[i + 1] /* TODO */;
                 end_if.grtcred_tx = sw_if.buffer_available[i + 1];
                 sw_if.packet_sent[i + 1] = end_if.get_data;
                 sw_if.data_ready_in[i + 1] = end_if.done_rx;
-                // TODO: end_if.err_rx;
-                // TODO: end_if.crc_corr_rx;
                 sw_if.in[i + 1] = end_if.flit_rx;
-                // TODO: end_if.crc_fail_cnt;
                 sw_if.credit_granted[i + 1] = end_if.grtcred_rx;
             end
         end

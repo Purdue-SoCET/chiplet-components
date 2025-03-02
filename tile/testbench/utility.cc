@@ -55,7 +55,7 @@ void tick(bool limit) {
     manager->eval_end_step();
     trace->dump(sim_time++);
 
-    if (limit && sim_time > 1000000) {
+    if (limit && sim_time > 100000) {
         signalHandler(0);
     }
 }

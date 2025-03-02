@@ -58,5 +58,5 @@ module tile_wrapper #(
     assign uart_rx[2][1] = uart_tx[3][1];
 
     assign uart_rx[3][0] = uart_tx[1][1];
-    assign uart_rx[3][1] = uart_tx[2][1];
+    assign uart_rx[3][1] = uart_tx[2][1]    ;
 endmodule

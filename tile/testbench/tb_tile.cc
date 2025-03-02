@@ -100,14 +100,14 @@ void resetAndInit() {
     // For 4:
     sendNode(4);
     // {*, 2, 1}
-    sendRouteTableInit(4, 0, 0, 2, 1);
+    sendRouteTableInit(4 , 0, 0, 2, 1);
     // {*, 3, 2}
     sendRouteTableInit(4, 1, 0, 3, 2);
     // {*, 1, 2}
     sendRouteTableInit(4, 2, 0, 1, 2);
 
     // Give some time for the packets to flow through the network
-    wait_for_propagate(500);
+    wait_for_propagate(50000);
 }
 
 int main(int argc, char **argv) {
