@@ -93,13 +93,28 @@ module tile #(
     );
 
     // Upper data link layer
+    endpoint_if #(
+        .NUM_VCS(2)
+    ) endpoint_if();
+
+    always_comb begin
+        endpoint_if.out = sw_if.out[0];
+        endpoint_if.buffer_available = sw_if.buffer_available[0];
+        endpoint_if.data_ready_out = sw_if.data_ready_out[0];
+        endpoint_if.node_id = sw_if.node_id;
+        sw_if.in[0] = endpoint_if.in;
+        sw_if.credit_granted[0] = endpoint_if.credit_granted;
+        sw_if.data_ready_in[0] = endpoint_if.data_ready_in;
+        sw_if.packet_sent[0] = endpoint_if.packet_sent;
+    end
+
     endpoint #(
         .NUM_MSGS(4),
         .DEPTH(BUFFER_SIZE)
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .switch_if(sw_if),
+        .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );
 endmodule
