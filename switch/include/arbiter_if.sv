@@ -11,10 +11,12 @@ interface arbiter_if #(
     logic [WIDTH-1:0] bid;
     logic valid;
     logic [$clog2(WIDTH)-1:0] select;
+    flit_t [WIDTH-1:0] rdata;
+    flit_t flit;
 
     modport arbiter(
-        input bid,
-        output valid, select
+        input bid, rdata,
+        output valid, select, flit
     );
 endinterface
 

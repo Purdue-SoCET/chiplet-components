@@ -30,3 +30,4 @@ jobs:
           ./apply_patches.sh digital-lib
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:endpoint
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target correctness --tool verilator socet:chiplet:switch
+          CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:tile

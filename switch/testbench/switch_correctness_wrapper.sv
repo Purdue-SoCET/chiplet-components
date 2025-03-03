@@ -25,8 +25,7 @@ module switch_wrapper(
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
         .BUFFER_SIZE(BUFFER_SIZE),
-        .TOTAL_NODES(4),
-        .NODE(1) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch1 (
         .clk(clk),
         .n_rst(nrst),
@@ -54,8 +53,7 @@ module switch_wrapper(
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
         .BUFFER_SIZE(BUFFER_SIZE),
-        .TOTAL_NODES(4),
-        .NODE(2) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch2 (
         .clk(clk),
         .n_rst(nrst),
@@ -81,8 +79,7 @@ module switch_wrapper(
         .NUM_BUFFERS(3),
         .NUM_VCS(2),
         .BUFFER_SIZE(BUFFER_SIZE),
-        .TOTAL_NODES(4),
-        .NODE(3) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch3 (
         .clk(clk),
         .n_rst(nrst),
@@ -108,8 +105,7 @@ module switch_wrapper(
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
         .BUFFER_SIZE(BUFFER_SIZE),
-        .TOTAL_NODES(4),
-        .NODE(4) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch4 (
         .clk(clk),
         .n_rst(nrst),

@@ -8,12 +8,12 @@ interface wrap_enc_8b_10b_if;
     import chiplet_types_pkg::*;
 
     logic start, start_out;
-    comma_sel_t comma_sel; 
+    comma_sel_t comma_sel;
     flit_t flit;
     flit_enc_t flit_out;
     comma_length_sel_t comma_length_sel_out;
 
-    //TODO 
+    //TODO
     modport enc(
         input  start, flit, comma_sel,
         output flit_out, comma_length_sel_out, start_out

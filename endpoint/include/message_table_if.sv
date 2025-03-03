@@ -7,7 +7,7 @@ interface message_table_if #(parameter NUM_MSGS=4);
     modport msg_table(
         input trigger_send
     );
-    
+
     modport endpoint(
         input trigger_send
     );

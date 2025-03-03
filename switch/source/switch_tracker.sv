@@ -3,9 +3,7 @@
         .NUM_OUTPORTS(NUM_OUTPORTS),                                                \
         .NUM_BUFFERS(NUM_BUFFERS),                                                  \
         .NUM_VCS(NUM_VCS),                                                          \
-        .BUFFER_SIZE(BUFFER_SIZE),                                                  \
-        .TOTAL_NODES(TOTAL_NODES),                                                  \
-        .NODE(NODE)                                                                 \
+        .BUFFER_SIZE(BUFFER_SIZE)                                                   \
     ) TRACK_SWITCH (                                                                \
         .clk(clk),                                                                  \
         .nrst(n_rst),                                                               \
@@ -16,16 +14,15 @@
         .buffer_availability(CB.buffer_availability),                               \
         .outport_selected_vc(CB.outport_vc),                                        \
         .outport_packet_sent(cb_if.packet_sent),                                    \
-        .speculative_success(SWALLOC.speculative_success << pipe_if.sa_egress_port) \
+        .speculative_success(SWALLOC.speculative_success << pipe_if.sa_egress_port),\
+        .node_id(rb_if.node_id) \
     );
 
 module switch_tracker#(
     parameter int NUM_OUTPORTS,
     parameter int NUM_BUFFERS,
     parameter int NUM_VCS,
-    parameter int BUFFER_SIZE,
-    parameter int TOTAL_NODES,
-    parameter node_id_t NODE
+    parameter int BUFFER_SIZE
 )(
     input logic clk,
     input logic nrst,
@@ -45,7 +42,8 @@ module switch_tracker#(
     input logic [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] [$clog2(BUFFER_SIZE+1)-1:0] buffer_availability,
     input logic [NUM_OUTPORTS-1:0] [$clog2(NUM_VCS)-1:0] outport_selected_vc,
     input logic [NUM_OUTPORTS-1:0] outport_packet_sent,
-    input logic [NUM_OUTPORTS-1:0] speculative_success
+    input logic [NUM_OUTPORTS-1:0] speculative_success,
+    input node_id_t node_id
 );
     int v_latency [NUM_VCS*NUM_BUFFERS-1:0] [$];
     int v_active_time [NUM_VCS*NUM_BUFFERS-1:0] [$];
@@ -268,7 +266,7 @@ module switch_tracker#(
 
     final begin
         string localtime = get_localtime();
-        string filename = {"./switch", node2string(NODE), "_perf", localtime, ".txt"};
+        string filename = {"./switch", node2string(node_id), "_perf", localtime, ".txt"};
         string comma;
         int fd = $fopen(filename, "w");
         if (fd != 0) begin

@@ -13,25 +13,23 @@ module tb_8b_10b_dec_wrap();
 
     logic CLK;
     logic nRST;
-    wrap_dec_8b_10b_if decif();
-    wrap_enc_8b_10b_if encif();
 
+    wrap_enc_8b_10b_if encif();
+    phy_manager_rx_if mngrx_if();
     // Instantiate the 8b/10b encoder
-    wrap_enc_8b_10b encoder_wrap (
+    phy_manager_tx encoder_wrap (
         .CLK(CLK),
         .nRST(nRST),
         .enc_if(encif)
     );
 
     // Instantiate the 8b/10b decoder
-    wrap_dec_8b_10b decoder_wrap (
+    phy_manager_rx decoder_wrap (
         .CLK(CLK),
         .nRST(nRST),
-        .dec_if(decif)
+        .mngrx_if(mngrx_if)
     );
-
-    assign decif.enc_flit = encif.flit_out;
-
+    assign mngrx_if.enc_flit_rx = encif.flit_out;
     always begin
         CLK = 0;
         #(CLK_PERIOD / 2.0);
@@ -40,27 +38,39 @@ module tb_8b_10b_dec_wrap();
     end
 
     initial begin
-        decif.err = '0;
+        mngrx_if.uart_err_rx = '0;
         nRST = 0;
+        @(posedge CLK); nRST = 1;
+        encif.start = '1;
+        encif.comma_sel = START_PACKET_SEL;
         @(posedge CLK);
-        nRST = 1;
-        @(negedge CLK);
-        for (logic [39:0] i = '0; i <= 40'd549755813888; i = 734391421 + i) begin
-            encif.flit = i;
-            encif.start = '1;
-            encif.comma_sel = DATA_SEL;
-            #(CLK_PERIOD);
-            encif.start = '0;
-            decif.done = '1;
-            decif.comma_length_sel = SELECT_COMMA_DATA;
-            #(CLK_PERIOD);
-            decif.done = '0;
-            if (i == decif.flit) $display("correct decoded data at %d", i);
-            else $display("incorrect decoded data at %d",i);
-            if ('1 == decif.done_out) $display("correct done at %d", i);
-            else $display("incorrect done at %d",i);
-            #(CLK_PERIOD);
-        end
+        mngrx_if.done_uart_rx = '1;
+        encif.start = '0;
+        mngrx_if.comma_length_sel_rx = SELECT_COMMA_1_FLIT;
+        @(posedge CLK);
+               mngrx_if.done_uart_rx = '0;
+        for (logic [39:0] i = '0; i <= 40'h9755813888; i = 40'h3343914211 + i) begin
+          @(posedge CLK);
+          encif.flit = i;
+          encif.start = '1;
+          encif.comma_sel = DATA_SEL;
+          @(posedge CLK);
+          encif.start = '0;
+          mngrx_if.done_uart_rx = '1;
+          mngrx_if.comma_length_sel_rx = SELECT_COMMA_DATA;
+          @(posedge CLK);
+          mngrx_if.done_uart_rx = '0;
+          @(posedge CLK);
+          @(posedge CLK);
+          @(posedge CLK);
+          @(posedge CLK);
+          #(1);
+          assert (i == mngrx_if.flit) $display("correct decoded data at %d", i);
+          else $display("incorrect decoded data at %d",i);
+          assert ('1 == mngrx_if.done_out) $display("correct done at %d", i);
+          else $display("incorrect done at %d",i);
+
+        end 
         $finish;
     end
 endmodule

@@ -17,7 +17,7 @@ module switch_endpoint_wrapper #(
 ) (
     input logic clk, n_rst,
     // Bus side signals
-    input logic wen, ren, 
+    input logic wen, ren,
     input logic [ADDR_WIDTH-1:0] addr,
     input logic [DATA_WIDTH-1:0] wdata,
     input logic [(DATA_WIDTH/8)-1:0] strobe,
@@ -44,24 +44,37 @@ module switch_endpoint_wrapper #(
         .NUM_BUFFERS(2),
         .NUM_VCS(2),
         .BUFFER_SIZE(8),
-        .TOTAL_NODES(4),
-        .NODE(1) // TODO: This should be configurable
+        .TOTAL_NODES(4)
     ) switch1 (
         .clk(clk),
         .n_rst(n_rst),
         .sw_if(sw_if)
     );
 
+    endpoint_if #(
+        .NUM_VCS(2)
+    ) endpoint_if();
+
+    always_comb begin
+        endpoint_if.out = sw_if.out[0];
+        endpoint_if.buffer_available = sw_if.buffer_available[0];
+        endpoint_if.data_ready_out = sw_if.data_ready_out[0];
+        endpoint_if.node_id = sw_if.node_id;
+        sw_if.in[0] = endpoint_if.in;
+        sw_if.credit_granted[0] = endpoint_if.credit_granted;
+        sw_if.data_ready_in[0] = endpoint_if.data_ready_in;
+        sw_if.packet_sent[0] = endpoint_if.packet_sent;
+    end
+
     bus_protocol_if bus_if();
 
     endpoint #(
         .NUM_MSGS(4),
-        .NODE_ID(1),
         .DEPTH(8)
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .switch_if(sw_if),
+        .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );
 
