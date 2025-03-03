@@ -58,4 +58,4 @@ module enc_8b10b(
             'd31: data_out[5:0] = D5b31;
         endcase
     end
-endmodule 
+endmodule

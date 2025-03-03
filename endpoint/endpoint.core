@@ -11,6 +11,7 @@ filesets:
             - "source/rx_fsm.sv"
             - "source/req_fifo.sv"
             - "source/message_table.sv"
+            - "include/endpoint_if.sv" : {is_include_file: true}
             - "include/message_table_if.sv" : {is_include_file: true}
             - "include/tx_fsm_if.sv" : {is_include_file: true}
         file_type: systemVerilogSource

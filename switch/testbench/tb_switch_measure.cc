@@ -48,6 +48,10 @@ void sendConfig(uint8_t switch_num, uint8_t addr, uint16_t data) {
     manager->queuePacketSend(1, flits);
 }
 
+void sendNode(uint8_t switch_num) {
+    sendConfig(switch_num, NODE_ID_ADDR, switch_num);
+}
+
 void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint8_t dest,
                         uint8_t port) {
     sendConfig(switch_num, tbl_entry, src << 10 | dest << 5 | port); // TODO: num bits for port?
@@ -56,6 +60,8 @@ void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint
 void resetAndInit() {
     reset();
     manager->reset();
+    // Set Nodo ID in 1
+    sendNode(1);
     // Set up routing table
     // For 1:
     // {*, 2, 1}
@@ -66,6 +72,7 @@ void resetAndInit() {
     sendRouteTableInit(1, 2, 0, 4, 1);
 
     // For 2:
+    sendNode(2);
     // {*, 1, 1}
     sendRouteTableInit(2, 0, 0, 1, 1);
     // {*, 4, 2}
@@ -74,6 +81,7 @@ void resetAndInit() {
     sendRouteTableInit(2, 2, 0, 3, 1);
 
     // For 3:
+    sendNode(3);
     // {*, 1, 1}
     sendRouteTableInit(3, 0, 0, 1, 1);
     // {*, 4, 2}
@@ -82,6 +90,7 @@ void resetAndInit() {
     sendRouteTableInit(3, 2, 0, 2, 2);
 
     // For 4:
+    sendNode(4);
     // {*, 2, 1}
     sendRouteTableInit(4, 0, 0, 2, 1);
     // {*, 3, 2}
@@ -90,7 +99,7 @@ void resetAndInit() {
     sendRouteTableInit(4, 2, 0, 1, 2);
 
     // Give some time for the packets to flow through the network
-    wait_for_propagate(300);
+    wait_for_propagate(500);
 }
 
 bool inject() {

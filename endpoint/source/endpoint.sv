@@ -3,17 +3,19 @@
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
 `include "message_table_if.sv"
+`include "endpoint_if.sv"
 
 module endpoint #(
     parameter NUM_MSGS=4,
-    parameter NODE_ID,
     parameter DEPTH
 ) (
     input logic clk, n_rst,
-    switch_if.endpoint switch_if,
+    endpoint_if endpoint_if,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
+
+    typedef enum logic { FSM, BUS } cache_controller_e;
 
     localparam CACHE_NUM_WORDS = 128;
     localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
@@ -30,6 +32,7 @@ module endpoint #(
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
     logic enable, overflow, crc_valid, crc_error;
     logic [6:0] metadata;
+    cache_controller_e rx_controller, next_rx_controller, tx_controller, next_tx_controller;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -55,7 +58,7 @@ module endpoint #(
         .fifo_enable(enable),
         .metadata(metadata),
         .crc_error(crc_error),
-        .switch_if(switch_if),
+        .endpoint_if(endpoint_if),
         .rx_cache_if (rx_cache_if)
     );
 
@@ -85,19 +88,22 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
-        .switch_if(switch_if),
+        .endpoint_if(endpoint_if),
         .tx_cache_if(tx_cache_if),
         .msg_if(msg_if)
     );
 
-    // TODO:
-    assign tx_fsm_if.node_id = NODE_ID;
+    assign tx_fsm_if.node_id = endpoint_if.node_id;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
             tx_fsm_if.pkt_start_addr <= '0;
+            rx_controller <= BUS;
+            tx_controller <= BUS;
         end else begin
             tx_fsm_if.pkt_start_addr <= next_pkt_start_addr;
+            rx_controller <= next_rx_controller;
+            tx_controller <= next_tx_controller;
         end
     end
 
@@ -125,6 +131,8 @@ module endpoint #(
         bus_if.request_stall = 0;
         next_pkt_start_addr = tx_fsm_if.pkt_start_addr;
         msg_if.trigger_send = '0;
+        next_rx_controller = (rx_cache_if.ren || rx_cache_if.wen) ? FSM : BUS;
+        next_tx_controller = (tx_cache_if.ren || tx_cache_if.wen) ? FSM : BUS;
 
         if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
             if (bus_if.ren) begin
@@ -141,7 +149,7 @@ module endpoint #(
             end
         // TX cache
         end else if (bus_if.addr >= TX_CACHE_START_ADDR && bus_if.addr < TX_CACHE_END_ADDR) begin
-            if (!(tx_cache_if.ren || tx_cache_if.wen)) begin
+            if (tx_controller == BUS) begin
                 tx_bus_if.wen = bus_if.wen;
                 tx_bus_if.ren = bus_if.ren;
                 tx_bus_if.addr = bus_if.addr[8:0];
@@ -155,13 +163,18 @@ module endpoint #(
             end
         // RX cache
         end else if (bus_if.addr >= RX_CACHE_START_ADDR && bus_if.addr < RX_CACHE_END_ADDR) begin
-            rx_bus_if.ren = bus_if.ren;
-            rx_bus_if.addr = bus_if.addr[8:0];
-            rx_bus_if.wdata = bus_if.wdata;
-            rx_bus_if.strobe = bus_if.strobe;
-            bus_if.rdata = rx_bus_if.rdata;
-            bus_if.error = rx_bus_if.error;
-            bus_if.request_stall = rx_bus_if.request_stall;
+            if (rx_controller == BUS) begin
+                rx_bus_if.wen = 0;
+                rx_bus_if.ren = bus_if.ren;
+                rx_bus_if.addr = bus_if.addr[8:0];
+                rx_bus_if.wdata = bus_if.wdata;
+                rx_bus_if.strobe = bus_if.strobe;
+                bus_if.rdata = rx_bus_if.rdata;
+                bus_if.error = rx_bus_if.error;
+                bus_if.request_stall = rx_bus_if.request_stall;
+            end else begin
+                bus_if.request_stall = 1;
+            end
         end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
             rx_fifo_if.addr = bus_if.addr[8:0];
@@ -170,16 +183,18 @@ module endpoint #(
             bus_if.error = 1;
         end
 
-        if (tx_cache_if.ren || tx_cache_if.wen) begin
+        if (tx_controller == FSM) begin
             tx_bus_if.wen = tx_cache_if.wen;
             tx_bus_if.ren = tx_cache_if.ren;
             tx_bus_if.addr = tx_cache_if.addr[8:0];
             tx_cache_if.rdata = tx_bus_if.rdata;
             tx_cache_if.error = tx_bus_if.error;
             tx_cache_if.request_stall = tx_bus_if.request_stall;
+        end else begin
+            tx_cache_if.request_stall = 1;
         end
 
-        if (rx_cache_if.wen) begin
+        if (rx_controller == FSM) begin
             rx_bus_if.wen = rx_cache_if.wen;
             rx_bus_if.wdata = rx_cache_if.wdata;
             rx_bus_if.ren = rx_cache_if.ren;
@@ -188,6 +203,8 @@ module endpoint #(
             rx_cache_if.rdata = rx_bus_if.rdata;
             rx_cache_if.error = rx_bus_if.error;
             rx_cache_if.request_stall = rx_bus_if.request_stall;
+        end else begin
+            rx_cache_if.request_stall = 1;
         end
     end
 endmodule

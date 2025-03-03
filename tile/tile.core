@@ -1,0 +1,98 @@
+CAPI=2:
+name: "socet:chiplet:tile:1.0.0"
+description: ""
+
+filesets:
+    rtl:
+        files:
+            - "source/tile.sv"
+        file_type: systemVerilogSource
+        depend:
+            - "socet:chiplet:endpoint"
+            - "socet:chiplet:switch"
+            - "socet:chiplet:uart"
+            - "socet:chiplet:endnode"
+
+    synth:
+        depend:
+            - "ece337:tech:AMI_05_LIB"
+            - "socet:chiplet:tile_syn"
+
+    tb:
+        files:
+            - "testbench/NetworkManager.cc": {file_type: cppSource}
+            - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/crc.c": {file_type: cSource}
+            - "testbench/crc.h": {file_type: cSource, is_include_file : true}
+            - "testbench/tb_tile.cc": {file_type: cppSource}
+            - "testbench/packet.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/utility.cc": {file_type: cppSource}
+            - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
+            - "testbench/tile_wrapper.sv"
+        file_type: systemVerilogSource
+
+    synfiles:
+        depend:
+            - "socet:chiplet:synfiles"
+
+targets:
+    default: &default
+        filesets:
+            - rtl
+        toplevel: tile
+
+    sim: &sim
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        toplevel:
+            - "tool_verilator? (tile_wrapper)"
+        tools:
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --trace-structs
+                    - --main
+                    - --timing
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -Wno-UNOPTFLAT
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
+                make_options:
+                    - -j
+    lint:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - tb
+        tools:
+            verilator:
+                mode: lint-only
+                verilator_options:
+                    - --timing
+                    - -Wall
+
+    syn:
+        <<: *default
+        filesets_append:
+            - synfiles
+        default_tool: design_compiler
+        toplevel: tile
+        tools:
+            design_compiler:
+                script_dir: "src/socet_chiplet_synfiles_0"
+                dc_script: "synth.tcl"
+                report_dir: "reports"
+                target_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db"
+                link_library: "/home/ecegrid/a/ece337/summer24-refactor/tech/ami05/osu05_stdcells.db dw_foundation.sldb"
+
+    syn_sim:
+        <<: *sim
+        filesets:
+            - synth
+            - tb
+

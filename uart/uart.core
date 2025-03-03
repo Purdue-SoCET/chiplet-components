@@ -10,6 +10,7 @@ filesets:
             - "source/uart_rx.sv"
             - "source/uart_tx.sv"
             - "source/rx_timer.sv"
+            - "source/uart_baud.sv"
         file_type: systemVerilogSource
         depend:
 
@@ -30,6 +31,12 @@ filesets:
             - "waves/uart_rx.do": { file_type: user }
             - "waves/uart_rx.gtkw": { file_type: user }
             # - "data/file.txt": { file_type: user }
+        file_type: systemVerilogSource
+
+    fpga:
+        files:
+            - "fpga/fpga_uart_wrapper.sv"
+            - fpga/pinmap.tcl : { file_type: tclSource }
         file_type: systemVerilogSource
 
     synfiles:
@@ -69,6 +76,18 @@ targets:
                     - --coverage
                 make_options:
                     - -j
+
+    fpga:
+        filesets:
+            - rtl
+            - fpga
+        description: FPGA Synthesis
+        default_tool: quartus
+        toplevel: fpga_uart_wrapper
+        tools:
+            quartus:
+                family: Cyclone IV E
+                device: EP4CE115F29C7
 
     lint:
         <<: *default

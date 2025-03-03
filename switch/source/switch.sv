@@ -11,8 +11,7 @@ module switch #(
     parameter int NUM_BUFFERS,
     parameter int NUM_VCS,
     parameter int BUFFER_SIZE,
-    parameter int TOTAL_NODES,
-    parameter node_id_t NODE
+    parameter int TOTAL_NODES
 ) (
     input logic clk, n_rst,
     switch_if.switch sw_if
@@ -91,7 +90,6 @@ module switch #(
         .a_if(rc_a_if)
     );
     route_compute #(
-        .NODE(NODE),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .TOTAL_NODES(TOTAL_NODES)
     ) RC (
@@ -106,14 +104,15 @@ module switch #(
         rc_a_if.bid = buf_if.req_pipeline;
         // Connect arbiter to route compute
         pipe_if.rc_valid = rc_a_if.valid;
-        pipe_if.rc_metadata = buf_if.rdata[rc_a_if.select].metadata;
-        pipe_if.rc_dest = buf_if.rdata[rc_a_if.select].payload[27:23];
+        rc_a_if.rdata = buf_if.rdata;
+        pipe_if.rc_metadata = rc_a_if.flit.metadata;
+        pipe_if.rc_dest = rc_a_if.flit.payload[27:23];
         pipe_if.rc_ingress_port = rc_a_if.select;
         buf_if.pipeline_granted = rc_a_if.valid << rc_a_if.select;
         // Connect switch allocator to register bank
         rb_if.reg_bank_claim = pipe_if.rc_valid &&
             buf_if.rdata[pipe_if.rc_ingress_port].payload[31:28] == FMT_SWITCH_CFG &&
-            buf_if.rdata[pipe_if.rc_ingress_port].payload[27:23] == NODE;
+            (buf_if.rdata[pipe_if.rc_ingress_port].payload[27:23] == rb_if.node_id || rb_if.node_id == 0);
         rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
         buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
     end
@@ -178,7 +177,6 @@ module switch #(
     // Stage 5: Claim things going to this node and forward things to reg bank
     // as necessary
     switch_reg_bank #(
-        .NODE(NODE),
         .NUM_BUFFERS(NUM_BUFFERS),
         .NUM_OUTPORTS(NUM_OUTPORTS),
         .TABLE_SIZE(32),
@@ -188,4 +186,5 @@ module switch #(
         .n_rst(n_rst),
         .rb_if(rb_if)
     );
+    assign sw_if.node_id = rb_if.node_id;
 endmodule
