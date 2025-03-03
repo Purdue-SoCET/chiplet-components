@@ -70,6 +70,7 @@ targets:
                     - --timing
                     - --coverage
                     - -Wno-WIDTHEXPAND
+                    - -Wno-WIDTHTRUNC
                     - -Wno-TIMESCALEMOD
                     - -Wno-UNOPTFLAT
                     - -CFLAGS -std=c++20
