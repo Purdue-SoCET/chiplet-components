@@ -17,7 +17,7 @@ module switch_endpoint_wrapper #(
 ) (
     input logic clk, n_rst,
     // Bus side signals
-    input logic wen, ren, 
+    input logic wen, ren,
     input logic [ADDR_WIDTH-1:0] addr,
     input logic [DATA_WIDTH-1:0] wdata,
     input logic [(DATA_WIDTH/8)-1:0] strobe,

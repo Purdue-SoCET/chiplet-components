@@ -3,18 +3,20 @@
 
 `include "chiplet_types_pkg.vh"
 `include "phy_types_pkg.vh"
-interface wrap_dec_8b_10b_if;
-    parameter PORTCOUNT = 5;
+interface wrap_dec_8b_10b_if #(
+    parameter PORTCOUNT = 5
+);
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
 
-    logic done, done_out, err ,err_out;
+    logic done, done_out, err, err_out;
     comma_length_sel_t comma_length_sel;
     flit_enc_t enc_flit;
-    comma_sel_t comma_sel; 
+    comma_sel_t comma_sel;
     flit_t flit;
     logic [7:0] curr_packet_size;
-    //TODO 
+
+    //TODO
     modport dec(
         input enc_flit, done, comma_length_sel, err,
         output flit,comma_sel,done_out,err_out, curr_packet_size

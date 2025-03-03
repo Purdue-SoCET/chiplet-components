@@ -13,7 +13,8 @@ interface uart_tx_if #(
     flit_enc_t data;
     logic done, tx_err;
     logic [PORTCOUNT-1:0] uart_out;
-    //TODO 
+
+    //TODO
     modport tx(
         input data, comma_sel, start,
         output uart_out,done, tx_err

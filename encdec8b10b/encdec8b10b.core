@@ -22,7 +22,6 @@ filesets:
             - "source/phy_manager_tx.sv"
             - "source/arbitration_buffer.sv"
 
-
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include:0.0.1"

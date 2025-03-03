@@ -5,7 +5,7 @@ module fpga_phy_wrapper(
     output logic sw_if_data_ready_in,
     uart_rx_if rx_if,
     uart_tx_if tx_if
-); 
+);
     import phy_types_pkg::*;
 
     flit_enc_t tx_flit_encoded;

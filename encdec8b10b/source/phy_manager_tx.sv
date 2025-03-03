@@ -25,7 +25,7 @@ module phy_manager_tx #(
     );
 
     assign enc_if.comma_sel = arb_if.comma_sel;
-    assign enc_if.flit = (arb_if.comma_sel == DATA_SEL || arb_if.comma_sel == END_PACKET_SEL  || arb_if.comma_sel == START_PACKET_SEL) ? phy_if.flit : flit_t'({arb_if.comma_header_out,32'b0});
+    assign enc_if.flit = (arb_if.comma_sel == DATA_SEL || arb_if.comma_sel == END_PACKET_SEL || arb_if.comma_sel == START_PACKET_SEL) ? phy_if.flit : flit_t'({arb_if.comma_header_out,32'b0});
     assign enc_if.start = arb_if.start;
 
     assign phy_if.enc_flit = enc_if.flit_out;

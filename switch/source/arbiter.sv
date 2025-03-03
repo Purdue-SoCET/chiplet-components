@@ -37,11 +37,11 @@ module arbiter#(
         right = ~left;
         left &= a_if.bid;
         right &= a_if.bid;
-        
+
         // Current winner has finished request
         if (!a_if.valid) begin
             // Start looking at everything after current requester to find
-            // first set 
+            // first set
             for (int i = 0; i < WIDTH; i++) begin
                 if (!found && right[i]) begin
                     /* verilator lint_off WIDTHTRUNC */
@@ -51,7 +51,7 @@ module arbiter#(
                     found = 1;
                 end
             end
-            
+
             // Then look for anything to the left (including current
             // selection)
             for (int i = 0; i < WIDTH; i++) begin

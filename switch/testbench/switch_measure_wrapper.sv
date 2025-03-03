@@ -55,7 +55,7 @@ module switch_wrapper(
     // │             ├◄──────┼             │
     // │             │       │             │
     // └─────────────┘       └─────────────┘
-    // 
+    //
     // In ports for 1: {endpoint, 2, 3}
     // Out ports for 1: {endpoint, 2, 3}
     // In ports for 2: {endpoint, 1, 4}

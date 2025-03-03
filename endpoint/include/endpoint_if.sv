@@ -8,7 +8,7 @@ interface endpoint_if #(
 );
     import chiplet_types_pkg::*;
 
-    flit_t in; 
+    flit_t in;
     logic data_ready_in;
     flit_t out;
     logic data_ready_out;

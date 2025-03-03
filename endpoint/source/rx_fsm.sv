@@ -2,7 +2,7 @@
 
 module rx_fsm (
     input logic clk, n_rst,
-    input logic overflow, 
+    input logic overflow,
     output logic fifo_enable,
     output logic [6:0] metadata,
     output logic crc_error,
@@ -159,6 +159,6 @@ module rx_fsm (
                 end
             end
             default : begin end
-        endcase 
+        endcase
     end
 endmodule

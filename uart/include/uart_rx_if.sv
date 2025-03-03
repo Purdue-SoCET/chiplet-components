@@ -8,11 +8,12 @@ interface uart_rx_if #(
 );
     import phy_types_pkg::*;
     import chiplet_types_pkg::*;
-    logic [PORTCOUNT -1:0] uart_in;
+    logic [PORTCOUNT-1:0] uart_in;
     flit_enc_t data;
     comma_length_sel_t comma_sel;
     logic done, rx_err;
-    //TODO 
+
+    //TODO
     modport rx(
         input uart_in,
         output data,comma_sel,done,rx_err
