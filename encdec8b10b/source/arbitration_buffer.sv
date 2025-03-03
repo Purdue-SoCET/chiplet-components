@@ -94,7 +94,7 @@ always_comb begin
         if (curr_flits_sent == packet_size) begin
             n_state = SENDING_END;
         end
-        else if (arb_if.send_new_data ) begin
+        else if (arb_if.send_new_data) begin
             n_state = SENDING_DATA;
         end
     end

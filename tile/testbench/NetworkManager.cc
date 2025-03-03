@@ -10,24 +10,27 @@ extern Vtile_wrapper *dut;
 void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint32_t> &flit) {
     uint32_t addr = 0x2000 + (0x80 * this->curr_id[from - 1]);
     for (auto f : flit) {
-        this->to_bus_write[from - 1].push(std::make_pair(addr, f));
+        this->queueBusWrite(from, addr, f);
         addr += 4;
     }
-    this->to_bus_write[from - 1].push(std::make_pair(ENDPOINT_SEND_ADDR, this->curr_id[from - 1]));
+    this->queueBusWrite(from, ENDPOINT_SEND_ADDR, this->curr_id[from - 1]);
     this->curr_id[from - 1] = (this->curr_id[from - 1] + 1) % 4;
 }
 
 // `from` is 1-indexed
 void NetworkManager::queuePacketCheck(uint8_t from, std::queue<uint32_t> flit) {
-    this->to_check[from - 1].push_back(flit);
+    // this->to_check[from - 1].push_back(flit);
 }
 
 void NetworkManager::queueBusWrite(uint8_t to, uint32_t addr, uint32_t data) {
     this->to_bus_write[to - 1].push(std::make_pair(addr, data));
 }
 
+void NetworkManager::queueBusRead(uint8_t to, uint32_t addr, uint32_t expected_data) {
+    this->to_bus_read[to - 1].push(std::make_pair(addr, expected_data));
+}
+
 void NetworkManager::reset() {
-    this->to_check = {};
     this->curr_id = {};
     this->to_bus_write = {};
     this->to_bus_read = {};
@@ -35,53 +38,25 @@ void NetworkManager::reset() {
 
 void NetworkManager::reportRemainingCheck() {
     for (int tile = 0; tile < 4; tile++) {
-        printf("Remaining for tile %d\n", tile + 1);
-        /*
-        if (this->to_be_sent[tile].size() != 0) {
-            printf("Switch %d still has packets to send!\n", tile);
-        }
-        */
-        for (auto packet : this->to_check[tile]) {
-            for (; !packet.empty(); packet.pop()) {
-                printf("%08x, ", packet.front());
-            }
-            printf("\n");
-        }
-        printf("\n");
+        printf("Remaining for tile %d: %zu\n", tile + 1, this->to_bus_read[tile].size());
     }
 }
 
 void NetworkManager::eval_step() {
-    static bool last_from_bus_write = 0;
     // Handle bus writes
     for (int i = 0; i < 4; i++) {
         if (!dut->ren[i] && !dut->request_stall[i]) {
             if (dut->wen[i]) {
                 dut->wen[i] = 0;
                 dut->addr[i] = 0;
-                if (last_from_bus_write) {
-                    this->to_bus_write[i].pop();
-                } else {
-                    /*
-                    this->to_be_sent[i].front().pop();
-                    if (this->to_be_sent[i].front().empty()) {
-                        this->to_be_sent[i].pop();
-                    }
-                    */
-                }
+                this->to_bus_write[i].pop();
             } else if (!this->to_bus_write[i].empty()) {
                 uint32_t addr = std::get<0>(this->to_bus_write[i].front());
                 uint32_t data = std::get<1>(this->to_bus_write[i].front());
                 dut->wen[i] = 1;
                 dut->wdata[i] = data;
                 dut->addr[i] = addr;
-                last_from_bus_write = 1;
-            } /* else if (!this->to_be_sent[i].empty()) {
-                dut->wen[i] = 1;
-                dut->wdata[i] = this->to_be_sent[i].front().front();
-                dut->addr[i] = 0;
-                last_from_bus_write = 0;
-            } */
+            }
         }
     }
     /*
@@ -141,7 +116,7 @@ bool NetworkManager::isComplete() {
     for (auto s : this->to_bus_write) {
         to_be_sent += s.size();
     }
-    for (auto s : this->to_check) {
+    for (auto s : this->to_bus_read) {
         to_check += s.size();
     }
     return to_be_sent == 0 && to_check == 0;

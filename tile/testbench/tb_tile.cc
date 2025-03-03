@@ -100,14 +100,14 @@ void resetAndInit() {
     // For 4:
     sendNode(4);
     // {*, 2, 1}
-    sendRouteTableInit(4 , 0, 0, 2, 1);
+    sendRouteTableInit(4, 0, 0, 2, 1);
     // {*, 3, 2}
     sendRouteTableInit(4, 1, 0, 3, 2);
     // {*, 1, 2}
     sendRouteTableInit(4, 2, 0, 1, 2);
 
     // Give some time for the packets to flow through the network
-    wait_for_propagate(50000);
+    wait_for_propagate(3000);
 }
 
 int main(int argc, char **argv) {
@@ -153,20 +153,6 @@ int main(int argc, char **argv) {
     */
 
     wait_for_propagate(100);
-    /*
-    // Test dateline crossing
-    {
-        resetAndInit();
-        // TODO
-    }
-    */
-
-    // Test error checking
-    // CRC error
-    // TODO: long packet sent with wrong crc, should be killed in forward path and asked to be
-    // resent
-    // TODO: try to put 4 packets on each switch
-    // TODO: randomize
 
     if (fails != 0) {
         std::cout << "\x1b[31mTotal failures\x1b[0m: " << fails << std::endl;
