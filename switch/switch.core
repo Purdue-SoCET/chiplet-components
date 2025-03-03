@@ -12,7 +12,7 @@ filesets:
             - "source/switch_reg_bank.sv"
             - "source/vc_allocator.sv"
             - "source/buffers.sv"
-            - "source/arbiter.sv"
+            - "source/switch_arbiter.sv"
             - "include/switch_pkg.sv" : {is_include_file: true}
             - "include/buffers_if.sv" : {is_include_file: true}
             - "include/crossbar_if.sv" : {is_include_file: true}
