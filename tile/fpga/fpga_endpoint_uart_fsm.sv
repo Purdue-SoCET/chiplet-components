@@ -28,7 +28,7 @@ module fpga_endpoint_uart_fsm #(
 
     bus_state_e bus_state, next_bus_state;
     logic read_nwrite, next_read_nwrite;
-    logic word_count_en, word_clear;
+    logic word_count_en, word_clear, word_done;
     logic [3:0] word_count;
     word_t next_addr, next_wdata;
     rx_states state, n_state;

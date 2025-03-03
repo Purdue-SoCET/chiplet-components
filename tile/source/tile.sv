@@ -12,6 +12,12 @@ module tile #(
 );
     parameter NUM_VCS = 2;
 
+    switch_if #(
+        .NUM_OUTPORTS(NUM_LINKS + 1),
+        .NUM_BUFFERS(NUM_LINKS + 1),
+        .NUM_VCS(NUM_VCS)
+    ) sw_if ();
+
     // Physical layer
     genvar i;
     generate
@@ -70,12 +76,6 @@ module tile #(
     endgenerate
 
     // Data link layer
-    switch_if #(
-        .NUM_OUTPORTS(NUM_LINKS + 1),
-        .NUM_BUFFERS(NUM_LINKS + 1),
-        .NUM_VCS(NUM_VCS)
-    ) sw_if ();
-
     switch #(
         .NUM_OUTPORTS(NUM_LINKS + 1),
         .NUM_BUFFERS(NUM_LINKS + 1),
