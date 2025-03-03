@@ -3,7 +3,9 @@
 module tile #(
     parameter NUM_LINKS,
     parameter BUFFER_SIZE = 8,
-    parameter PORT_COUNT = 5
+    parameter PORT_COUNT = 5,
+    parameter UART_FREQ = 50_000_000,
+    parameter UART_BAUD_RATE = 9600
 ) (
     input clk, n_rst,
     input logic [NUM_LINKS-1:0] [PORT_COUNT-1:0] uart_rx,
@@ -39,7 +41,9 @@ module tile #(
             end
 
             uart_baud #(
-                .PORTCOUNT(PORT_COUNT)
+                .PORTCOUNT(PORT_COUNT),
+                .FREQUENCY(UART_FREQ),
+                .EXPECTED_BAUD_RATE(UART_BAUD_RATE)
             ) uart (
                 .CLK(clk),
                 .nRST(n_rst),

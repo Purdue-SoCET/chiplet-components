@@ -9,7 +9,7 @@ package chiplet_types_pkg;
     parameter PKT_MAX_LENGTH = 131; // long write: head+address+128 words+crc
     parameter PKT_LENGTH_WIDTH = $clog2(PKT_MAX_LENGTH);
     import phy_types_pkg::*;
-    typedef logic [WORD_W-1:0] word_t;
+    typedef logic [WORD_W-1:0] chiplet_word_t;
     typedef logic [4:0] node_id_t;
     typedef logic [1:0] pkt_id_t;
 
@@ -84,10 +84,10 @@ package chiplet_types_pkg;
     // Flit Format
     typedef struct packed {
         flit_metadata_t metadata;
-        word_t          payload;
+        chiplet_word_t          payload;
     } flit_t;
 
-    function logic [PKT_LENGTH_WIDTH-1:0] expected_num_flits(word_t flit);
+    function logic [PKT_LENGTH_WIDTH-1:0] expected_num_flits(chiplet_word_t flit);
         long_hdr_t long_hdr; 
         short_hdr_t short_hdr;
         resp_hdr_t resp_hdr;

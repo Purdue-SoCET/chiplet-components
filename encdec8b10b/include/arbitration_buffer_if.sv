@@ -15,7 +15,7 @@ interface arbitration_buffer_if #(
     logic get_data;
     comma_sel_t comma_sel;
     logic [7:0] comma_header_out, rx_header;
-    word_t flit_data;
+    chiplet_word_t flit_data;
 
     modport arb(
         input ack_write, data_write, flit_data,

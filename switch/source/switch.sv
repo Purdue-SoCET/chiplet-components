@@ -82,7 +82,7 @@ module switch #(
     assign buf_if.pipeline_failed = (pipe_if.pipe_valid && pipe_if.pipe_failed) << pipe_if.pipe_ingress_port;
 
     // Stage 1: Route compute
-    arbiter #(
+    switch_arbiter #(
         .WIDTH(2*NUM_BUFFERS)
     ) RC_ARBITER (
         .CLK(clk),

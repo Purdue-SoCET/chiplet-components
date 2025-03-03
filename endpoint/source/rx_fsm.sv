@@ -21,7 +21,7 @@ module rx_fsm (
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     logic length_clear, length_done, stop_sending;
     logic count_enable, done, clear_crc, crc_update;
-    word_t crc_val;
+    chiplet_word_t crc_val;
     logic [8:0] next_cache_addr, prev_cache_addr, next_prev_cache_addr;
 
     socetlib_crc CRC_CHECKER(

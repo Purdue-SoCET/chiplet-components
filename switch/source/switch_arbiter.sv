@@ -1,7 +1,7 @@
 `include "arbiter_if.sv"
 
 // Round robin arbiter
-module arbiter#(
+module switch_arbiter#(
     parameter int WIDTH
 )(
     input logic CLK, nRST,

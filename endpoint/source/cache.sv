@@ -10,10 +10,10 @@ module cache #(
 
     localparam ADDR_LEN = $clog2(NUM_WORDS);
 
-    word_t byte_en;
+    chiplet_word_t byte_en;
 
     // TODO: SRAM?
-    word_t [NUM_WORDS-1:0] cache, next_cache;
+    chiplet_word_t [NUM_WORDS-1:0] cache, next_cache;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin
