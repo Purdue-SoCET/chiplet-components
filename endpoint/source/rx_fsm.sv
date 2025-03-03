@@ -155,6 +155,7 @@ module rx_fsm (
                 if(!overflow) begin
                     fifo_enable = 1;
                     length_clear = 1;
+                    next_prev_cache_addr = rx_cache_if.addr;
                 end
             end
             default : begin end

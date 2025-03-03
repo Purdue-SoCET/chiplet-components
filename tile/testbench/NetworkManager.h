@@ -14,7 +14,7 @@
 class NetworkManager {
     std::array<uint8_t, 4> curr_id;
     std::array<std::queue<std::pair<uint32_t, uint32_t>>, 4> to_bus_write;
-    std::array<std::queue<std::pair<uint32_t, uint32_t>>, 4> to_bus_read;
+    std::array<std::vector<std::queue<uint32_t>>, 4> to_bus_read;
 
   public:
     NetworkManager() {}

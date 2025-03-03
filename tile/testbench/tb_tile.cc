@@ -21,10 +21,20 @@ void writeBus(uint8_t tile, uint32_t addr, uint32_t data) {
     manager->queueBusWrite(tile, addr, data);
 }
 
+uint32_t readBus(uint8_t tile, uint32_t addr) {
+    dut->addr[tile - 1] = addr;
+    dut->ren[tile - 1] = 1;
+    tick(false);
+    uint32_t ret = dut->rdata[tile - 1];
+    dut->ren[tile - 1] = 0;
+    return ret;
+}
+
 void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, bool vc = 0) {
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
     std::vector<uint32_t> flits = {hdr};
     crc_t crc = crc_init();
+    crc = crc_update(crc, &hdr, 4);
     for (auto d : data) {
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
@@ -33,11 +43,6 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                     (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
-    std::queue<uint32_t> flit_queue = {};
-    for (auto f : flits) {
-        flit_queue.push(f);
-    }
-    manager->queuePacketCheck(to, flit_queue);
 }
 
 // Send all config packets out of switch 1, we can't check these since they will be consumed by the
@@ -118,41 +123,59 @@ int main(int argc, char **argv) {
     dut->trace(trace, 5);
     trace->open("tile.fst");
 
-    // Test single packet routing
-    // Send packet from 1 to 2
-    {
-        resetAndInit();
-        while (!manager->isComplete()) {
-            tick(true);
-        }
-    }
-
-    /*
-    // Put randomized packets on each switch
-    {
-        unsigned seed = std::time(nullptr);
-        std::srand(seed);
-        printf("Seed: %d\n", seed);
-        resetAndInit();
-        for (int from = 1; from <= 4; from++) {
-            for (int to = 1; to <= 4; to++) {
-                if (from != to) {
-                    for (int i = 0; i < 10; i++) {
-                        uint8_t packet_size = (std::rand() % 16) + 1;
-                        std::vector<uint32_t> data(packet_size);
-                        std::generate(data.begin(), data.end(), std::rand);
-                        sendSmallWrite(from, to, data);
-                    }
+    for (int from = 1; from <= 4; from++) {
+        for (int to = 1; to <= 4; to++) {
+            if (from != to) {
+                resetAndInit();
+                std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
+                sendSmallWrite(from, to, data);
+                while (!manager->isComplete()) {
+                    tick(false);
                 }
+                uint32_t header = SmallWrite(from, to, 4, 0xCAFECAFE, 0);
+                while (readBus(to, 0x3400) == 0) {}
+                ensure(readBus(to, 0x3400), {{1}}, "num packets", false);
+                readBus(to, 0x340C);
+                crc_t crc = crc_init();
+                ensure(readBus(to, 0x3000), {{header}}, "header", false);
+                crc = crc_update(crc, &header, 4);
+                ensure(readBus(to, 0x3004), {{data[0]}}, "body flit 1", false);
+                crc = crc_update(crc, &data[0], 4);
+                ensure(readBus(to, 0x3008), {{data[1]}}, "body flit 2", false);
+                crc = crc_update(crc, &data[1], 4);
+                ensure(readBus(to, 0x300C), {{data[2]}}, "body flit 3", false);
+                crc = crc_update(crc, &data[2], 4);
+                ensure(readBus(to, 0x3010), {{data[3]}}, "body flit 4", false);
+                crc = crc_update(crc, &data[3], 4);
+                crc = crc_finalize(crc);
+                ensure(readBus(to, 0x3014), {{crc}}, "crc", false);
+
+                // Random data test
+                data = {rand(), rand(), rand()};
+                sendSmallWrite(from, to, data);
+                while (!manager->isComplete()) {
+                    tick(false);
+                }
+                header = SmallWrite(from, to, 3, 0xCAFECAFE, 1);
+                while (readBus(to, 0x3400) == 0) {}
+                ensure(readBus(to, 0x3400), {{1}}, "rand num packets", false);
+                readBus(to, 0x340C);
+                crc = crc_init();
+                ensure(readBus(to, 0x3018), {{header}}, "rand header", false);
+                crc = crc_update(crc, &header, 4);
+                ensure(readBus(to, 0x301C), {{data[0]}}, "rand body flit 1", false);
+                crc = crc_update(crc, &data[0], 4);
+                ensure(readBus(to, 0x3020), {{data[1]}}, "rand body flit 2", false);
+                crc = crc_update(crc, &data[1], 4);
+                ensure(readBus(to, 0x3024), {{data[2]}}, "rand body flit 3", false);
+                crc = crc_update(crc, &data[2], 4);
+                crc = crc_finalize(crc);
+                ensure(readBus(to, 0x3028), {{crc}}, "rand crc", false);
+
+                wait_for_propagate(1000);
             }
         }
-        while (!manager->isComplete()) {
-            tick(true);
-        }
     }
-    */
-
-    wait_for_propagate(100);
 
     if (fails != 0) {
         std::cout << "\x1b[31mTotal failures\x1b[0m: " << fails << std::endl;
