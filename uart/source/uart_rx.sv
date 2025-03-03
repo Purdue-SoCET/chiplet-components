@@ -10,13 +10,15 @@ module uart_rx #(
     input logic CLK, nRST,
     uart_rx_if.rx rx_if
 );
-
     import phy_types_pkg::*;
+
+    localparam RX_COUNTER_WIDTH = $clog2(CLKDIV_COUNT+1);
 
     logic message_done, start, clk_en, sent_flag, shift_en, clk_flag;
     logic [PORTCOUNT-1:0] sync_out;
     logic [3:0] bit_sent_count;
     logic [3:0] length_of_message;
+    logic [RX_COUNTER_WIDTH-1:0] rx_overflow_val;
     typedef enum logic [3:0]{IDLE, RECIEVE, ERROR, DONE, START} rx_states;
     rx_states state, n_state;
 
@@ -63,14 +65,15 @@ module uart_rx #(
         end
     endgenerate
 
-    rx_timer #(
-        .NBITS($clog2(CLKDIV_COUNT)),
-        .COUNT_TO(CLKDIV_COUNT)
+    socetlib_counter #(
+        .NBITS(RX_COUNTER_WIDTH)
     ) clk_count (
         .CLK(CLK),
         .nRST(nRST),
         .clear(rx_if.rx_err),
         .count_enable(clk_en),
+        .overflow_val(rx_overflow_val),
+        .count_out(),
         .overflow_flag(clk_flag)
     );
 
@@ -149,9 +152,12 @@ module uart_rx #(
         shift_en ='0;
         rx_if.done = '0;
         rx_if.rx_err = '0;
+        rx_overflow_val = CLKDIV_COUNT;
+
         case(state)
             START: begin
                 clk_en = '1;
+                rx_overflow_val = CLKDIV_COUNT/2;
             end
             RECIEVE: begin
                 clk_en = 1'b1;

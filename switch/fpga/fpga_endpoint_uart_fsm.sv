@@ -9,12 +9,14 @@ module fpga_endpoint_uart_fsm #(
     import phy_types_pkg::*;
 
     localparam CLKDIV_COUNT = FREQUENCY / EXPECTED_BAUD_RATE;
+    localparam RX_OVERFLOW_WIDTH = $clog2(CLKDIV_COUNT+1);
 
     uart_rx_if #(.PORTCOUNT(1)) rx_if();
 
     logic message_done, start,clk_en,sent_flag,shift_en, clk_flag;
     logic sync_out;
     logic [3:0]bit_sent_count;
+    logic [RX_OVERFLOW_WIDTH-1:0] rx_overflow_val;
     typedef enum logic [3:0]{IDLE, RECIEVE, ERROR,DONE, START} rx_states;
 
     typedef enum logic [2:0] {
@@ -56,14 +58,15 @@ module fpga_endpoint_uart_fsm #(
         .parallel_out(data)
     );
 
-    rx_timer #(
-        .NBITS($clog2(CLKDIV_COUNT)),
-        .COUNT_TO(CLKDIV_COUNT)
+    socetlib_counter #(
+        .NBITS($clog2(CLKDIV_COUNT + 1))
     ) clk_count (
         .CLK(clk),
         .nRST(n_rst),
         .clear(rx_if.rx_err),
         .count_enable(clk_en),
+        .overflow_val(rx_overflow_val),
+        .count_out(),
         .overflow_flag(clk_flag)
     );
 
@@ -157,9 +160,11 @@ module fpga_endpoint_uart_fsm #(
         shift_en ='0;
         rx_if.done = '0;
         rx_if.rx_err = '0;
+        rx_overflow_val = CLKDIV_COUNT;
         case(state)
             START: begin
                 clk_en = '1;
+                rx_overflow_val = CLKDIV_COUNT / 2;
             end
             RECIEVE: begin
                 clk_en = 1'b1;

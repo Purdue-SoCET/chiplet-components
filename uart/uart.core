@@ -9,7 +9,6 @@ filesets:
             - "include/uart_tx_if.sv" : {is_include_file: true}
             - "source/uart_rx.sv"
             - "source/uart_tx.sv"
-            - "source/rx_timer.sv"
             - "source/uart_baud.sv"
         file_type: systemVerilogSource
         depend:
