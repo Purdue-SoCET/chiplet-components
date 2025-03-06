@@ -49,6 +49,7 @@ module endpoint #(
         .crc_valid(enable),
         .metadata(metadata),
         .overflow(overflow),
+        .packet_recv(packet_recv),
         .bus_if(rx_fifo_if)
     );
 
@@ -95,7 +96,6 @@ module endpoint #(
     );
 
     assign tx_fsm_if.node_id = endpoint_if.node_id;
-    assign packet_recv = enable;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin

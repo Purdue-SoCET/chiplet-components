@@ -7,6 +7,7 @@ module req_fifo#(
     input logic crc_valid,
     input logic [6:0] metadata,
     output logic overflow,
+    output logic packet_recv,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
@@ -20,6 +21,7 @@ module req_fifo#(
     logic ren, underrun, clear;
     logic [6:0] fifo_read;
     logic [$clog2(DEPTH):0] count;
+    logic empty;
 
     socetlib_fifo #(
         .WIDTH(7),
@@ -32,12 +34,14 @@ module req_fifo#(
         .wdata(metadata),
         .clear(clear),
         .full(),
-        .empty(),
+        .empty(empty),
         .underrun(underrun),
         .overrun(overflow),
         .count(count),
         .rdata(fifo_read)
     );
+
+    assign packet_recv = !empty;
 
     always_comb begin
         ren = 0;
