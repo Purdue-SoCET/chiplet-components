@@ -9,6 +9,7 @@
     ) tile_``num``(                                                 \
         .clk(clk),                                                  \
         .n_rst(n_rst),                                              \
+        .packet_recv(),                                             \
         .uart_rx(uart_rx[num - 1]),                                 \
         .uart_tx(uart_tx[num - 1]),                                 \
         .bus_if(bus_if_``num``)                                     \

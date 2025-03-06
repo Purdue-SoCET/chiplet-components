@@ -10,6 +10,7 @@ module tile #(
     input clk, n_rst,
     input logic [NUM_LINKS-1:0] [PORT_COUNT-1:0] uart_rx,
     output logic [NUM_LINKS-1:0] [PORT_COUNT-1:0] uart_tx,
+    output logic packet_recv,
     bus_protocol_if.peripheral_vital bus_if
 );
     parameter NUM_VCS = 2;
@@ -114,6 +115,7 @@ module tile #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
+        .packet_recv(packet_recv),
         .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );

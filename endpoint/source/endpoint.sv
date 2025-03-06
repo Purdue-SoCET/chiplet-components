@@ -10,6 +10,7 @@ module endpoint #(
     parameter DEPTH
 ) (
     input logic clk, n_rst,
+    output logic packet_recv,
     endpoint_if endpoint_if,
     bus_protocol_if.peripheral_vital bus_if
 );
@@ -94,6 +95,7 @@ module endpoint #(
     );
 
     assign tx_fsm_if.node_id = endpoint_if.node_id;
+    assign packet_recv = enable;
 
     always_ff @(posedge clk, negedge n_rst) begin
         if (!n_rst) begin

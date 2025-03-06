@@ -40,6 +40,7 @@ module fpga_tile_wrapper(
             ) TILE (
                 .clk(CLOCK_50),
                 .n_rst(KEY[0]),
+                .packet_recv(),
                 .uart_rx(uart_rx[i]),
                 .uart_tx(uart_tx[i]),
                 .bus_if(bus_if)

@@ -74,6 +74,7 @@ module switch_endpoint_wrapper #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
+        .packet_recv(),
         .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );
