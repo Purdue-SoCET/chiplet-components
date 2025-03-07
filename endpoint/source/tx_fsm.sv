@@ -16,14 +16,15 @@ module tx_fsm#(
     import chiplet_types_pkg::*;
 
     typedef enum logic [3:0] {
-        IDLE, START_SEND_PKT, SEND_PKT
+        IDLE, START_SEND_PKT, SEND_PKT, CRC
     } state_e;
 
     typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
 
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
-    logic length_clear, length_done, stop_sending;
+    logic length_clear, length_done, stop_sending, crc_done, crc_update;
+    logic [31:0] crc_out, crc_in;
     flit_t flit;
     pkt_id_t curr_pkt_id, next_curr_pkt_id;
 
@@ -49,6 +50,16 @@ module tx_fsm#(
         .overflow_val(3*DEPTH/4),
         .count_out(),
         .overflow_flag(stop_sending)
+    );
+
+    socetlib_crc #() CRC_GEN (
+        .CLK(clk),
+        .nRST(n_rst),
+        .clear(length_clear),
+        .update(crc_update),
+        .in(crc_in),
+        .crc_out(crc_out),
+        .done(crc_done)
     );
 
     always_ff @(posedge clk, negedge n_rst) begin
@@ -87,6 +98,11 @@ module tx_fsm#(
             end
             SEND_PKT : begin
                 if (length_done) begin
+                    next_state = CRC;
+                end
+            end
+            CRC : begin
+                if (crc_done) begin
                     next_state = IDLE;
                 end
             end
@@ -122,12 +138,20 @@ module tx_fsm#(
                 end
             end
             SEND_PKT : begin
-                endpoint_if.data_ready_in = !stop_sending && !length_done;
+                endpoint_if.data_ready_in = crc_done;
                 tx_cache_if.ren = 1;
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = tx_cache_if.rdata;
+                crc_in = tx_cache_if.rdata;
+                crc_update = !crc_done;
+            end
+            CRC : begin
+                flit.metadata.vc = 0;
+                flit.metadata.id = curr_pkt_id;
+                flit.metadata.req = tx_if.node_id;
+                flit.payload = crc_out;
             end
             default : begin end
         endcase
