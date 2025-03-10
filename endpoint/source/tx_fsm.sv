@@ -125,6 +125,8 @@ module tx_fsm#(
         endpoint_if.data_ready_in = 0;
         flit = flit_t'(0);
         length_clear = 0;
+        crc_update = 0;
+        crc_in = '0;
 
         casez (state)
             IDLE : begin
