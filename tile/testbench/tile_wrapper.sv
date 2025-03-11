@@ -5,7 +5,9 @@
     tile #(                                                         \
         .NUM_LINKS(2),                                              \
         .BUFFER_SIZE(BUFFER_SIZE),                                  \
-        .PORT_COUNT(PORT_COUNT)                                     \
+        .PORT_COUNT(PORT_COUNT),                                    \
+        .UART_FREQ(10_000_000),                                     \
+        .UART_BAUD_RATE(1_000_000)                                  \
     ) tile_``num``(                                                 \
         .clk(clk),                                                  \
         .n_rst(n_rst),                                              \
