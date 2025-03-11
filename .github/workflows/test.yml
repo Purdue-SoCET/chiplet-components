@@ -29,5 +29,8 @@ jobs:
           make buildsys_setup
           ./apply_patches.sh digital-lib
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:endpoint
+          ./tmp/build/socet_chiplet_endpoint_0.0.1/sim-verilator/Vswitch_endpoint_wrapper
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target correctness --tool verilator socet:chiplet:switch
+          ./tmp/build/socet_chiplet_switch_0.0.1/sim-verilator/Vswitch_wrapper
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:tile
+          ./tmp/build/socet_chiplet_tile_0.0.1/sim-verilator/Vtile_wrapper
