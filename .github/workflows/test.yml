@@ -33,6 +33,6 @@ jobs:
           CXX=g++-13 fusesoc --cores-root . run --setup --build --build-root build --target sim --tool verilator socet:chiplet:tile
       - name: Run tests
         run: |
-          ./tmp/build/socet_chiplet_endpoint_0.0.1/sim-verilator/Vswitch_endpoint_wrapper
-          ./tmp/build/socet_chiplet_switch_0.0.1/correctness-verilator/Vswitch_wrapper
-          ./tmp/build/socet_chiplet_tile_0.0.1/sim-verilator/Vtile_wrapper
+          ./build/socet_chiplet_endpoint_0.0.1/sim-verilator/Vswitch_endpoint_wrapper
+          ./build/socet_chiplet_switch_0.0.1/correctness-verilator/Vswitch_wrapper
+          ./build/socet_chiplet_tile_0.0.1/sim-verilator/Vtile_wrapper
