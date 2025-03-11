@@ -35,4 +35,4 @@ jobs:
         run: |
           ./build/socet_chiplet_endpoint_0.0.1/sim-verilator/Vswitch_endpoint_wrapper
           ./build/socet_chiplet_switch_0.0.1/correctness-verilator/Vswitch_wrapper
-          ./build/socet_chiplet_tile_0.0.1/sim-verilator/Vtile_wrapper
+          ./build/socet_chiplet_tile_1.0.0/sim-verilator/Vtile_wrapper
