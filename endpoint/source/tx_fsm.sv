@@ -107,7 +107,6 @@ module tx_fsm#(
                 else if(length_done && curr_pkt_fmt != FMT_SWITCH_CFG) begin
                     next_state = CRC;
                 end
-                
             end
             CRC : begin
                 next_state = IDLE;

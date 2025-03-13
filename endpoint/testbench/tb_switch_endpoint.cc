@@ -103,14 +103,22 @@ void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, b
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
     std::queue<uint32_t> flits;
     flits.push((uint32_t)(uint64_t)hdr);
-    // crc_t crc = crc_init();
-    //crc = crc_update(crc, (uint32_t *)(uint64_t *)&hdr, 4);
+    crc_t crc = crc_init();
+    crc = crc_update(crc, (uint32_t *)(uint64_t *)&hdr, 4);
     for (auto d : data) {
         flits.push((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                    (((uint64_t)hdr.req) << 32) | d);
-        //crc = crc_update(crc, &d, 4);
+        crc = crc_update(crc, &d, 4);
+    }
+    if (from == 2) {
+        flits.push((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
+                   (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     }
     manager->queuePacketSend(from, flits);
+    if (from == 1) {
+        flits.push((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
+                   (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
+    }
     manager->queuePacketCheck(to, flits);
 }
 
