@@ -120,15 +120,16 @@ module tx_fsm#(
     always_comb begin
         long_hdr = long_hdr_t'(32'd0);
         next_curr_pkt_fmt = curr_pkt_fmt;
+
         tx_cache_if.addr = tx_if.pkt_start_addr[curr_pkt_id] + (length * 4);
         tx_cache_if.ren = 0;
         tx_cache_if.wen = 0;
         tx_cache_if.strobe = '0;
-        // TODO:
         tx_cache_if.is_burst = '0;
         tx_cache_if.burst_type = '0;
         tx_cache_if.burst_length = 0;
         tx_cache_if.secure_transfer = 0;
+        
         next_curr_pkt_length = curr_pkt_length;
         endpoint_if.data_ready_in = 0;
         flit = flit_t'(0);
