@@ -21,8 +21,10 @@ module tx_fsm#(
 
     typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
 
+    long_hdr_t long_hdr; 
     state_e state, next_state;
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
+    format_e curr_pkt_fmt, next_curr_pkt_fmt;
     logic length_clear, length_done, stop_sending, crc_done, crc_update;
     logic [31:0] crc_out, crc_in;
     flit_t flit;
@@ -67,10 +69,12 @@ module tx_fsm#(
             state <= IDLE;
             curr_pkt_length <= 0;
             curr_pkt_id <= 0;
+            curr_pkt_fmt <= FMT_LONG_READ;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
             curr_pkt_id <= next_curr_pkt_id;
+            curr_pkt_fmt <= next_curr_pkt_fmt;
         end
     end
 
@@ -97,14 +101,16 @@ module tx_fsm#(
                 end
             end
             SEND_PKT : begin
-                if (length_done) begin
-                    next_state = CRC;
-                end
-            end
-            CRC : begin
-                if (crc_done) begin
+                if (length_done && curr_pkt_fmt == FMT_SWITCH_CFG) begin
                     next_state = IDLE;
                 end
+                else if(length_done && curr_pkt_fmt != FMT_SWITCH_CFG) begin
+                    next_state = CRC;
+                end
+                
+            end
+            CRC : begin
+                next_state = IDLE;
             end
             default : begin end
         endcase
@@ -112,6 +118,8 @@ module tx_fsm#(
 
     // State output logic
     always_comb begin
+        long_hdr = long_hdr_t'(32'd0);
+        next_curr_pkt_fmt = curr_pkt_fmt;
         tx_cache_if.addr = tx_if.pkt_start_addr[curr_pkt_id] + (length * 4);
         tx_cache_if.ren = 0;
         tx_cache_if.wen = 0;
@@ -137,6 +145,11 @@ module tx_fsm#(
                 tx_cache_if.ren = 1;
                 if (!tx_cache_if.request_stall) begin
                     next_curr_pkt_length = expected_num_flits(tx_cache_if.rdata);
+                    long_hdr = long_hdr_t'(tx_cache_if.rdata);
+                    next_curr_pkt_fmt = long_hdr.format;
+                    if(next_curr_pkt_fmt != FMT_SWITCH_CFG) begin
+                        next_curr_pkt_length = next_curr_pkt_length - 1;
+                    end
                 end
             end
             SEND_PKT : begin
@@ -147,13 +160,14 @@ module tx_fsm#(
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = tx_cache_if.rdata;
                 crc_in = tx_cache_if.rdata;
-                crc_update = !crc_done;
+                crc_update = !crc_done & !length_done;
             end
             CRC : begin
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = crc_out;
+                endpoint_if.data_ready_in = 1;
             end
             default : begin end
         endcase
