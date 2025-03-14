@@ -33,15 +33,10 @@ uint32_t readBus(uint8_t tile, uint32_t addr) {
 void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, bool vc = 0) {
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
     std::vector<uint32_t> flits = {hdr};
-    crc_t crc = crc_init();
-    crc = crc_update(crc, &hdr, 4);
     for (auto d : data) {
         flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
                         (((uint64_t)hdr.req) << 32) | d);
-        crc = crc_update(crc, &d, 4);
     }
-    flits.push_back((((uint64_t)hdr.vc) << 39) | (((uint64_t)hdr.id) << 37) |
-                    (((uint64_t)hdr.req) << 32) | crc_finalize(crc));
     manager->queuePacketSend(from, flits);
 }
 

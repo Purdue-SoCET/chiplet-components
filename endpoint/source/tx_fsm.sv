@@ -54,7 +54,7 @@ module tx_fsm#(
         .overflow_flag(stop_sending)
     );
 
-    socetlib_crc #() CRC_GEN (
+    socetlib_crc CRC_GEN (
         .CLK(clk),
         .nRST(n_rst),
         .clear(length_clear),
@@ -153,14 +153,14 @@ module tx_fsm#(
                 end
             end
             SEND_PKT : begin
-                endpoint_if.data_ready_in = crc_done;
+                endpoint_if.data_ready_in = !stop_sending && !length_done && crc_done;
                 tx_cache_if.ren = 1;
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = tx_cache_if.rdata;
                 crc_in = tx_cache_if.rdata;
-                crc_update = !crc_done & !length_done;
+                crc_update = !crc_done && !length_done && !stop_sending;
             end
             CRC : begin
                 flit.metadata.vc = 0;
