@@ -361,5 +361,5 @@ int main(int argc, char **argv) {
     dut->final();
     trace->close();
 
-    return 0;
+    return fails;
 }

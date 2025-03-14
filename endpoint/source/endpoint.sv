@@ -86,7 +86,7 @@ module endpoint #(
         .NUM_MSGS(NUM_MSGS),
         .TX_SEND_ADDR(TX_SEND_ADDR),
         .DEPTH(DEPTH)
-    ) tx(
+    ) tx_fsm(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
