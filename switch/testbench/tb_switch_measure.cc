@@ -17,9 +17,60 @@
 uint64_t sim_time = 0;
 uint64_t fails = 0;
 
-NetworkManager *manager;
+NetworkManager<9> *manager;
 Vswitch_wrapper *dut;
 VerilatedFstC *trace;
+
+void signalHandler(int signum) {
+    std::cout << "Got signal " << signum << std::endl;
+    std::cout << "Calling SystemVerilog 'final' block & exiting!" << std::endl;
+
+    manager->reportRemainingCheck();
+
+    dut->final();
+    trace->close();
+
+    exit(signum);
+}
+
+void tick(bool limit) {
+    dut->clk = 0;
+    manager->tick();
+    dut->eval();
+    trace->dump(sim_time++);
+    dut->clk = 1;
+    dut->eval();
+    trace->dump(sim_time++);
+
+    if (limit && sim_time > 1000000) {
+        signalHandler(0);
+    }
+}
+
+void reset() {
+    dut->clk = 0;
+    dut->nrst = 1;
+    for (int i = 0; i < 9; i++) {
+        dut->in_flit[i] = 0;
+        dut->data_ready_in[i] = 0;
+        dut->packet_sent[i] = 0;
+    }
+
+    tick(false);
+    dut->nrst = 0;
+    tick(false);
+    tick(false);
+    tick(false);
+    dut->nrst = 1;
+    tick(false);
+    tick(false);
+}
+
+void wait_for_propagate(uint32_t waits) {
+    for (int i = 0; i < waits; i++) {
+        tick(false);
+    }
+}
 
 void sendSmallWrite(uint8_t from, uint8_t to, const std::span<uint32_t> &data, bool vc = 0) {
     SmallWrite hdr(from, to, data.size(), 0xCAFECAFE, vc);
@@ -60,43 +111,179 @@ void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint
 void resetAndInit() {
     reset();
     manager->reset();
+    // East/west first, then north/south
     // Set Nodo ID in 1
     sendNode(1);
     // Set up routing table
     // For 1:
     // {*, 2, 1}
     sendRouteTableInit(1, 0, 0, 2, 1);
-    // {*, 3, 2}
-    sendRouteTableInit(1, 1, 0, 3, 2);
-    // {*, 4, 1}
-    sendRouteTableInit(1, 2, 0, 4, 1);
+    // {*, 3, 1}
+    sendRouteTableInit(1, 1, 0, 3, 1);
+    // {*, 4, 2}
+    sendRouteTableInit(1, 2, 0, 4, 2);
+    // {*, 5, 1}
+    sendRouteTableInit(1, 3, 0, 5, 1);
+    // {*, 6, 1}
+    sendRouteTableInit(1, 4, 0, 6, 1);
+    // {*, 7, 2}
+    sendRouteTableInit(1, 5, 0, 7, 2);
+    // {*, 8, 1}
+    sendRouteTableInit(1, 6, 0, 8, 1);
+    // {*, 9, 1}
+    sendRouteTableInit(1, 7, 0, 9, 1);
 
     // For 2:
     sendNode(2);
     // {*, 1, 1}
     sendRouteTableInit(2, 0, 0, 1, 1);
-    // {*, 4, 2}
-    sendRouteTableInit(2, 1, 0, 4, 2);
-    // {*, 3, 1}
-    sendRouteTableInit(2, 2, 0, 3, 1);
+    // {*, 3, 2}
+    sendRouteTableInit(2, 1, 0, 3, 2);
+    // {*, 4, 1}
+    sendRouteTableInit(2, 2, 0, 4, 1);
+    // {*, 5, 3}
+    sendRouteTableInit(2, 3, 0, 5, 3);
+    // {*, 6, 2}
+    sendRouteTableInit(2, 4, 0, 6, 2);
+    // {*, 7, 1}
+    sendRouteTableInit(2, 5, 0, 7, 1);
+    // {*, 8, 3}
+    sendRouteTableInit(2, 6, 0, 8, 3);
+    // {*, 9, 2}
+    sendRouteTableInit(2, 7, 0, 9, 2);
 
     // For 3:
     sendNode(3);
     // {*, 1, 1}
     sendRouteTableInit(3, 0, 0, 1, 1);
-    // {*, 4, 2}
-    sendRouteTableInit(3, 1, 0, 4, 2);
-    // {*, 2, 2}
-    sendRouteTableInit(3, 2, 0, 2, 2);
+    // {*, 2, 1}
+    sendRouteTableInit(3, 1, 0, 2, 1);
+    // {*, 4, 1}
+    sendRouteTableInit(3, 2, 0, 4, 1);
+    // {*, 5, 1}
+    sendRouteTableInit(3, 3, 0, 5, 1);
+    // {*, 6, 2}
+    sendRouteTableInit(3, 4, 0, 6, 2);
+    // {*, 7, 1}
+    sendRouteTableInit(3, 5, 0, 7, 1);
+    // {*, 8, 1}
+    sendRouteTableInit(3, 6, 0, 8, 1);
+    // {*, 9, 2}
+    sendRouteTableInit(3, 7, 0, 9, 2);
 
     // For 4:
     sendNode(4);
-    // {*, 2, 1}
-    sendRouteTableInit(4, 0, 0, 2, 1);
+    // {*, 1, 1}
+    sendRouteTableInit(4, 0, 0, 1, 1);
+    // {*, 2, 2}
+    sendRouteTableInit(4, 1, 0, 2, 2);
     // {*, 3, 2}
-    sendRouteTableInit(4, 1, 0, 3, 2);
+    sendRouteTableInit(4, 2, 0, 3, 2);
+    // {*, 5, 2}
+    sendRouteTableInit(4, 3, 0, 5, 2);
+    // {*, 6, 2}
+    sendRouteTableInit(4, 4, 0, 6, 2);
+    // {*, 7, 3}
+    sendRouteTableInit(4, 5, 0, 7, 3);
+    // {*, 8, 2}
+    sendRouteTableInit(4, 6, 0, 8, 2);
+    // {*, 9, 2}
+    sendRouteTableInit(4, 7, 0, 9, 2);
+
+    // For 5:
+    sendNode(5);
     // {*, 1, 2}
-    sendRouteTableInit(4, 2, 0, 1, 2);
+    sendRouteTableInit(5, 0, 0, 1, 2);
+    // {*, 2, 1}
+    sendRouteTableInit(5, 1, 0, 2, 1);
+    // {*, 3, 3}
+    sendRouteTableInit(5, 2, 0, 3, 3);
+    // {*, 4, 2}
+    sendRouteTableInit(5, 3, 0, 4, 2);
+    // {*, 6, 3}
+    sendRouteTableInit(5, 4, 0, 6, 3);
+    // {*, 7, 2}
+    sendRouteTableInit(5, 5, 0, 7, 2);
+    // {*, 8, 4}
+    sendRouteTableInit(5, 6, 0, 8, 4);
+    // {*, 9, 3}
+    sendRouteTableInit(5, 7, 0, 9, 3);
+
+    // For 6:
+    sendNode(6);
+    // {*, 1, 2}
+    sendRouteTableInit(6, 0, 0, 1, 2);
+    // {*, 2, 2}
+    sendRouteTableInit(6, 1, 0, 2, 2);
+    // {*, 3, 1}
+    sendRouteTableInit(6, 2, 0, 3, 1);
+    // {*, 4, 2}
+    sendRouteTableInit(6, 3, 0, 4, 2);
+    // {*, 5, 2}
+    sendRouteTableInit(6, 4, 0, 5, 2);
+    // {*, 7, 2}
+    sendRouteTableInit(6, 5, 0, 7, 2);
+    // {*, 8, 2}
+    sendRouteTableInit(6, 6, 0, 8, 2);
+    // {*, 9, 3}
+    sendRouteTableInit(6, 7, 0, 9, 3);
+
+    // For 7:
+    sendNode(7);
+    // {*, 1, 1}
+    sendRouteTableInit(7, 0, 0, 1, 1);
+    // {*, 2, 2}
+    sendRouteTableInit(7, 1, 0, 2, 2);
+    // {*, 3, 2}
+    sendRouteTableInit(7, 2, 0, 3, 2);
+    // {*, 4, 1}
+    sendRouteTableInit(7, 3, 0, 4, 1);
+    // {*, 5, 2}
+    sendRouteTableInit(7, 4, 0, 5, 2);
+    // {*, 6, 2}
+    sendRouteTableInit(7, 5, 0, 6, 2);
+    // {*, 8, 2}
+    sendRouteTableInit(7, 6, 0, 8, 2);
+    // {*, 9, 2}
+    sendRouteTableInit(7, 7, 0, 9, 2);
+
+    // For 8:
+    sendNode(8);
+    // {*, 1, 2}
+    sendRouteTableInit(8, 0, 0, 1, 2);
+    // {*, 2, 1}
+    sendRouteTableInit(8, 1, 0, 2, 1);
+    // {*, 3, 3}
+    sendRouteTableInit(8, 2, 0, 3, 3);
+    // {*, 4, 2}
+    sendRouteTableInit(8, 3, 0, 4, 2);
+    // {*, 5, 1}
+    sendRouteTableInit(8, 4, 0, 5, 1);
+    // {*, 6, 3}
+    sendRouteTableInit(8, 5, 0, 6, 3);
+    // {*, 7, 2}
+    sendRouteTableInit(8, 6, 0, 7, 2);
+    // {*, 9, 3}
+    sendRouteTableInit(8, 7, 0, 9, 3);
+
+    // For 9:
+    sendNode(9);
+    // {*, 1, 2}
+    sendRouteTableInit(9, 0, 0, 1, 2);
+    // {*, 2, 2}
+    sendRouteTableInit(9, 1, 0, 2, 2);
+    // {*, 3, 1}
+    sendRouteTableInit(9, 2, 0, 3, 1);
+    // {*, 4, 2}
+    sendRouteTableInit(9, 3, 0, 4, 2);
+    // {*, 5, 2}
+    sendRouteTableInit(9, 4, 0, 5, 2);
+    // {*, 6, 1}
+    sendRouteTableInit(9, 5, 0, 6, 1);
+    // {*, 7, 2}
+    sendRouteTableInit(9, 6, 0, 7, 2);
+    // {*, 8, 2}
+    sendRouteTableInit(9, 7, 0, 8, 2);
 
     // Give some time for the packets to flow through the network
     wait_for_propagate(500);
@@ -109,10 +296,10 @@ bool inject() {
     static_assert(cycles_per_injection > 0);
     if (total_injections <= TOTAL_INJECTIONS && sim_time % cycles_per_injection == 0) {
         total_injections++;
-        for (int from = 1; from <= 4; from++) {
+        for (int from = 1; from <= 9; from++) {
             uint8_t to = from;
             do {
-                to = std::rand() % 4 + 1;
+                to = std::rand() % 9 + 1;
             } while (from == to);
             uint8_t packet_len = (std::rand() % 16) + 1;
             std::vector<uint32_t> data(packet_len);
@@ -125,8 +312,8 @@ bool inject() {
 }
 
 int main(int argc, char **argv) {
-    manager = new NetworkManager;
     dut = new Vswitch_wrapper;
+    manager = new NetworkManager<9>(dut);
     trace = new VerilatedFstC;
     Verilated::traceEverOn(true);
     dut->trace(trace, 5);
@@ -139,7 +326,7 @@ int main(int argc, char **argv) {
         printf("Seed: %d\n", seed);
         resetAndInit();
         while (inject() || !manager->isComplete()) {
-            tick(false);
+            tick(true);
         }
     }
 

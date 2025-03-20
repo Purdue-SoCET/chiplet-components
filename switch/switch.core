@@ -40,12 +40,10 @@ filesets:
 
     tb:
         files:
-            - "testbench/NetworkManager.cc": {file_type: cppSource}
             - "testbench/NetworkManager.h": {file_type: cppSource, is_include_file : true}
             - "testbench/crc.c": {file_type: cppSource}
             - "testbench/crc.h": {file_type: cppSource, is_include_file : true}
             - "testbench/packet.h": {file_type: cppSource, is_include_file : true}
-            - "testbench/utility.cc": {file_type: cppSource}
             - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
         file_type: systemVerilogSource
         depend:
