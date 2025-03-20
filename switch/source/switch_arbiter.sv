@@ -61,5 +61,9 @@ module switch_arbiter#(
                 found = 1;
             end
         end
+
+        if (a_if.valid && a_if.select == next_select) begin
+            found = 0;
+        end
     end
 endmodule

@@ -125,8 +125,10 @@ int main(int argc, char **argv) {
         ensure(dut->select, 4, "test case 4 after tick");
         ensure(dut->valid, 1, "test case 4 after tick");
         tick(false);
-        ensure(dut->select, 4, "test case 4 after second tick");
-        ensure(dut->valid, 1, "test case 4 after second tick");
+        ensure(dut->valid, 0, "test case 4 after second tick");
+        tick(false);
+        ensure(dut->select, 4, "test case 4 after third tick");
+        ensure(dut->valid, 1, "test case 4 after third tick");
     }
 
     wait_for_propagate(10);
