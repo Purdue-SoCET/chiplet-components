@@ -32,7 +32,7 @@ module endpoint #(
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid, crc_error, rx_fifo_wen, rx_fifo_ren;
+    logic enable, overflow, crc_valid, crc_error, rx_fifo_wen, rx_fifo_ren, tx_fifo_ren;
     logic [6:0] metadata;
     cache_controller_e rx_controller, next_rx_controller, tx_controller, next_tx_controller;
     fifo_state_e rx_fifo_state, next_rx_fifo_state;
@@ -73,11 +73,11 @@ module endpoint #(
     //     .bus_if(rx_bus_if)
     // );
 
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
-        .clk(clk),
-        .n_rst(n_rst),
-        .bus_if(tx_bus_if)
-    );
+    // cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
+    //     .clk(clk),
+    //     .n_rst(n_rst),
+    //     .bus_if(tx_bus_if)
+    // );
 
     socetlib_fifo #(
         .WIDTH(32),
@@ -97,23 +97,23 @@ module endpoint #(
         .rdata(rx_bus_if.rdata)
     );
 
-    // socetlib_fifo #(
-    //     .WIDTH(32),
-    //     .DEPTH(CACHE_NUM_WORDS)
-    // ) tx_fifo (
-    //     .CLK(clk),
-    //     .nRST(n_rst),
-    //     .WEN(tx_bus_if.wen),
-    //     .REN(tx_bus_if.ren),
-    //     .wdata(tx_bus_if.wdata & tx_byte_en),
-    //     .clear(1'b0),
-    //     .full(),
-    //     .empty(),
-    //     .underrun(),
-    //     .overrun(),
-    //     .count(),
-    //     .rdata(tx_bus_if.rdata)
-    // );
+    socetlib_fifo #(
+        .WIDTH(32),
+        .DEPTH(CACHE_NUM_WORDS)
+    ) tx_fifo (
+        .CLK(clk),
+        .nRST(n_rst),
+        .WEN(tx_bus_if.wen),
+        .REN(endpoint_if.data_ready_in),
+        .wdata(tx_bus_if.wdata & tx_byte_en),
+        .clear(1'b0),
+        .full(),
+        .empty(),
+        .underrun(),
+        .overrun(),
+        .count(),
+        .rdata(tx_bus_if.rdata)
+    );
 
     message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
         .clk(clk),
@@ -143,12 +143,14 @@ module endpoint #(
             tx_controller <= BUS;
             rx_fifo_state <= OFF;
             rx_fifo_ren <= 0;
+            tx_fifo_ren <= 0;
         end else begin
             tx_fsm_if.pkt_start_addr <= next_pkt_start_addr;
             rx_controller <= next_rx_controller;
             tx_controller <= next_tx_controller;
             rx_fifo_state <= next_rx_fifo_state;
             rx_fifo_ren <= rx_bus_if.ren;
+            tx_fifo_ren <= tx_bus_if.ren;
         end
     end
 
