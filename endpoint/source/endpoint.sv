@@ -17,6 +17,7 @@ module endpoint #(
     import chiplet_types_pkg::*;
 
     typedef enum logic { FSM, BUS } cache_controller_e;
+    typedef enum logic { OFF, ON } fifo_state_e;
 
     localparam CACHE_NUM_WORDS = 128;
     localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
@@ -31,9 +32,11 @@ module endpoint #(
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid, crc_error;
+    logic enable, overflow, crc_valid, crc_error, rx_fifo_wen, rx_fifo_ren;
     logic [6:0] metadata;
     cache_controller_e rx_controller, next_rx_controller, tx_controller, next_tx_controller;
+    fifo_state_e rx_fifo_state, next_rx_fifo_state;
+    chiplet_word_t tx_byte_en, rx_byte_en;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
@@ -64,17 +67,53 @@ module endpoint #(
         .rx_cache_if (rx_cache_if)
     );
 
-    cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
-        .clk(clk),
-        .n_rst(n_rst),
-        .bus_if(rx_bus_if)
-    );
+    // cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
+    //     .clk(clk),
+    //     .n_rst(n_rst),
+    //     .bus_if(rx_bus_if)
+    // );
 
     cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
         .clk(clk),
         .n_rst(n_rst),
         .bus_if(tx_bus_if)
     );
+
+    socetlib_fifo #(
+        .WIDTH(32),
+        .DEPTH(CACHE_NUM_WORDS)
+    ) rx_fifo (
+        .CLK(clk),
+        .nRST(n_rst),
+        .WEN(rx_fifo_wen),
+        .REN(rx_fifo_ren),
+        .wdata(rx_bus_if.wdata & rx_byte_en),
+        .clear(1'b0),
+        .full(),
+        .empty(),
+        .underrun(),
+        .overrun(),
+        .count(),
+        .rdata(rx_bus_if.rdata)
+    );
+
+    // socetlib_fifo #(
+    //     .WIDTH(32),
+    //     .DEPTH(CACHE_NUM_WORDS)
+    // ) tx_fifo (
+    //     .CLK(clk),
+    //     .nRST(n_rst),
+    //     .WEN(tx_bus_if.wen),
+    //     .REN(tx_bus_if.ren),
+    //     .wdata(tx_bus_if.wdata & tx_byte_en),
+    //     .clear(1'b0),
+    //     .full(),
+    //     .empty(),
+    //     .underrun(),
+    //     .overrun(),
+    //     .count(),
+    //     .rdata(tx_bus_if.rdata)
+    // );
 
     message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
         .clk(clk),
@@ -102,11 +141,40 @@ module endpoint #(
             tx_fsm_if.pkt_start_addr <= '0;
             rx_controller <= BUS;
             tx_controller <= BUS;
+            rx_fifo_state <= OFF;
+            rx_fifo_ren <= 0;
         end else begin
             tx_fsm_if.pkt_start_addr <= next_pkt_start_addr;
             rx_controller <= next_rx_controller;
             tx_controller <= next_tx_controller;
+            rx_fifo_state <= next_rx_fifo_state;
+            rx_fifo_ren <= rx_bus_if.ren;
         end
+    end
+
+    always_comb begin
+        for (int i = 0; i < 4; i = i + 1) begin
+            rx_byte_en[i*8+:8] = rx_bus_if.strobe[i] ? 8'hFF : 8'h00;
+            tx_byte_en[i*8+:8] = tx_bus_if.strobe[i] ? 8'hFF : 8'h00;
+        end
+    end
+
+    always_comb begin //RX FIFO WEN State Machine
+        rx_fifo_wen = 0;
+        next_rx_fifo_state = rx_fifo_state;
+        casez(rx_fifo_state)
+            OFF : begin
+                if(rx_bus_if.wen) begin
+                    next_rx_fifo_state = ON;
+                    rx_fifo_wen = 1;
+                end
+            end
+            ON : begin
+                if(!rx_bus_if.wen) begin
+                    next_rx_fifo_state = OFF;
+                end
+            end
+        endcase
     end
 
     always_comb begin
@@ -159,7 +227,7 @@ module endpoint #(
                 tx_bus_if.strobe = bus_if.strobe;
                 bus_if.rdata = tx_bus_if.rdata;
                 bus_if.error = tx_bus_if.error;
-                bus_if.request_stall = tx_bus_if.request_stall;
+                bus_if.request_stall = 0;
             end else begin
                 bus_if.request_stall = 1;
             end
