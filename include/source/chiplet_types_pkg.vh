@@ -67,10 +67,13 @@ package chiplet_types_pkg;
         logic [6:0]     data_lo;
     } switch_cfg_hdr_t;
 
+    //comma formtat
     typedef struct packed {
         format_e        format;
         node_id_t       dest;
-        logic [18:0]    r;
+        node_id_t       to;
+        logic [15:0]    ;
+        logic [2:0]     r;
         comma_sel_t     comma_sel;
     } comma_header_t;
 
@@ -87,6 +90,7 @@ package chiplet_types_pkg;
         chiplet_word_t          payload;
     } flit_t;
 
+    typedef struct packed
     function logic [PKT_LENGTH_WIDTH-1:0] expected_num_flits(chiplet_word_t flit);
         long_hdr_t long_hdr; 
         short_hdr_t short_hdr;

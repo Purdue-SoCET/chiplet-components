@@ -60,57 +60,60 @@ module wrap_dec_8b_10b #(
     resp_hdr_t resp_hdr;
 
     //comma selection
-    always_comb begin
-        n_flit = dec_if.flit;
-        err_in_comma = '0;
-        n_comma_sel = dec_if.comma_sel;
-        long_hdr = long_hdr_t'({flit_data.payload, 32'd0});
-        short_hdr = short_hdr_t'(flit_data.payload);
-        msg_hdr = msg_hdr_t'(flit_data.payload);
-        resp_hdr = resp_hdr_t'(flit_data.payload);
-        if (dec_if.done) begin
-            done_out_n = '1;
-            case (dec_if.comma_length_sel)
-                SELECT_COMMA_1_FLIT: begin
-                    case(dec_if.enc_flit.word[9:0])
-                        START_COMMA:  begin
-                            n_comma_sel = START_PACKET_SEL;
-                        end
-                        END_COMMA:  begin
-                            n_comma_sel = END_PACKET_SEL;
-                        end
-                        GRTCRED0_COMMA: begin
-                            n_comma_sel = GRTCRED0_SEL;
-                        end
-                        GRTCRED1_COMMA: begin
-                            n_comma_sel = GRTCRED1_SEL;
-                        end
-                        default: begin
-                            err_in_comma = '1;
-                        end
-                    endcase
-                end
-                SELECT_COMMA_2_FLIT: begin
-                    n_flit.metadata.vc = flit_data.payload[7];
-                    n_flit.metadata.id = flit_data.payload[6:5];
-                    n_flit.metadata.req = flit_data.payload[4:0];
-                    case(dec_if.enc_flit.word[19:10])
-                        ACK_COMMA: begin
-                            n_comma_sel = ACK_SEL;
-                        end
-                        default: begin
-                            err_in_comma = '1;
-                        end
-                    endcase
-                end
-                SELECT_COMMA_DATA: begin
-                    n_flit = flit_data;
-                    n_comma_sel = DATA_SEL;
-                end
-                default: begin end
-            endcase
-        end
+always_comb begin
+    n_flit = dec_if.flit;
+    err_in_comma = '0;
+    n_comma_sel = dec_if.comma_sel;
+
+    // Interpret flit payloads as headers
+    long_hdr = long_hdr_t'({flit_data.payload, 32'd0});
+    short_hdr = short_hdr_t'(flit_data.payload);
+    msg_hdr = msg_hdr_t'(flit_data.payload);
+    resp_hdr = resp_hdr_t'(flit_data.payload);
+
+    if (dec_if.done) begin
+        done_out_n = '1;
+
+        case (dec_if.comma_length_sel)
+            // Single flit commas
+            SELECT_COMMA_1_FLIT: begin
+                case (dec_if.enc_flit.word[9:0])
+                    START_COMMA:   n_comma_sel = START_PACKET_SEL;
+                    END_COMMA:     n_comma_sel = END_PACKET_SEL;
+                    GRTCRED0_COMMA: n_comma_sel = GRTCRED0_SEL;
+                    GRTCRED1_COMMA: n_comma_sel = GRTCRED1_SEL;
+                    NACK_CTRL_BAUD_COMMA: n_comma_sel = NACK_CTRL_BAUD_SEL;
+                    default: err_in_comma = '1; // Unknown comma
+                endcase
+            end
+
+            // Two flit commas with extracted metadata
+            SELECT_COMMA_2_FLIT: begin
+                n_flit.metadata.vc = flit_data.payload[7];
+                n_flit.metadata.id = flit_data.payload[6:5];
+                n_flit.metadata.req = flit_data.payload[4:0];
+
+                case (dec_if.enc_flit.word[19:10])
+                    ACK_COMMA: n_comma_sel = ACK_SEL;
+                    BAUD_COMMA: n_comma_sel = BAUD_SEL;
+                    REQ_CTRL_BAUD_COMMA: n_comma_sel = REQ_CTRL_BAUD_SEL;
+                    GRT_CTRL_BAUD_COMMA: n_comma_sel = GRT_CTRL_BAUD_SEL;
+                    default: err_in_comma = '1; // Unknown two-flit comma
+                endcase
+            end
+
+            // Regular data
+            SELECT_COMMA_DATA: begin
+                n_flit = flit_data;
+                n_comma_sel = DATA_SEL;
+            end
+
+            default: begin 
+                err_in_comma = '1; // Unrecognized selection
+            end
+        endcase
     end
+end
 
     always_comb begin
         err_in_order = '0;

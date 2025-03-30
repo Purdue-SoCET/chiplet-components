@@ -15,6 +15,7 @@ module wrap_enc_8b_10b #(
     flit_enc_t flit_norm, n_flit;
     comma_length_sel_t n_comma_length_sel_out;
     logic start_n;
+
     always_ff @(posedge CLK, negedge nRST) begin
         if (~nRST) begin
             enc_if.start_out <= '0;
@@ -30,45 +31,63 @@ module wrap_enc_8b_10b #(
 
     genvar i;
     generate
-    for (i = 0; i < PORTCOUNT; i= i +1) begin : enc_8b10b_block
+    for (i = 0; i < PORTCOUNT; i = i + 1) begin : enc_8b10b_block
         enc_8b10b enc (
             .data_in(enc_if.flit[i*8+:8]),
-            .data_out(flit_norm[i*10+:10]));
+            .data_out(flit_norm[i*10+:10])
+        );
     end
     endgenerate
 
-    //comma selection
+    // Comma selection logic
     always_comb begin
         start_n = '0;
         n_flit = '0;
         n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
+
         if (enc_if.start) begin
             start_n = '1;
             case (enc_if.comma_sel)
                 START_PACKET_SEL: begin
-                    n_flit =  {START_COMMA, {40{1'b1}}};
+                    n_flit = {START_COMMA, {40{1'b1}}};
                     n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
                 end
-                END_PACKET_SEL:  begin
-                    n_flit =  {END_COMMA, {40{1'b1}}};
+                END_PACKET_SEL: begin
+                    n_flit = {END_COMMA, {40{1'b1}}};
                     n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
-                    end
+                end
                 GRTCRED0_SEL: begin
-                    n_flit = {GRTCRED0_COMMA,{40{1'b1}}};
+                    n_flit = {GRTCRED0_COMMA, {40{1'b1}}};
                     n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
-                    end
+                end
                 GRTCRED1_SEL: begin
                     n_flit = {GRTCRED1_COMMA, {40{1'b1}}};
                     n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
                 end
                 ACK_SEL: begin
-                    n_flit = {ACK_COMMA,flit_norm.meta_data, {30{1'b1}}};
+                    n_flit = {ACK_COMMA, flit_norm.meta_data, {30{1'b1}}};
                     n_comma_length_sel_out = SELECT_COMMA_2_FLIT;
                 end
-                DATA_SEL:  begin
+                DATA_SEL: begin
                     n_flit = flit_norm;
                     n_comma_length_sel_out = SELECT_COMMA_DATA;
-                    end
+                end
+                NACK_CTRL_BAUD_SEL: begin
+                    n_flit = {NACK_CTRL_BAUD_COMMA, {30{1'b1}}};
+                    n_comma_length_sel_out = SELECT_COMMA_1_FLIT;
+                end
+                BAUD_SEL: begin
+                    n_flit = {BAUD_COMMA, flit_norm.meta_data, {30{1'b1}}};
+                    n_comma_length_sel_out = SELECT_COMMA_2_FLIT;
+                end
+                REQ_CTRL_BAUD_SEL: begin
+                    n_flit = {REQ_CTRL_BAUD_COMMA, flit_norm.meta_data, {30{1'b1}}};
+                    n_comma_length_sel_out = SELECT_COMMA_2_FLIT;
+                end
+                GRT_CTRL_BAUD_SEL: begin
+                    n_flit = {GRT_CTRL_BAUD_COMMA, flit_norm.meta_data, {30{1'b1}}};
+                    n_comma_length_sel_out = SELECT_COMMA_2_FLIT;
+                end
                 default: begin end
             endcase
         end

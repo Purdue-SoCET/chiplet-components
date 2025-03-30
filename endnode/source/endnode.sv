@@ -77,16 +77,23 @@ module endnode #(
     assign end_if.grtcred_rx[0] = (phy_rx_if.comma_sel == GRTCRED0_SEL) && phy_rx_if.done_out;
     assign end_if.grtcred_rx[1] = (phy_rx_if.comma_sel == GRTCRED1_SEL) && phy_rx_if.done_out;
     assign phy_tx_if.new_flit = end_if.send_next_flit_tx;
+    comma_header_t comma_hdr;
+    assign phy_tx_if.grt_ctrl_comma_write = (phy_rx_if.comma_sel == GRT_CTRL_BAUD_SEL) && phy_rx_if.done_out && ((phy_rx_if.flit.meta_data).meta_data == comma_hdr.dest);
+    assign phy_tx_if.nack_baud_write = (phy_rx_if.comma_sel == GRT_CTRL_BAUD_SEL) && phy_rx_if.done_out && ((phy_rx_if.flit.meta_data).meta_data != comma_hdr.dest);
 
     comma_header_t komma_hdr;
     always_comb begin
         komma_hdr = comma_header_t'(end_if.flit_tx.payload);
         phy_tx_if.ack_write = '0;
         phy_tx_if.data_write = '0;
+        phy_tx_if.req_ctrl_comma_write = '0;
         if (komma_hdr.format == KOMMA_PACKET && end_if.start_tx) begin
             case(komma_hdr.comma_sel)
                 ACK_SEL: begin
                     phy_tx_if.ack_write = '1;
+                end
+                REQ_CTRL_BAUD_SEL: begin
+                    phy_tx_if.req_ctrl_comma_write = '1;
                 end
                 default: begin end
             endcase
