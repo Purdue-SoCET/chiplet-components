@@ -38,31 +38,32 @@ module switch_arbiter#(
         left &= a_if.bid;
         right &= a_if.bid;
 
-        // Current winner has finished request
-        if (!a_if.valid) begin
-            // Start looking at everything after current requester to find
-            // first set
-            for (int i = 0; i < WIDTH; i++) begin
-                if (!found && right[i]) begin
-                    /* verilator lint_off WIDTHTRUNC */
-                    next_select = i;
-                    next_flit = a_if.rdata[next_select];
-                    /* verilator lint_on WIDTHTRUNC */
-                    found = 1;
-                end
+        // Start looking at everything after current requester to find
+        // first set
+        for (int i = 0; i < WIDTH; i++) begin
+            if (!found && right[i]) begin
+                /* verilator lint_off WIDTHTRUNC */
+                next_select = i;
+                next_flit = a_if.rdata[next_select];
+                /* verilator lint_on WIDTHTRUNC */
+                found = 1;
             end
+        end
 
-            // Then look for anything to the left (including current
-            // selection)
-            for (int i = 0; i < WIDTH; i++) begin
-                if (!found && left[i]) begin
-                    /* verilator lint_off WIDTHTRUNC */
-                    next_select = i;
-                    next_flit = a_if.rdata[next_select];
-                    /* verilator lint_on WIDTHTRUNC */
-                    found = 1;
-                end
+        // Then look for anything to the left (including current
+        // selection)
+        for (int i = 0; i < WIDTH; i++) begin
+            if (!found && left[i]) begin
+                /* verilator lint_off WIDTHTRUNC */
+                next_select = i;
+                next_flit = a_if.rdata[next_select];
+                /* verilator lint_on WIDTHTRUNC */
+                found = 1;
             end
+        end
+
+        if (a_if.valid && a_if.select == next_select) begin
+            found = 0;
         end
     end
 endmodule

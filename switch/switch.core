@@ -63,6 +63,12 @@ filesets:
             - "testbench/tb_switch_correctness.cc": {file_type: cppSource}
         file_type: systemVerilogSource
 
+    arbiter_tb:
+        files:
+            - "testbench/switch_arbiter_wrapper.sv"
+            - "testbench/tb_switch_arbiter.cc": {file_type: cppSource}
+        file_type: systemVerilogSource
+
     fpga:
         files:
             - "fpga/fpga_switch_wrapper.sv"
@@ -151,6 +157,28 @@ targets:
                     - --trace
                     - --trace-structs
                     - --main
+                    - --timing
+                    - --coverage
+                    - -Wno-WIDTHEXPAND
+                    - -Wno-TIMESCALEMOD
+                    - -CFLAGS -std=c++20
+                    - -trace-fst
+                make_options:
+                    - -j
+
+    arbiter:
+        <<: *default
+        default_tool: verilator
+        filesets_append:
+            - arbiter_tb
+        toplevel:
+            - "tool_verilator? (switch_arbiter_wrapper)"
+        tools:
+            verilator:
+                verilator_options:
+                    - --cc
+                    - --trace
+                    - --trace-structs
                     - --timing
                     - --coverage
                     - -Wno-WIDTHEXPAND
