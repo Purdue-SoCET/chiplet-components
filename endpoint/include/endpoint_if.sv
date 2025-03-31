@@ -15,10 +15,11 @@ interface endpoint_if #(
     logic [NUM_VCS-1:0] buffer_available;
     logic [NUM_VCS-1:0] credit_granted;
     logic packet_sent;
+    logic config_done;
     node_id_t node_id;
 
     modport endpoint(
-        input out, buffer_available, data_ready_out, node_id,
+        input out, buffer_available, data_ready_out, node_id, config_done,
         output in, credit_granted, data_ready_in, packet_sent
     );
 

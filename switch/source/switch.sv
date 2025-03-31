@@ -116,6 +116,7 @@ module switch #(
         rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
         buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
     end
+    assign sw_if.config_done = rb_if.config_done;
 
     // Stage 2: VC allocation
     vc_allocator #(

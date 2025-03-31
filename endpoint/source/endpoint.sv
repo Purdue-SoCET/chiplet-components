@@ -30,6 +30,7 @@ module endpoint #(
     localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
     localparam REQ_FIFO_START_ADDR = 32'h3400;
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
+    localparam CONFIG_DONE_ADDR = 32'h3500;
 
     logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
     logic enable, overflow, crc_valid, crc_error, rx_fifo_wen, rx_fifo_ren, tx_fifo_ren;
@@ -253,6 +254,8 @@ module endpoint #(
             bus_if.rdata = rx_fifo_if.rdata;
         end else if (bus_if.wen || bus_if.ren) begin
             bus_if.error = 1;
+        end else if (bus_if.addr == CONFIG_DONE_ADDR) begin
+            bus_if.rdata = {31'd0, endpoint_if.config_done};
         end
 
         if (tx_controller == FSM) begin

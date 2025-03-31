@@ -103,6 +103,7 @@ module tile #(
         endpoint_if.buffer_available = sw_if.buffer_available[0];
         endpoint_if.data_ready_out = sw_if.data_ready_out[0];
         endpoint_if.node_id = sw_if.node_id;
+        endpoint_if.config_done = sw_if.config_done;
         sw_if.in[0] = endpoint_if.in;
         sw_if.credit_granted[0] = endpoint_if.credit_granted;
         sw_if.data_ready_in[0] = endpoint_if.data_ready_in;
