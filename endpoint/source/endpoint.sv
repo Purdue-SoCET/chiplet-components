@@ -16,7 +16,6 @@ module endpoint #(
 );
     import chiplet_types_pkg::*;
 
-    typedef enum logic { FSM, BUS } cache_controller_e;
     typedef enum logic { OFF, ON } fifo_state_e;
 
     localparam CACHE_NUM_WORDS = 128;
@@ -32,15 +31,13 @@ module endpoint #(
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
     localparam CONFIG_DONE_ADDR = 32'h3500;
 
-    logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] next_pkt_start_addr;
-    logic enable, overflow, crc_valid, crc_error, rx_fifo_wen, rx_fifo_ren, tx_fifo_ren;
+    logic enable, overflow, crc_valid, crc_error;
     logic [6:0] metadata;
-    cache_controller_e rx_controller, next_rx_controller, tx_controller, next_tx_controller;
+    logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
+    logic rx_fifo_wen, rx_fifo_ren, rx_fifo_empty;
     fifo_state_e rx_fifo_state, next_rx_fifo_state;
     chiplet_word_t tx_byte_en, rx_byte_en;
 
-    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_bus_if();
-    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) tx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_bus_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
@@ -68,52 +65,43 @@ module endpoint #(
         .rx_cache_if (rx_cache_if)
     );
 
-    // cache #(.NUM_WORDS(CACHE_NUM_WORDS)) rx_cache(
-    //     .clk(clk),
-    //     .n_rst(n_rst),
-    //     .bus_if(rx_bus_if)
-    // );
-
-    // cache #(.NUM_WORDS(CACHE_NUM_WORDS)) tx_cache(
-    //     .clk(clk),
-    //     .n_rst(n_rst),
-    //     .bus_if(tx_bus_if)
-    // );
-
     socetlib_fifo #(
         .WIDTH(32),
-        .DEPTH(CACHE_NUM_WORDS)
+        .DEPTH(8)
     ) rx_fifo (
         .CLK(clk),
         .nRST(n_rst),
         .WEN(rx_fifo_wen),
         .REN(rx_fifo_ren),
-        .wdata(rx_bus_if.wdata & rx_byte_en),
+        .wdata(endpoint_if.out.payload),
         .clear(1'b0),
         .full(),
-        .empty(),
+        .empty(rx_fifo_empty),
         .underrun(),
         .overrun(),
         .count(),
-        .rdata(rx_bus_if.rdata)
+        .rdata(bus_if.rdata)
     );
 
+    // TODO: can we reduce the size of this?
+    // Example flow would be trigger certain packet send then start spamming
+    // flits. Just need to be careful about error conditions
     socetlib_fifo #(
         .WIDTH(32),
-        .DEPTH(CACHE_NUM_WORDS)
+        .DEPTH(8)
     ) tx_fifo (
         .CLK(clk),
         .nRST(n_rst),
-        .WEN(tx_bus_if.wen),
-        .REN(endpoint_if.data_ready_in),
-        .wdata(tx_bus_if.wdata & tx_byte_en),
+        .WEN(tx_fifo_wen),
+        .REN(tx_fsm_if.fifo_ren),
+        .wdata(bus_if.wdata),
         .clear(1'b0),
-        .full(),
-        .empty(),
+        .full(tx_fifo_full),
+        .empty(tx_fifo_empty),
         .underrun(),
         .overrun(),
         .count(),
-        .rdata(tx_bus_if.rdata)
+        .rdata(tx_fsm_if.fifo_rdata)
     );
 
     message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
@@ -131,69 +119,17 @@ module endpoint #(
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
         .endpoint_if(endpoint_if),
-        .tx_cache_if(tx_cache_if),
         .msg_if(msg_if)
     );
 
     assign tx_fsm_if.node_id = endpoint_if.node_id;
 
-    always_ff @(posedge clk, negedge n_rst) begin
-        if (!n_rst) begin
-            tx_fsm_if.pkt_start_addr <= '0;
-            rx_controller <= BUS;
-            tx_controller <= BUS;
-            rx_fifo_state <= OFF;
-            rx_fifo_ren <= 0;
-            tx_fifo_ren <= 0;
-        end else begin
-            tx_fsm_if.pkt_start_addr <= next_pkt_start_addr;
-            rx_controller <= next_rx_controller;
-            tx_controller <= next_tx_controller;
-            rx_fifo_state <= next_rx_fifo_state;
-            rx_fifo_ren <= rx_bus_if.ren;
-            tx_fifo_ren <= tx_bus_if.ren;
-        end
-    end
-
     always_comb begin
-        for (int i = 0; i < 4; i = i + 1) begin
-            rx_byte_en[i*8+:8] = rx_bus_if.strobe[i] ? 8'hFF : 8'h00;
-            tx_byte_en[i*8+:8] = tx_bus_if.strobe[i] ? 8'hFF : 8'h00;
-        end
-    end
-
-    always_comb begin //RX FIFO WEN State Machine
-        rx_fifo_wen = 0;
-        next_rx_fifo_state = rx_fifo_state;
-        casez(rx_fifo_state)
-            OFF : begin
-                if(rx_bus_if.wen) begin
-                    next_rx_fifo_state = ON;
-                    rx_fifo_wen = 1;
-                end
-            end
-            ON : begin
-                if(!rx_bus_if.wen) begin
-                    next_rx_fifo_state = OFF;
-                end
-            end
-        endcase
-    end
-
-    always_comb begin
-        tx_bus_if.wen = 0;
-        tx_bus_if.ren = 0;
-        tx_bus_if.addr = 0;
-        tx_bus_if.wdata = 0;
-        tx_bus_if.strobe = 0;
         rx_bus_if.wen = 0;
         rx_bus_if.ren = 0;
         rx_bus_if.addr = 0;
         rx_bus_if.wdata = 0;
         rx_bus_if.strobe = 0;
-        tx_cache_if.rdata = 32'hBAD1BAD1;
-        tx_cache_if.error = 0;
-        tx_cache_if.request_stall = 0;
         rx_cache_if.rdata = 32'hBAD1BAD1;
         rx_cache_if.error = 0;
         rx_cache_if.request_stall = 0;
@@ -202,51 +138,34 @@ module endpoint #(
         bus_if.rdata = 32'hBAD1BAD1;
         bus_if.error = 0;
         bus_if.request_stall = 0;
-        next_pkt_start_addr = tx_fsm_if.pkt_start_addr;
         msg_if.trigger_send = '0;
-        next_rx_controller = (rx_cache_if.ren || rx_cache_if.wen) ? FSM : BUS;
-        next_tx_controller = (tx_cache_if.ren || tx_cache_if.wen) ? FSM : BUS;
+        tx_fifo_wen = 0;
+        rx_fifo_wen = 0;
+        rx_fifo_ren = 0;
 
-        if (bus_if.addr < PKT_ID_ADDR_ADDR_LEN) begin
-            if (bus_if.ren) begin
-                bus_if.rdata = tx_fsm_if.pkt_start_addr[bus_if.addr[2+:$clog2(NUM_MSGS)]];
-            end else if (bus_if.wen) begin
-                next_pkt_start_addr[bus_if.addr[2+:$clog2(NUM_MSGS)]] = bus_if.wdata[0+:ADDR_WIDTH] & ~'h3;
-            end
         // Message table
-        end else if (bus_if.addr == TX_SEND_ADDR && bus_if.wen) begin
-            if (bus_if.wdata < NUM_MSGS) begin
+        if (bus_if.addr == TX_SEND_ADDR && bus_if.wen) begin
+            if (!tx_fifo_empty && bus_if.wdata < NUM_MSGS) begin
                 msg_if.trigger_send[bus_if.wdata] = 1;
             end else begin
                 bus_if.error = 1;
             end
         // TX cache
-        end else if (bus_if.addr >= TX_CACHE_START_ADDR && bus_if.addr < TX_CACHE_END_ADDR) begin
-            if (tx_controller == BUS) begin
-                tx_bus_if.wen = bus_if.wen;
-                tx_bus_if.ren = bus_if.ren;
-                tx_bus_if.addr = bus_if.addr[8:0];
-                tx_bus_if.wdata = bus_if.wdata;
-                tx_bus_if.strobe = bus_if.strobe;
-                bus_if.rdata = tx_bus_if.rdata;
-                bus_if.error = tx_bus_if.error;
-                bus_if.request_stall = 0;
+        end else if (bus_if.wen && bus_if.addr >= TX_CACHE_START_ADDR && bus_if.addr < TX_CACHE_END_ADDR) begin
+            if (!tx_fifo_full) begin
+                tx_fifo_wen = 1;
             end else begin
-                bus_if.request_stall = 1;
+                bus_if.error = 1;
+                bus_if.request_stall = 0;
             end
         // RX cache
-        end else if (bus_if.addr >= RX_CACHE_START_ADDR && bus_if.addr < RX_CACHE_END_ADDR) begin
-            if (rx_controller == BUS) begin
-                rx_bus_if.wen = 0;
-                rx_bus_if.ren = bus_if.ren;
-                rx_bus_if.addr = bus_if.addr[8:0];
-                rx_bus_if.wdata = bus_if.wdata;
-                rx_bus_if.strobe = bus_if.strobe;
-                bus_if.rdata = rx_bus_if.rdata;
-                bus_if.error = rx_bus_if.error;
-                bus_if.request_stall = rx_bus_if.request_stall;
+        end else if (bus_if.ren && bus_if.addr >= RX_CACHE_START_ADDR && bus_if.addr < RX_CACHE_END_ADDR) begin
+            // TOOD: handle bus read from rx cache
+            if (!rx_fifo_empty) begin
+                rx_fifo_ren = 1;
             end else begin
-                bus_if.request_stall = 1;
+                bus_if.error = 1;
+                bus_if.request_stall = 0;
             end
         end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
@@ -258,17 +177,8 @@ module endpoint #(
             bus_if.rdata = {31'd0, endpoint_if.config_done};
         end
 
-        if (tx_controller == FSM) begin
-            tx_bus_if.wen = tx_cache_if.wen;
-            tx_bus_if.ren = tx_cache_if.ren;
-            tx_bus_if.addr = tx_cache_if.addr[8:0];
-            tx_cache_if.rdata = tx_bus_if.rdata;
-            tx_cache_if.error = tx_bus_if.error;
-            tx_cache_if.request_stall = tx_bus_if.request_stall;
-        end else begin
-            tx_cache_if.request_stall = 1;
-        end
-
+        // TODO: handle fsm write from rx cache
+        /*
         if (rx_controller == FSM) begin
             rx_bus_if.wen = rx_cache_if.wen;
             rx_bus_if.wdata = rx_cache_if.wdata;
@@ -281,5 +191,6 @@ module endpoint #(
         end else begin
             rx_cache_if.request_stall = 1;
         end
+        */
     end
 endmodule
