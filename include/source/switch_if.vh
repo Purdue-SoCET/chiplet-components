@@ -23,12 +23,12 @@ interface switch_if #(
     //TODO 
     modport switch(
         input in, credit_granted, data_ready_in, packet_sent, 
-        output out, buffer_available, data_ready_out, node_id, config_done
+        output out, buffer_available, data_ready_out, config_done, node_id
     );
 
     modport endpoint(
         output in, credit_granted, data_ready_in, packet_sent,
-        input out, buffer_available, data_ready_out, node_id
+        input out, buffer_available, data_ready_out, config_done, node_id
     );
 endinterface
 
