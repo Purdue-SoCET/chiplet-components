@@ -8,7 +8,19 @@ extern Vswitch_endpoint_wrapper *dut;
 
 // `from` is 1-indexed
 void NetworkManager::queuePacketSend(uint8_t from, std::queue<uint32_t> flit) {
-    this->to_be_sent[from - 1].push(flit);
+    if (from == 1) {
+        queueBusSend(0x4, 0);
+        while (!flit.empty()) {
+            queueBusSend(0x0, flit.front());
+            flit.pop();
+        }
+    } else {
+        this->to_be_sent[from - 1].push(flit);
+    }
+}
+
+void NetworkManager::queueBusSend(uint32_t addr, uint32_t data) {
+    this->to_bus_write.push(std::make_pair(addr, data));
 }
 
 // `from` is 1-indexed
@@ -52,23 +64,18 @@ void NetworkManager::tick() {
 
     // Update any inputs
     // Handle bus side
-    if (!dut->ren && !dut->request_stall) {
-        if (this->to_be_sent[0].size()) {
-            if (this->to_be_sent[0].front().empty()) {
-                if (dut->addr == 0x0004) {
-                    dut->wen = 0;
-                    this->to_be_sent[0].pop();
-                } else {
-                    dut->addr = 0x0004;
-                    dut->wen = 1;
-                    dut->wdata = this->curr_id;
-                    this->curr_id = (this->curr_id + 1) % 4;
-                }
+    if (!dut->ren) {
+        if (this->to_bus_write.size()) {
+            if (dut->wen && !dut->request_stall) {
+                dut->wen = 0;
+                dut->addr = 0;
+                this->to_bus_write.pop();
             } else {
-                dut->addr = 0x0000;
+                uint32_t addr = std::get<0>(this->to_bus_write.front());
+                uint32_t data = std::get<1>(this->to_bus_write.front());
                 dut->wen = 1;
-                dut->wdata = this->to_be_sent[0].front().front();
-                this->to_be_sent[0].front().pop();
+                dut->wdata = data;
+                dut->addr = addr;
             }
         }
     }

@@ -2,7 +2,6 @@
 
 `include "chiplet_types_pkg.vh"
 `include "switch_if.vh"
-`include "message_table_if.sv"
 `include "endpoint_if.sv"
 
 module endpoint #(
@@ -27,13 +26,11 @@ module endpoint #(
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 32'h80;
     localparam CONFIG_DONE_ADDR = REQ_FIFO_START_ADDR + 32'h100;
 
-    logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
     logic rx_fifo_ren, rx_fifo_empty;
     chiplet_word_t tx_byte_en, rx_byte_en;
     logic [31:0] rx_fifo_rdata;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
-    message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
     rx_fsm_if rx_if();
 
@@ -70,33 +67,6 @@ module endpoint #(
         .rdata(rx_fifo_rdata)
     );
 
-    // TODO: can we reduce the size of this?
-    // Example flow would be trigger certain packet send then start spamming
-    // flits. Just need to be careful about error conditions
-    socetlib_fifo #(
-        .WIDTH(32),
-        .DEPTH(128)
-    ) tx_fifo (
-        .CLK(clk),
-        .nRST(n_rst),
-        .WEN(tx_fifo_wen),
-        .REN(tx_fsm_if.fifo_ren),
-        .wdata(bus_if.wdata),
-        .clear(1'b0),
-        .full(tx_fifo_full),
-        .empty(tx_fifo_empty),
-        .underrun(),
-        .overrun(),
-        .count(),
-        .rdata(tx_fsm_if.fifo_rdata)
-    );
-
-    message_table #(.NUM_MSGS(NUM_MSGS)) msg_table(
-        .clk(clk),
-        .n_rst(n_rst),
-        .msg_if(msg_if)
-    );
-
     tx_fsm #(
         .NUM_MSGS(NUM_MSGS),
         .TX_SEND_ADDR(TX_SEND_ADDR),
@@ -105,8 +75,7 @@ module endpoint #(
         .clk(clk),
         .n_rst(n_rst),
         .tx_if(tx_fsm_if),
-        .endpoint_if(endpoint_if),
-        .msg_if(msg_if)
+        .endpoint_if(endpoint_if)
     );
 
     assign tx_fsm_if.node_id = endpoint_if.node_id;
@@ -117,28 +86,28 @@ module endpoint #(
         bus_if.rdata = 32'hBAD1BAD1;
         bus_if.error = 0;
         bus_if.request_stall = 0;
-        msg_if.trigger_send = '0;
-        tx_fifo_wen = 0;
         rx_fifo_ren = 0;
+        tx_fsm_if.wen = 0;
+        tx_fsm_if.start = 0;
+        tx_fsm_if.wdata = bus_if.wdata;
 
         // Message table
-        if (bus_if.addr == TX_SEND_ADDR && bus_if.wen) begin
-            if (!tx_fsm_if.busy) begin
-                if (!tx_fifo_empty && bus_if.wdata < NUM_MSGS) begin
-                    msg_if.trigger_send[bus_if.wdata] = 1;
-                end else begin
-                    bus_if.error = 1;
-                end
-            end else begin
-                bus_if.request_stall = 1;
+        if (bus_if.addr == TX_SEND_ADDR) begin
+            if (bus_if.wen && !tx_fsm_if.sending && bus_if.wdata < NUM_MSGS) begin
+                tx_fsm_if.start = 1;
+            end else if (bus_if.ren) begin
+                bus_if.rdata = tx_fsm_if.sending;
             end
         // TX cache
         end else if (bus_if.wen && bus_if.addr == TX_WRITE_ADDR) begin
-            if (!tx_fifo_full) begin
-                tx_fifo_wen = 1;
+            if (tx_fsm_if.sending) begin
+                if (!tx_fsm_if.busy) begin
+                    tx_fsm_if.wen = 1;
+                end else begin
+                    bus_if.request_stall = 1;
+                end
             end else begin
                 bus_if.error = 1;
-                bus_if.request_stall = 0;
             end
         // RX cache
         end else if (bus_if.ren && bus_if.addr == RX_READ_ADDR) begin

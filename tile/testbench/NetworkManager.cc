@@ -9,10 +9,10 @@ extern Vtile_wrapper *dut;
 // `from` is 1-indexed
 void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint32_t> &flit) {
     uint32_t addr = 0x0000;
+    this->queueBusWrite(from, ENDPOINT_SEND_ADDR, this->curr_id[from - 1]);
     for (auto f : flit) {
         this->queueBusWrite(from, addr, f);
     }
-    this->queueBusWrite(from, ENDPOINT_SEND_ADDR, this->curr_id[from - 1]);
     this->curr_id[from - 1] = (this->curr_id[from - 1] + 1) % 4;
 }
 
@@ -40,12 +40,12 @@ void NetworkManager::reportRemainingCheck() {
 void NetworkManager::eval_step() {
     // Handle bus writes
     for (int i = 0; i < 4; i++) {
-        if (!dut->ren[i] && !dut->request_stall[i]) {
-            if (dut->wen[i]) {
+        if (!dut->ren[i]) {
+            if (dut->wen[i] && !dut->request_stall[i]) {
                 dut->wen[i] = 0;
                 dut->addr[i] = 0;
                 this->to_bus_write[i].pop();
-            } else if (!this->to_bus_write[i].empty()) {
+            } else if (!dut->wen[i] && !this->to_bus_write[i].empty()) {
                 uint32_t addr = std::get<0>(this->to_bus_write[i].front());
                 uint32_t data = std::get<1>(this->to_bus_write[i].front());
                 dut->wen[i] = 1;

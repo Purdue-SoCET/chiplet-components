@@ -2,6 +2,22 @@
 
 `define CREATE_TILE(num)                                            \
     bus_protocol_if bus_if_``num``();                               \
+    bus_protocol_if tile_bus_if_``num``();                          \
+    ahb_if ahb_if_``num`` (                                         \
+        .HCLK(clk),                                                 \
+        .HRESETn(n_rst)                                             \
+    );                                                              \
+    ahb_manager MANAGER_``num`` (                                   \
+        .busif(bus_if_``num``),                                     \
+        .ahbif(ahb_if_``num``)                                      \
+    );                                                              \
+    ahb_subordinate #(                                              \
+        .BASE_ADDR(0),                                              \
+        .NWORDS(4096)                                               \
+    ) SUBORDINATE_``num`` (                                         \
+        .ahb_if(ahb_if_``num``),                                    \
+        .bus_if(tile_bus_if_``num``)                                \
+    );                                                              \
     tile #(                                                         \
         .NUM_LINKS(2),                                              \
         .BUFFER_SIZE(BUFFER_SIZE),                                  \
@@ -14,7 +30,7 @@
         .packet_recv(),                                             \
         .uart_rx(uart_rx[num - 1]),                                 \
         .uart_tx(uart_tx[num - 1]),                                 \
-        .bus_if(bus_if_``num``)                                     \
+        .bus_if(tile_bus_if_``num``)                                \
     );                                                              \
     assign bus_if_``num``.wdata = wdata[num - 1];                   \
     assign bus_if_``num``.wen = wen[num - 1];                       \

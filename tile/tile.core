@@ -30,6 +30,10 @@ filesets:
             - "testbench/utility.h": {file_type: cppSource, is_include_file : true}
             - "testbench/tile_wrapper.sv"
         file_type: systemVerilogSource
+        depend:
+            - "socet:bus-components:ahb_manager"
+            - "socet:bus-components:ahb_subordinate"
+            - "socet:bus-components:ahb_if"
 
     fpga:
         files:
@@ -73,6 +77,8 @@ targets:
                     - -Wno-WIDTHTRUNC
                     - -Wno-TIMESCALEMOD
                     - -Wno-UNOPTFLAT
+                    - -Wno-UNSIGNED
+                    - -Wno-CASEINCOMPLETE
                     - -CFLAGS -std=c++20
                     - -trace-fst
                 make_options:

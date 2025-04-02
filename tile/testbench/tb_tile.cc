@@ -24,21 +24,8 @@ void writeBus(uint8_t tile, uint32_t addr, uint32_t data) {
 uint32_t readBus(uint8_t tile, uint32_t addr) {
     dut->addr[tile - 1] = addr;
     dut->ren[tile - 1] = 1;
-
-    dut->clk = 0;
-    dut->eval_step();
-    manager->eval_step();
-    dut->eval_end_step();
-    manager->eval_end_step();
-    trace->dump(sim_time++);
+    tick(false);
     uint32_t ret = dut->rdata[tile - 1];
-    dut->clk = 1;
-    dut->eval_step();
-    manager->eval_step();
-    dut->eval_end_step();
-    manager->eval_end_step();
-    trace->dump(sim_time++);
-
     dut->ren[tile - 1] = 0;
     return ret;
 }
