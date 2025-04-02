@@ -6,7 +6,6 @@ filesets:
     rtl:
         files:
             - "source/endpoint.sv"
-            - "source/cache.sv"
             - "source/tx_fsm.sv"
             - "source/rx_fsm.sv"
             - "source/req_fifo.sv"
