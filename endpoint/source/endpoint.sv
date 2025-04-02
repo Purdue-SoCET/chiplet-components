@@ -24,7 +24,7 @@ module endpoint #(
     localparam TX_SEND_ADDR = 32'h0004;
     localparam RX_READ_ADDR = 32'h1000;
     localparam REQ_FIFO_START_ADDR = RX_READ_ADDR + 32'h100;
-    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
+    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 32'h80;
     localparam CONFIG_DONE_ADDR = REQ_FIFO_START_ADDR + 32'h100;
 
     logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
@@ -151,7 +151,7 @@ module endpoint #(
             end
         end else if (bus_if.ren && bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
-            rx_fifo_if.addr = bus_if.addr[7:0];
+            rx_fifo_if.addr = bus_if.addr[6:0];
             bus_if.rdata = rx_fifo_if.rdata;
         end else if (bus_if.addr == CONFIG_DONE_ADDR) begin
             bus_if.rdata = {31'd0, endpoint_if.config_done};

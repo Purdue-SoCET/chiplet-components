@@ -113,7 +113,7 @@ void resetAndInit() {
     sendRouteTableInit(4, 2, 0, 1, 2);
 
     // Give some time for the packets to flow through the network
-    wait_for_propagate(1000);
+    wait_for_propagate(3000);
 }
 
 int main(int argc, char **argv) {
@@ -124,14 +124,14 @@ int main(int argc, char **argv) {
     dut->trace(trace, 5);
     trace->open("tile.fst");
 
-    for (int from = 1; from <= 2; from++) {
-        for (int to = 1; to <= 2; to++) {
+    for (int from = 1; from <= 4; from++) {
+        for (int to = 1; to <= 4; to++) {
             if (from != to) {
                 resetAndInit();
                 std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
                 sendSmallWrite(from, to, data);
                 while (!manager->isComplete()) {
-                    tick(true);
+                    tick(false);
                 }
                 uint32_t header = SmallWrite(from, to, 4, 0xCAFECAFE, 0);
                 while (readBus(to, 0x1100) == 0) {}
@@ -151,7 +151,6 @@ int main(int argc, char **argv) {
                 crc = crc_finalize(crc);
                 ensure(readBus(to, 0x1000), {{crc}}, "crc", false);
 
-                /*
                 // Random data test
                 data = {rand(), rand(), rand()};
                 sendSmallWrite(from, to, data);
@@ -173,7 +172,6 @@ int main(int argc, char **argv) {
                 crc = crc_update(crc, &data[2], 4);
                 crc = crc_finalize(crc);
                 ensure(readBus(to, 0x1000), {{crc}}, "rand crc", false);
-                */
 
                 wait_for_propagate(1000);
             }
