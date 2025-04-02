@@ -4,7 +4,7 @@
 #include <iostream>
 #include <span>
 
-#define ENDPOINT_SEND_ADDR 0x1004
+#define ENDPOINT_SEND_ADDR 0x0004
 #define DATELINE_ADDR 0x11
 #define NODE_ID_ADDR 0x12
 

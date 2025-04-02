@@ -123,6 +123,7 @@ module tx_fsm#(
         length_clear = 0;
         crc_update = 0;
         crc_in = '0;
+        tx_if.busy = state != IDLE;
 
         casez (state)
             IDLE : begin

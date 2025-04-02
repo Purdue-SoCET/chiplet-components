@@ -9,13 +9,13 @@ interface tx_fsm_if #(
 );
     import chiplet_types_pkg::*;
 
-    logic fifo_ren;
+    logic fifo_ren, busy;
     logic [31:0] fifo_rdata;
     node_id_t node_id;
 
     modport tx_fsm(
         input fifo_rdata, node_id,
-        output fifo_ren
+        output fifo_ren, busy
     );
 endinterface
 

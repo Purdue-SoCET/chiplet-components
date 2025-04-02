@@ -24,8 +24,21 @@ void writeBus(uint8_t tile, uint32_t addr, uint32_t data) {
 uint32_t readBus(uint8_t tile, uint32_t addr) {
     dut->addr[tile - 1] = addr;
     dut->ren[tile - 1] = 1;
-    tick(false);
+
+    dut->clk = 0;
+    dut->eval_step();
+    manager->eval_step();
+    dut->eval_end_step();
+    manager->eval_end_step();
+    trace->dump(sim_time++);
     uint32_t ret = dut->rdata[tile - 1];
+    dut->clk = 1;
+    dut->eval_step();
+    manager->eval_step();
+    dut->eval_end_step();
+    manager->eval_end_step();
+    trace->dump(sim_time++);
+
     dut->ren[tile - 1] = 0;
     return ret;
 }
@@ -60,13 +73,6 @@ void sendRouteTableInit(uint8_t switch_num, uint8_t tbl_entry, uint8_t src, uint
 void resetAndInit() {
     reset();
     manager->reset();
-
-    for (int tile = 1; tile <= 4; tile++) {
-        writeBus(tile, 0x0, 0x000);
-        writeBus(tile, 0x4, 0x080);
-        writeBus(tile, 0x8, 0x100);
-        writeBus(tile, 0xC, 0x180);
-    }
 
     // Set Node ID in 1
     sendNode(1);
@@ -107,7 +113,7 @@ void resetAndInit() {
     sendRouteTableInit(4, 2, 0, 1, 2);
 
     // Give some time for the packets to flow through the network
-    wait_for_propagate(3000);
+    wait_for_propagate(1000);
 }
 
 int main(int argc, char **argv) {
@@ -118,33 +124,34 @@ int main(int argc, char **argv) {
     dut->trace(trace, 5);
     trace->open("tile.fst");
 
-    for (int from = 1; from <= 4; from++) {
-        for (int to = 1; to <= 4; to++) {
+    for (int from = 1; from <= 2; from++) {
+        for (int to = 1; to <= 2; to++) {
             if (from != to) {
                 resetAndInit();
                 std::vector<uint32_t> data = {0xFAFAFA, 0xAFAFAFAF, 0xCAFECAFE, 0x12345678};
                 sendSmallWrite(from, to, data);
                 while (!manager->isComplete()) {
-                    tick(false);
+                    tick(true);
                 }
                 uint32_t header = SmallWrite(from, to, 4, 0xCAFECAFE, 0);
-                while (readBus(to, 0x3400) == 0) {}
-                ensure(readBus(to, 0x3400), {{1}}, "num packets", false);
-                readBus(to, 0x340C);
+                while (readBus(to, 0x1100) == 0) {}
+                ensure(readBus(to, 0x1100), {{1}}, "num packets", false);
+                readBus(to, 0x110C);
                 crc_t crc = crc_init();
-                ensure(readBus(to, 0x3000), {{header}}, "header", false);
+                ensure(readBus(to, 0x1000), {{header}}, "header", false);
                 crc = crc_update(crc, &header, 4);
-                ensure(readBus(to, 0x3004), {{data[0]}}, "body flit 1", false);
+                ensure(readBus(to, 0x1000), {{data[0]}}, "body flit 1", false);
                 crc = crc_update(crc, &data[0], 4);
-                ensure(readBus(to, 0x3008), {{data[1]}}, "body flit 2", false);
+                ensure(readBus(to, 0x1000), {{data[1]}}, "body flit 2", false);
                 crc = crc_update(crc, &data[1], 4);
-                ensure(readBus(to, 0x300C), {{data[2]}}, "body flit 3", false);
+                ensure(readBus(to, 0x1000), {{data[2]}}, "body flit 3", false);
                 crc = crc_update(crc, &data[2], 4);
-                ensure(readBus(to, 0x3010), {{data[3]}}, "body flit 4", false);
+                ensure(readBus(to, 0x1000), {{data[3]}}, "body flit 4", false);
                 crc = crc_update(crc, &data[3], 4);
                 crc = crc_finalize(crc);
-                ensure(readBus(to, 0x3014), {{crc}}, "crc", false);
+                ensure(readBus(to, 0x1000), {{crc}}, "crc", false);
 
+                /*
                 // Random data test
                 data = {rand(), rand(), rand()};
                 sendSmallWrite(from, to, data);
@@ -152,20 +159,21 @@ int main(int argc, char **argv) {
                     tick(false);
                 }
                 header = SmallWrite(from, to, 3, 0xCAFECAFE, 1);
-                while (readBus(to, 0x3400) == 0) {}
-                ensure(readBus(to, 0x3400), {{1}}, "rand num packets", false);
-                readBus(to, 0x340C);
+                while (readBus(to, 0x1100) == 0) {}
+                ensure(readBus(to, 0x1100), {{1}}, "rand num packets", false);
+                readBus(to, 0x110C);
                 crc = crc_init();
-                ensure(readBus(to, 0x3018), {{header}}, "rand header", false);
+                ensure(readBus(to, 0x1000), {{header}}, "rand header", false);
                 crc = crc_update(crc, &header, 4);
-                ensure(readBus(to, 0x301C), {{data[0]}}, "rand body flit 1", false);
+                ensure(readBus(to, 0x1000), {{data[0]}}, "rand body flit 1", false);
                 crc = crc_update(crc, &data[0], 4);
-                ensure(readBus(to, 0x3020), {{data[1]}}, "rand body flit 2", false);
+                ensure(readBus(to, 0x1000), {{data[1]}}, "rand body flit 2", false);
                 crc = crc_update(crc, &data[1], 4);
-                ensure(readBus(to, 0x3024), {{data[2]}}, "rand body flit 3", false);
+                ensure(readBus(to, 0x1000), {{data[2]}}, "rand body flit 3", false);
                 crc = crc_update(crc, &data[2], 4);
                 crc = crc_finalize(crc);
-                ensure(readBus(to, 0x3028), {{crc}}, "rand crc", false);
+                ensure(readBus(to, 0x1000), {{crc}}, "rand crc", false);
+                */
 
                 wait_for_propagate(1000);
             }

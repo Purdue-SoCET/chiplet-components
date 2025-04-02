@@ -8,10 +8,9 @@ extern Vtile_wrapper *dut;
 
 // `from` is 1-indexed
 void NetworkManager::queuePacketSend(uint8_t from, const std::span<uint32_t> &flit) {
-    uint32_t addr = 0x2000 + (0x80 * this->curr_id[from - 1]);
+    uint32_t addr = 0x0000;
     for (auto f : flit) {
         this->queueBusWrite(from, addr, f);
-        addr += 4;
     }
     this->queueBusWrite(from, ENDPOINT_SEND_ADDR, this->curr_id[from - 1]);
     this->curr_id[from - 1] = (this->curr_id[from - 1] + 1) % 4;

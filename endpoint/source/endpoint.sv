@@ -54,7 +54,7 @@ module endpoint #(
 
     socetlib_fifo #(
         .WIDTH(32),
-        .DEPTH(8)
+        .DEPTH(128)
     ) rx_fifo (
         .CLK(clk),
         .nRST(n_rst),
@@ -75,7 +75,7 @@ module endpoint #(
     // flits. Just need to be careful about error conditions
     socetlib_fifo #(
         .WIDTH(32),
-        .DEPTH(8)
+        .DEPTH(128)
     ) tx_fifo (
         .CLK(clk),
         .nRST(n_rst),
@@ -123,10 +123,14 @@ module endpoint #(
 
         // Message table
         if (bus_if.addr == TX_SEND_ADDR && bus_if.wen) begin
-            if (!tx_fifo_empty && bus_if.wdata < NUM_MSGS) begin
-                msg_if.trigger_send[bus_if.wdata] = 1;
+            if (!tx_fsm_if.busy) begin
+                if (!tx_fifo_empty && bus_if.wdata < NUM_MSGS) begin
+                    msg_if.trigger_send[bus_if.wdata] = 1;
+                end else begin
+                    bus_if.error = 1;
+                end
             end else begin
-                bus_if.error = 1;
+                bus_if.request_stall = 1;
             end
         // TX cache
         end else if (bus_if.wen && bus_if.addr == TX_WRITE_ADDR) begin
