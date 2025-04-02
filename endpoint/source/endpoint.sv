@@ -16,8 +16,6 @@ module endpoint #(
 );
     import chiplet_types_pkg::*;
 
-    typedef enum logic { OFF, ON } fifo_state_e;
-
     localparam CACHE_NUM_WORDS = 128;
     localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
     localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;
@@ -35,11 +33,9 @@ module endpoint #(
     logic [6:0] metadata;
     logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
     logic rx_fifo_wen, rx_fifo_ren, rx_fifo_empty;
-    fifo_state_e rx_fifo_state, next_rx_fifo_state;
     chiplet_word_t tx_byte_en, rx_byte_en;
+    logic [31:0] rx_fifo_rdata;
 
-    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_bus_if();
-    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_cache_if();
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
@@ -61,8 +57,8 @@ module endpoint #(
         .fifo_enable(enable),
         .metadata(metadata),
         .crc_error(crc_error),
-        .endpoint_if(endpoint_if),
-        .rx_cache_if (rx_cache_if)
+        .rx_fifo_wen(rx_fifo_wen),
+        .endpoint_if(endpoint_if)
     );
 
     socetlib_fifo #(
@@ -80,7 +76,7 @@ module endpoint #(
         .underrun(),
         .overrun(),
         .count(),
-        .rdata(bus_if.rdata)
+        .rdata(rx_fifo_rdata)
     );
 
     // TODO: can we reduce the size of this?
@@ -125,14 +121,6 @@ module endpoint #(
     assign tx_fsm_if.node_id = endpoint_if.node_id;
 
     always_comb begin
-        rx_bus_if.wen = 0;
-        rx_bus_if.ren = 0;
-        rx_bus_if.addr = 0;
-        rx_bus_if.wdata = 0;
-        rx_bus_if.strobe = 0;
-        rx_cache_if.rdata = 32'hBAD1BAD1;
-        rx_cache_if.error = 0;
-        rx_cache_if.request_stall = 0;
         rx_fifo_if.ren = 0;
         rx_fifo_if.addr = 0;
         bus_if.rdata = 32'hBAD1BAD1;
@@ -140,7 +128,6 @@ module endpoint #(
         bus_if.request_stall = 0;
         msg_if.trigger_send = '0;
         tx_fifo_wen = 0;
-        rx_fifo_wen = 0;
         rx_fifo_ren = 0;
 
         // Message table
@@ -162,6 +149,7 @@ module endpoint #(
         end else if (bus_if.ren && bus_if.addr >= RX_CACHE_START_ADDR && bus_if.addr < RX_CACHE_END_ADDR) begin
             // TOOD: handle bus read from rx cache
             if (!rx_fifo_empty) begin
+                bus_if.rdata = rx_fifo_rdata;
                 rx_fifo_ren = 1;
             end else begin
                 bus_if.error = 1;

@@ -42,8 +42,14 @@ void writeBus(uint32_t addr, uint32_t data) {
 uint32_t readBus(uint32_t addr) {
     dut->addr = addr;
     dut->ren = 1;
-    tick();
+    dut->clk = 0;
+    manager->tick();
+    dut->eval();
+    trace->dump(sim_time++);
     uint32_t ret = dut->rdata;
+    dut->clk = 1;
+    dut->eval();
+    trace->dump(sim_time++);
     dut->ren = 0;
     return ret;
 }

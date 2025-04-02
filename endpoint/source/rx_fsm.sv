@@ -6,8 +6,8 @@ module rx_fsm (
     output logic fifo_enable,
     output logic [6:0] metadata,
     output logic crc_error,
-    endpoint_if.rx_fsm endpoint_if,
-    bus_protocol_if.protocol rx_cache_if
+    output logic rx_fifo_wen,
+    endpoint_if.rx_fsm endpoint_if
 );
     import chiplet_types_pkg::*;
 
@@ -22,7 +22,6 @@ module rx_fsm (
     logic length_clear, length_done, stop_sending;
     logic count_enable, done, clear_crc, crc_update;
     chiplet_word_t crc_val;
-    logic [8:0] next_cache_addr, prev_cache_addr, next_prev_cache_addr;
 
     socetlib_crc CRC_CHECKER(
         .CLK(clk),
@@ -50,18 +49,13 @@ module rx_fsm (
         if (!n_rst) begin
             state <= IDLE;
             curr_pkt_length <= 0;
-            rx_cache_if.addr <= 0;
-            prev_cache_addr <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
-            rx_cache_if.addr <= next_cache_addr;
-            prev_cache_addr <= next_prev_cache_addr;
         end
     end
 
     assign metadata = {endpoint_if.out.metadata.id, endpoint_if.out.metadata.req};
-    assign rx_cache_if.wdata = endpoint_if.out.payload;
 
     // Next state logic
     always_comb begin
@@ -76,10 +70,10 @@ module rx_fsm (
                 next_state = CRC_WAIT;
             end
             CRC_WAIT : begin
-                if(done && !rx_cache_if.request_stall && !length_done) begin
+                if(done && !length_done) begin
                     next_state = BODY;
                 end
-                else if(done && !rx_cache_if.request_stall && length_done) begin
+                else if(done && length_done) begin
                     next_state = CRC_CHECK;
                 end
             end
@@ -93,7 +87,7 @@ module rx_fsm (
             CRC_CHECK : begin
                 if(crc_val != endpoint_if.out.payload) begin
                     next_state = IDLE;
-                end else if (!rx_cache_if.request_stall) begin
+                end else begin
                     next_state = REQ_EN;
                 end
             end
@@ -109,18 +103,13 @@ module rx_fsm (
         next_curr_pkt_length = curr_pkt_length;
         count_enable = 0;
         fifo_enable = 0;
-        rx_cache_if.wen = 0;
-        rx_cache_if.ren = 0;
-        rx_cache_if.strobe = 4'hF;
-        //rx_cache_if.wdata = 0;
         length_clear = 0;
-        next_cache_addr = rx_cache_if.addr;
         crc_error = 0;
         clear_crc = 0;
         crc_update = 0;
-        next_prev_cache_addr = prev_cache_addr;
         endpoint_if.packet_sent = 0;
         endpoint_if.credit_granted = 0;
+        rx_fifo_wen = 0;
 
         casez (state)
             IDLE : begin
@@ -130,32 +119,28 @@ module rx_fsm (
                 next_curr_pkt_length = expected_num_flits(endpoint_if.out.payload);
             end
             CRC_WAIT : begin
-                crc_update = !done;
-                rx_cache_if.wen = 1;
-                if (done && !rx_cache_if.request_stall) begin
+                crc_update = endpoint_if.data_ready_out && !done;
+                if (done) begin
+                    rx_fifo_wen = 1;
                     endpoint_if.packet_sent = 1;
                     endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
                     count_enable = 1;
-                    next_cache_addr = rx_cache_if.addr + 4;
                 end
             end
             BODY : begin end
             CRC_CHECK : begin
                 endpoint_if.packet_sent = 1;
                 endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
-                rx_cache_if.wen = 1;
                 if(crc_val != endpoint_if.out.payload) begin
-                    next_cache_addr = prev_cache_addr;
                     crc_error = 1;
-                end else if (!rx_cache_if.request_stall) begin
-                    next_cache_addr = rx_cache_if.addr + 4;
+                end else begin
+                    rx_fifo_wen = 1;
                 end
              end
             REQ_EN: begin
                 if(!overflow) begin
                     fifo_enable = 1;
                     length_clear = 1;
-                    next_prev_cache_addr = rx_cache_if.addr;
                 end
             end
             default : begin end
