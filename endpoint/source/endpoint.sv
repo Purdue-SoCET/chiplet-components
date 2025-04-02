@@ -20,14 +20,12 @@ module endpoint #(
     localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
     localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;
     localparam PKT_ID_ADDR_ADDR_LEN = NUM_MSGS * 4;
-    localparam TX_SEND_ADDR = 32'h1004;
-    localparam TX_CACHE_START_ADDR = 32'h2000;
-    localparam TX_CACHE_END_ADDR = TX_CACHE_START_ADDR + CACHE_ADDR_LEN;
-    localparam RX_CACHE_START_ADDR = 32'h3000;
-    localparam RX_CACHE_END_ADDR = RX_CACHE_START_ADDR + CACHE_ADDR_LEN;
-    localparam REQ_FIFO_START_ADDR = 32'h3400;
+    localparam TX_WRITE_ADDR = 32'h0000;
+    localparam TX_SEND_ADDR = 32'h0004;
+    localparam RX_READ_ADDR = 32'h1000;
+    localparam REQ_FIFO_START_ADDR = RX_READ_ADDR + 32'h100;
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
-    localparam CONFIG_DONE_ADDR = 32'h3500;
+    localparam CONFIG_DONE_ADDR = REQ_FIFO_START_ADDR + 32'h100;
 
     logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
     logic rx_fifo_ren, rx_fifo_empty;
@@ -131,7 +129,7 @@ module endpoint #(
                 bus_if.error = 1;
             end
         // TX cache
-        end else if (bus_if.wen && bus_if.addr >= TX_CACHE_START_ADDR && bus_if.addr < TX_CACHE_END_ADDR) begin
+        end else if (bus_if.wen && bus_if.addr == TX_WRITE_ADDR) begin
             if (!tx_fifo_full) begin
                 tx_fifo_wen = 1;
             end else begin
@@ -139,8 +137,7 @@ module endpoint #(
                 bus_if.request_stall = 0;
             end
         // RX cache
-        end else if (bus_if.ren && bus_if.addr >= RX_CACHE_START_ADDR && bus_if.addr < RX_CACHE_END_ADDR) begin
-            // TOOD: handle bus read from rx cache
+        end else if (bus_if.ren && bus_if.addr == RX_READ_ADDR) begin
             if (!rx_fifo_empty) begin
                 bus_if.rdata = rx_fifo_rdata;
                 rx_fifo_ren = 1;
@@ -148,30 +145,14 @@ module endpoint #(
                 bus_if.error = 1;
                 bus_if.request_stall = 0;
             end
-        end else if (bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
+        end else if (bus_if.ren && bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
             rx_fifo_if.ren = bus_if.ren;
-            rx_fifo_if.addr = bus_if.addr[8:0];
+            rx_fifo_if.addr = bus_if.addr[7:0];
             bus_if.rdata = rx_fifo_if.rdata;
-        end else if (bus_if.wen || bus_if.ren) begin
-            bus_if.error = 1;
         end else if (bus_if.addr == CONFIG_DONE_ADDR) begin
             bus_if.rdata = {31'd0, endpoint_if.config_done};
-        end
-
-        // TODO: handle fsm write from rx cache
-        /*
-        if (rx_controller == FSM) begin
-            rx_bus_if.wen = rx_cache_if.wen;
-            rx_bus_if.wdata = rx_cache_if.wdata;
-            rx_bus_if.ren = rx_cache_if.ren;
-            rx_bus_if.addr = rx_cache_if.addr[8:0];
-            rx_bus_if.strobe = '1;
-            rx_cache_if.rdata = rx_bus_if.rdata;
-            rx_cache_if.error = rx_bus_if.error;
-            rx_cache_if.request_stall = rx_bus_if.request_stall;
-        end else begin
-            rx_cache_if.request_stall = 1;
-        end
-        */
+        end else if (bus_if.wen || bus_if.ren) begin
+            bus_if.error = 1;
+        end 
     end
 endmodule

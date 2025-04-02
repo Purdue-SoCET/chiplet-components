@@ -55,18 +55,17 @@ void NetworkManager::tick() {
     if (!dut->ren && !dut->request_stall) {
         if (this->to_be_sent[0].size()) {
             if (this->to_be_sent[0].front().empty()) {
-                if (dut->addr == 0x1004) {
+                if (dut->addr == 0x0004) {
                     dut->wen = 0;
                     this->to_be_sent[0].pop();
                 } else {
-                    dut->addr = 0x1004;
+                    dut->addr = 0x0004;
                     dut->wen = 1;
                     dut->wdata = this->curr_id;
                     this->curr_id = (this->curr_id + 1) % 4;
                 }
             } else {
-                if (!dut->wen) dut->addr = 0x2000 + (0x80 * this->curr_id);
-                else dut->addr += 4;
+                dut->addr = 0x0000;
                 dut->wen = 1;
                 dut->wdata = this->to_be_sent[0].front().front();
                 this->to_be_sent[0].front().pop();
