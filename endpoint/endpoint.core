@@ -13,6 +13,7 @@ filesets:
             - "include/endpoint_if.sv" : {is_include_file: true}
             - "include/message_table_if.sv" : {is_include_file: true}
             - "include/tx_fsm_if.sv" : {is_include_file: true}
+            - "include/rx_fsm_if.sv" : {is_include_file: true}
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:include"

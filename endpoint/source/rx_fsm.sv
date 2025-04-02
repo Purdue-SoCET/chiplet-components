@@ -2,11 +2,7 @@
 
 module rx_fsm (
     input logic clk, n_rst,
-    input logic overflow,
-    output logic fifo_enable,
-    output logic [6:0] metadata,
-    output logic crc_error,
-    output logic rx_fifo_wen,
+    rx_fsm_if.rx_fsm rx_if,
     endpoint_if.rx_fsm endpoint_if
 );
     import chiplet_types_pkg::*;
@@ -55,7 +51,7 @@ module rx_fsm (
         end
     end
 
-    assign metadata = {endpoint_if.out.metadata.id, endpoint_if.out.metadata.req};
+    assign rx_if.metadata = {endpoint_if.out.metadata.id, endpoint_if.out.metadata.req};
 
     // Next state logic
     always_comb begin
@@ -70,11 +66,13 @@ module rx_fsm (
                 next_state = CRC_WAIT;
             end
             CRC_WAIT : begin
-                if(done && !length_done) begin
-                    next_state = BODY;
-                end
-                else if(done && length_done) begin
-                    next_state = CRC_CHECK;
+                if (!rx_if.rx_fifo_full) begin
+                    if(done && !length_done) begin
+                        next_state = BODY;
+                    end
+                    else if(done && length_done) begin
+                        next_state = CRC_CHECK;
+                    end
                 end
             end
             BODY : begin
@@ -85,10 +83,12 @@ module rx_fsm (
                 end
             end
             CRC_CHECK : begin
-                if(crc_val != endpoint_if.out.payload) begin
-                    next_state = IDLE;
-                end else begin
-                    next_state = REQ_EN;
+                if (!rx_if.rx_fifo_full) begin
+                    if(crc_val != endpoint_if.out.payload) begin
+                        next_state = IDLE;
+                    end else begin
+                        next_state = REQ_EN;
+                    end
                 end
             end
             REQ_EN: begin
@@ -102,14 +102,13 @@ module rx_fsm (
     always_comb begin
         next_curr_pkt_length = curr_pkt_length;
         count_enable = 0;
-        fifo_enable = 0;
+        rx_if.metadata_fifo_wen = 0;
         length_clear = 0;
-        crc_error = 0;
         clear_crc = 0;
         crc_update = 0;
         endpoint_if.packet_sent = 0;
         endpoint_if.credit_granted = 0;
-        rx_fifo_wen = 0;
+        rx_if.rx_fifo_wen = 0;
 
         casez (state)
             IDLE : begin
@@ -119,9 +118,9 @@ module rx_fsm (
                 next_curr_pkt_length = expected_num_flits(endpoint_if.out.payload);
             end
             CRC_WAIT : begin
-                crc_update = endpoint_if.data_ready_out && !done;
-                if (done) begin
-                    rx_fifo_wen = 1;
+                crc_update = endpoint_if.data_ready_out && !done && !rx_if.rx_fifo_full;
+                if (done && !rx_if.rx_fifo_full) begin
+                    rx_if.rx_fifo_wen = 1;
                     endpoint_if.packet_sent = 1;
                     endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
                     count_enable = 1;
@@ -131,15 +130,13 @@ module rx_fsm (
             CRC_CHECK : begin
                 endpoint_if.packet_sent = 1;
                 endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
-                if(crc_val != endpoint_if.out.payload) begin
-                    crc_error = 1;
-                end else begin
-                    rx_fifo_wen = 1;
+                if(crc_val == endpoint_if.out.payload && !rx_if.rx_fifo_full) begin
+                    rx_if.rx_fifo_wen = 1;
                 end
              end
             REQ_EN: begin
-                if(!overflow) begin
-                    fifo_enable = 1;
+                if(!rx_if.metadata_full) begin
+                    rx_if.metadata_fifo_wen = 1;
                     length_clear = 1;
                 end
             end

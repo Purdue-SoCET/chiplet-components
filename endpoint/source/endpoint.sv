@@ -29,35 +29,28 @@ module endpoint #(
     localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 20;
     localparam CONFIG_DONE_ADDR = 32'h3500;
 
-    logic enable, overflow, crc_valid, crc_error;
-    logic [6:0] metadata;
     logic tx_fifo_wen, tx_fifo_full, tx_fifo_empty;
-    logic rx_fifo_wen, rx_fifo_ren, rx_fifo_empty;
+    logic rx_fifo_ren, rx_fifo_empty;
     chiplet_word_t tx_byte_en, rx_byte_en;
     logic [31:0] rx_fifo_rdata;
 
     bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
     message_table_if #(.NUM_MSGS(NUM_MSGS)) msg_if();
     tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
+    rx_fsm_if rx_if();
 
     req_fifo requestor_fifo(
         .clk(clk),
         .n_rst(n_rst),
-        .crc_valid(enable),
-        .metadata(metadata),
-        .overflow(overflow),
         .packet_recv(packet_recv),
+        .rx_if(rx_if),
         .bus_if(rx_fifo_if)
     );
 
     rx_fsm rx_fsm(
         .clk(clk),
         .n_rst(n_rst),
-        .overflow(overflow),
-        .fifo_enable(enable),
-        .metadata(metadata),
-        .crc_error(crc_error),
-        .rx_fifo_wen(rx_fifo_wen),
+        .rx_if(rx_if),
         .endpoint_if(endpoint_if)
     );
 
@@ -67,7 +60,7 @@ module endpoint #(
     ) rx_fifo (
         .CLK(clk),
         .nRST(n_rst),
-        .WEN(rx_fifo_wen),
+        .WEN(rx_if.rx_fifo_wen),
         .REN(rx_fifo_ren),
         .wdata(endpoint_if.out.payload),
         .clear(1'b0),

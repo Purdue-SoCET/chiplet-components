@@ -4,10 +4,8 @@ module req_fifo#(
     parameter DEPTH = 16
 ) (
     input logic clk, n_rst,
-    input logic crc_valid,
-    input logic [6:0] metadata,
-    output logic overflow,
     output logic packet_recv,
+    rx_fsm_if.metadata_fifo rx_if,
     bus_protocol_if.peripheral_vital bus_if
 );
     import chiplet_types_pkg::*;
@@ -18,7 +16,7 @@ module req_fifo#(
     localparam REN_ADDR = 32'h0C;
     localparam CLEAR_ADDR = 32'h10;
 
-    logic ren, underrun, clear;
+    logic ren, overrun, underrun, clear;
     logic [6:0] fifo_read;
     logic [$clog2(DEPTH):0] count;
     logic empty;
@@ -29,14 +27,14 @@ module req_fifo#(
     ) requestor_fifo (
         .CLK(clk),
         .nRST(n_rst),
-        .WEN(crc_valid),
+        .WEN(rx_if.metadata_fifo_wen),
         .REN(ren),
-        .wdata(metadata),
+        .wdata(rx_if.metadata),
         .clear(clear),
-        .full(),
+        .full(rx_if.metadata_full),
         .empty(empty),
         .underrun(underrun),
-        .overrun(overflow),
+        .overrun(overrun),
         .count(count),
         .rdata(fifo_read)
     );
@@ -55,7 +53,7 @@ module req_fifo#(
                     bus_if.rdata = count;
                 end
                 OVERRUN_ADDR: begin
-                    bus_if.rdata = overflow;
+                    bus_if.rdata = overrun;
                 end
                 UNDERRUN_ADDR: begin
                     bus_if.rdata = underrun;
