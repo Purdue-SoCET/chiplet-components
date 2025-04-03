@@ -4,8 +4,7 @@
 `include "chiplet_types_pkg.vh"
 
 interface tx_fsm_if #(
-    parameter NUM_MSGS=4,
-    parameter ADDR_WIDTH
+    parameter NUM_MSGS=4
 );
     import chiplet_types_pkg::*;
 

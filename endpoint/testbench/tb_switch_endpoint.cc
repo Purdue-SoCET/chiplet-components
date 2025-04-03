@@ -237,21 +237,23 @@ int main(int argc, char **argv) {
             tick();
         }
         uint32_t header = SmallWrite(2, 1, 4, 0xCAFECAFE, 0);
-        while (readBus(0x1100) == 0) {}
-        ensure(readBus(0x1100), {{1}}, "num packets");
+        while (readBus(0x1000) == 0) {}
+        ensure(readBus(0x1000), {{1}}, "ready");
         crc_t crc = crc_init();
-        ensure(readBus(0x1000), {{header}}, "header");
+        ensure(readBus(0x1004), {{header}}, "header");
         crc = crc_update(crc, &header, 4);
-        ensure(readBus(0x1000), {{data[0]}}, "body flit 1");
+        ensure(readBus(0x1004), {{data[0]}}, "body flit 1");
         crc = crc_update(crc, &data[0], 4);
-        ensure(readBus(0x1000), {{data[1]}}, "body flit 2");
+        ensure(readBus(0x1004), {{data[1]}}, "body flit 2");
         crc = crc_update(crc, &data[1], 4);
-        ensure(readBus(0x1000), {{data[2]}}, "body flit 3");
+        ensure(readBus(0x1004), {{data[2]}}, "body flit 3");
         crc = crc_update(crc, &data[2], 4);
-        ensure(readBus(0x1000), {{data[3]}}, "body flit 4");
+        while (readBus(0x1000) == 0) {}
+        ensure(readBus(0x1004), {{data[3]}}, "body flit 4");
         crc = crc_update(crc, &data[3], 4);
         crc = crc_finalize(crc);
-        ensure(readBus(0x1000), {{crc}}, "crc");
+        while (readBus(0x1000) == 0) {}
+        ensure(readBus(0x1004), {{crc}}, "crc");
 
         // Random data test
         data = {rand(), rand(), rand()};
@@ -261,19 +263,19 @@ int main(int argc, char **argv) {
         }
         wait_for_propagate(100);
         header = SmallWrite(2, 1, 3, 0xCAFECAFE, 0);
-        while (readBus(0x1100) == 0) {}
-        ensure(readBus(0x1100), {{2}}, "num packets");
+        while (readBus(0x1000) == 0) {}
+        ensure(readBus(0x1000), {{1}}, "ready");
         crc = crc_init();
-        ensure(readBus(0x1000), {{header}}, "header");
+        ensure(readBus(0x1004), {{header}}, "header");
         crc = crc_update(crc, &header, 4);
-        ensure(readBus(0x1000), {{data[0]}}, "body flit 1");
+        ensure(readBus(0x1004), {{data[0]}}, "body flit 1");
         crc = crc_update(crc, &data[0], 4);
-        ensure(readBus(0x1000), {{data[1]}}, "body flit 2");
+        ensure(readBus(0x1004), {{data[1]}}, "body flit 2");
         crc = crc_update(crc, &data[1], 4);
-        ensure(readBus(0x1000), {{data[2]}}, "body flit 3");
+        ensure(readBus(0x1004), {{data[2]}}, "body flit 3");
         crc = crc_update(crc, &data[2], 4);
         crc = crc_finalize(crc);
-        ensure(readBus(0x1000), {{crc}}, "crc");
+        ensure(readBus(0x1004), {{crc}}, "crc");
     }
 
     wait_for_propagate(150);

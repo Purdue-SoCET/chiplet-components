@@ -15,51 +15,29 @@ module endpoint #(
 );
     import chiplet_types_pkg::*;
 
-    localparam CACHE_NUM_WORDS = 128;
-    localparam ADDR_WIDTH = $clog2(4*CACHE_NUM_WORDS);
-    localparam CACHE_ADDR_LEN = CACHE_NUM_WORDS * 4;
-    localparam PKT_ID_ADDR_ADDR_LEN = NUM_MSGS * 4;
     localparam TX_WRITE_ADDR = 32'h0000;
     localparam TX_SEND_ADDR = 32'h0004;
-    localparam RX_READ_ADDR = 32'h1000;
-    localparam REQ_FIFO_START_ADDR = RX_READ_ADDR + 32'h100;
-    localparam REQ_FIFO_END_ADDR = REQ_FIFO_START_ADDR + 32'h80;
-    localparam CONFIG_DONE_ADDR = REQ_FIFO_START_ADDR + 32'h100;
+    localparam RX_READY_ADDR = 32'h1000;
+    localparam RX_PAYLOAD_ADDR = 32'h1004;
+    localparam RX_METADATA_ADDR = 32'h1008;
+    localparam CONFIG_DONE_ADDR = 32'h100C;
 
-    logic rx_fifo_ren, rx_fifo_empty;
-    chiplet_word_t tx_byte_en, rx_byte_en;
-    logic [31:0] rx_fifo_rdata;
+    logic rx_fifo_ren, rx_fifo_wen, rx_fifo_empty, rx_fifo_full;
+    flit_t rx_fifo_rdata;
 
-    bus_protocol_if #(.ADDR_WIDTH(ADDR_WIDTH)) rx_fifo_if();
-    tx_fsm_if #(.NUM_MSGS(NUM_MSGS), .ADDR_WIDTH(ADDR_WIDTH)) tx_fsm_if();
-    rx_fsm_if rx_if();
-
-    req_fifo requestor_fifo(
-        .clk(clk),
-        .n_rst(n_rst),
-        .packet_recv(packet_recv),
-        .rx_if(rx_if),
-        .bus_if(rx_fifo_if)
-    );
-
-    rx_fsm rx_fsm(
-        .clk(clk),
-        .n_rst(n_rst),
-        .rx_if(rx_if),
-        .endpoint_if(endpoint_if)
-    );
+    tx_fsm_if #(.NUM_MSGS(NUM_MSGS)) tx_fsm_if();
 
     socetlib_fifo #(
-        .WIDTH(32),
-        .DEPTH(128)
+        .WIDTH($bits(flit_t)),
+        .DEPTH(4)
     ) rx_fifo (
         .CLK(clk),
         .nRST(n_rst),
-        .WEN(rx_if.rx_fifo_wen),
+        .WEN(rx_fifo_wen),
         .REN(rx_fifo_ren),
         .wdata(endpoint_if.out.payload),
         .clear(1'b0),
-        .full(),
+        .full(rx_fifo_full),
         .empty(rx_fifo_empty),
         .underrun(),
         .overrun(),
@@ -78,27 +56,37 @@ module endpoint #(
         .endpoint_if(endpoint_if)
     );
 
-    assign tx_fsm_if.node_id = endpoint_if.node_id;
+    assign packet_recv = !rx_fifo_empty;
 
     always_comb begin
-        rx_fifo_if.ren = 0;
-        rx_fifo_if.addr = 0;
+        rx_fifo_wen = 0;
+        endpoint_if.packet_sent = 0;
+        endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 0;
+
+        if (endpoint_if.data_ready_out && !rx_fifo_full) begin
+            rx_fifo_wen = 1;
+            endpoint_if.packet_sent = 1;
+            endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 1;
+        end
+    end
+
+    always_comb begin
         bus_if.rdata = 32'hBAD1BAD1;
         bus_if.error = 0;
         bus_if.request_stall = 0;
-        rx_fifo_ren = 0;
         tx_fsm_if.wen = 0;
         tx_fsm_if.start = 0;
         tx_fsm_if.wdata = bus_if.wdata;
+        tx_fsm_if.node_id = endpoint_if.node_id;
+        rx_fifo_ren = 0;
 
-        // Message table
+        // TX cache
         if (bus_if.addr == TX_SEND_ADDR) begin
             if (bus_if.wen && !tx_fsm_if.sending && bus_if.wdata < NUM_MSGS) begin
                 tx_fsm_if.start = 1;
             end else if (bus_if.ren) begin
                 bus_if.rdata = tx_fsm_if.sending;
             end
-        // TX cache
         end else if (bus_if.wen && bus_if.addr == TX_WRITE_ADDR) begin
             if (tx_fsm_if.sending) begin
                 if (!tx_fsm_if.busy) begin
@@ -110,22 +98,25 @@ module endpoint #(
                 bus_if.error = 1;
             end
         // RX cache
-        end else if (bus_if.ren && bus_if.addr == RX_READ_ADDR) begin
+        end else if (bus_if.ren && bus_if.addr == RX_READY_ADDR) begin
+            bus_if.rdata = !rx_fifo_empty;
+        end else if (bus_if.ren && bus_if.addr == RX_PAYLOAD_ADDR) begin
             if (!rx_fifo_empty) begin
-                bus_if.rdata = rx_fifo_rdata;
+                bus_if.rdata = rx_fifo_rdata.payload;
                 rx_fifo_ren = 1;
             end else begin
                 bus_if.error = 1;
-                bus_if.request_stall = 0;
             end
-        end else if (bus_if.ren && bus_if.addr >= REQ_FIFO_START_ADDR && bus_if.addr < REQ_FIFO_END_ADDR) begin
-            rx_fifo_if.ren = bus_if.ren;
-            rx_fifo_if.addr = bus_if.addr[6:0];
-            bus_if.rdata = rx_fifo_if.rdata;
+        end else if (bus_if.ren && bus_if.addr == RX_METADATA_ADDR) begin
+            if (!rx_fifo_empty) begin
+                bus_if.rdata = rx_fifo_rdata.metadata;
+            end else begin
+                bus_if.error = 1;
+            end
         end else if (bus_if.addr == CONFIG_DONE_ADDR) begin
             bus_if.rdata = {31'd0, endpoint_if.config_done};
         end else if (bus_if.wen || bus_if.ren) begin
             bus_if.error = 1;
-        end 
+        end
     end
 endmodule

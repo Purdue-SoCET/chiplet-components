@@ -121,22 +121,26 @@ int main(int argc, char **argv) {
                     tick(false);
                 }
                 uint32_t header = SmallWrite(from, to, 4, 0xCAFECAFE, 0);
-                while (readBus(to, 0x1100) == 0) {}
-                ensure(readBus(to, 0x1100), {{1}}, "num packets", false);
-                readBus(to, 0x110C);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1000), {{1}}, "ready", false);
                 crc_t crc = crc_init();
-                ensure(readBus(to, 0x1000), {{header}}, "header", false);
+                ensure(readBus(to, 0x1004), {{header}}, "header", false);
                 crc = crc_update(crc, &header, 4);
-                ensure(readBus(to, 0x1000), {{data[0]}}, "body flit 1", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[0]}}, "body flit 1", false);
                 crc = crc_update(crc, &data[0], 4);
-                ensure(readBus(to, 0x1000), {{data[1]}}, "body flit 2", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[1]}}, "body flit 2", false);
                 crc = crc_update(crc, &data[1], 4);
-                ensure(readBus(to, 0x1000), {{data[2]}}, "body flit 3", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[2]}}, "body flit 3", false);
                 crc = crc_update(crc, &data[2], 4);
-                ensure(readBus(to, 0x1000), {{data[3]}}, "body flit 4", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[3]}}, "body flit 4", false);
                 crc = crc_update(crc, &data[3], 4);
                 crc = crc_finalize(crc);
-                ensure(readBus(to, 0x1000), {{crc}}, "crc", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{crc}}, "crc", false);
 
                 // Random data test
                 data = {rand(), rand(), rand()};
@@ -145,20 +149,24 @@ int main(int argc, char **argv) {
                     tick(false);
                 }
                 header = SmallWrite(from, to, 3, 0xCAFECAFE, 1);
-                while (readBus(to, 0x1100) == 0) {}
-                ensure(readBus(to, 0x1100), {{1}}, "rand num packets", false);
-                readBus(to, 0x110C);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1000), {{1}}, "ready", false);
                 crc = crc_init();
-                ensure(readBus(to, 0x1000), {{header}}, "rand header", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{header}}, "rand header", false);
                 crc = crc_update(crc, &header, 4);
-                ensure(readBus(to, 0x1000), {{data[0]}}, "rand body flit 1", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[0]}}, "rand body flit 1", false);
                 crc = crc_update(crc, &data[0], 4);
-                ensure(readBus(to, 0x1000), {{data[1]}}, "rand body flit 2", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[1]}}, "rand body flit 2", false);
                 crc = crc_update(crc, &data[1], 4);
-                ensure(readBus(to, 0x1000), {{data[2]}}, "rand body flit 3", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{data[2]}}, "rand body flit 3", false);
                 crc = crc_update(crc, &data[2], 4);
                 crc = crc_finalize(crc);
-                ensure(readBus(to, 0x1000), {{crc}}, "rand crc", false);
+                while (readBus(to, 0x1000) == 0) {}
+                ensure(readBus(to, 0x1004), {{crc}}, "rand crc", false);
 
                 wait_for_propagate(1000);
             }
