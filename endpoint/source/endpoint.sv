@@ -61,7 +61,7 @@ module endpoint #(
     always_comb begin
         rx_fifo_wen = 0;
         endpoint_if.packet_sent = 0;
-        endpoint_if.credit_granted[endpoint_if.out.metadata.vc] = 0;
+        endpoint_if.credit_granted = 0;
 
         if (endpoint_if.data_ready_out && !rx_fifo_full) begin
             rx_fifo_wen = 1;
