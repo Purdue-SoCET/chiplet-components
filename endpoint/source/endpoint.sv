@@ -35,7 +35,7 @@ module endpoint #(
         .nRST(n_rst),
         .WEN(rx_fifo_wen),
         .REN(rx_fifo_ren),
-        .wdata(endpoint_if.out.payload),
+        .wdata(endpoint_if.out),
         .clear(1'b0),
         .full(rx_fifo_full),
         .empty(rx_fifo_empty),
@@ -55,8 +55,6 @@ module endpoint #(
         .tx_if(tx_fsm_if),
         .endpoint_if(endpoint_if)
     );
-
-    assign packet_recv = !rx_fifo_empty;
 
     always_comb begin
         rx_fifo_wen = 0;

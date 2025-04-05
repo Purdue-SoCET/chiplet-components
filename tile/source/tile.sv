@@ -90,6 +90,7 @@ module tile #(
     ) switch (
         .clk(clk),
         .n_rst(n_rst),
+        .packet_recv(packet_recv),
         .sw_if(sw_if)
     );
 
@@ -116,7 +117,6 @@ module tile #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .packet_recv(packet_recv),
         .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );

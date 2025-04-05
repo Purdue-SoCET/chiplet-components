@@ -14,7 +14,8 @@ module switch #(
     parameter int TOTAL_NODES
 ) (
     input logic clk, n_rst,
-    switch_if.switch sw_if
+    switch_if.switch sw_if,
+    output logic packet_recv
 );
     // Interfaces
     pipeline_if #(
@@ -174,6 +175,8 @@ module switch #(
     assign cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
     assign sw_if.out = cb_if.out;
     assign sw_if.data_ready_out = cb_if.valid;
+
+    assign packet_recv = |cb_if.enable[0];
 
     // Stage 5: Claim things going to this node and forward things to reg bank
     // as necessary
