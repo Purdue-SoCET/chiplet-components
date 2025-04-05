@@ -81,12 +81,10 @@ module tx_fsm#(
     // Next state logic
     always_comb begin
         next_state = state;
-        next_curr_pkt_id = curr_pkt_id;
         casez (state)
             IDLE : begin
                 if (tx_if.start) begin
                     next_state = HEADER;
-                    next_curr_pkt_id = tx_if.wdata[0+:$clog2(NUM_MSGS)];
                 end
             end
             HEADER : begin
@@ -130,11 +128,15 @@ module tx_fsm#(
         next_data_store = data_store;
         tx_if.sending = state != IDLE;
         tx_if.busy = 0;
+        next_curr_pkt_id = curr_pkt_id;
 
         casez (state)
             IDLE : begin
                 next_curr_pkt_length = '1;
                 length_clear = 1;
+                if (tx_if.start) begin
+                    next_curr_pkt_id = tx_if.wdata[0+:$clog2(NUM_MSGS)];
+                end
             end
             HEADER : begin
                 next_curr_pkt_length = expected_num_flits(tx_if.wdata);
@@ -171,7 +173,7 @@ module tx_fsm#(
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = crc_out;
-                endpoint_if.data_ready_in = 1;
+                endpoint_if.data_ready_in = !stop_sending;
             end
             default : begin end
         endcase
