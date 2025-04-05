@@ -76,7 +76,6 @@ targets:
                     - -Wno-WIDTHEXPAND
                     - -Wno-WIDTHTRUNC
                     - -Wno-TIMESCALEMOD
-                    - -Wno-UNOPTFLAT
                     - -Wno-UNSIGNED
                     - -Wno-CASEINCOMPLETE
                     - -CFLAGS -std=c++20

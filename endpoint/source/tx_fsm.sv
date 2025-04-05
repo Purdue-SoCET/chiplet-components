@@ -140,16 +140,16 @@ module tx_fsm#(
                 next_curr_pkt_length = expected_num_flits(tx_if.wdata);
                 long_hdr = long_hdr_t'(tx_if.wdata);
                 next_curr_pkt_fmt = long_hdr.format;
+                tx_if.busy = stop_sending;
                 if(next_curr_pkt_fmt != FMT_SWITCH_CFG) begin
                     next_curr_pkt_length = next_curr_pkt_length - 1;
                     next_data_store = tx_if.wdata;
                 end else begin
-                    endpoint_if.data_ready_in = !stop_sending;
+                    endpoint_if.data_ready_in = !stop_sending && tx_if.wen;
                     flit.metadata.vc = 0;
                     flit.metadata.id = curr_pkt_id;
                     flit.metadata.req = tx_if.node_id;
                     flit.payload = tx_if.wdata;
-                    tx_if.busy =  stop_sending;
                 end
             end
             SEND_PKT : begin

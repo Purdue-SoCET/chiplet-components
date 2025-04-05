@@ -82,10 +82,9 @@ module endpoint #(
 
         // TX cache
         if (bus_if.addr == TX_SEND_ADDR) begin
+            bus_if.rdata = tx_fsm_if.sending;
             if (bus_if.wen && !tx_fsm_if.sending && bus_if.wdata < NUM_MSGS) begin
                 tx_fsm_if.start = 1;
-            end else if (bus_if.ren) begin
-                bus_if.rdata = tx_fsm_if.sending;
             end
         end else if (bus_if.wen && bus_if.addr == TX_WRITE_ADDR) begin
             if (tx_fsm_if.sending) begin
