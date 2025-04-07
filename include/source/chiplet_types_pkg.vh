@@ -113,7 +113,7 @@ package chiplet_types_pkg;
             end
             FMT_MSG : begin
                 expected_num_flits = 2 + // header + crc
-                    (|msg_hdr.length ? msg_hdr.length : 128); // data
+                    msg_hdr.length; // data
             end
             FMT_SWITCH_CFG : begin
                 expected_num_flits = 1;
