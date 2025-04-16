@@ -29,7 +29,8 @@ module switch_wrapper(
     ) switch1 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if1)
+        .sw_if(sw_if1),
+        .packet_recv()
     );
 
     assign sw_if1.in = {sw_if4.out[1], in_flit[0]};
@@ -57,7 +58,8 @@ module switch_wrapper(
     ) switch2 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if2)
+        .sw_if(sw_if2),
+        .packet_recv()
     );
 
     assign sw_if2.in = {sw_if4.out[2], in_flit[1]};
@@ -83,7 +85,8 @@ module switch_wrapper(
     ) switch3 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if3)
+        .sw_if(sw_if3),
+        .packet_recv()
     );
 
     assign sw_if3.in = {sw_if2.out[1], sw_if1.out[1], in_flit[2]};
@@ -109,7 +112,8 @@ module switch_wrapper(
     ) switch4 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if4)
+        .sw_if(sw_if4),
+        .packet_recv()
     );
 
     assign sw_if4.in = {sw_if3.out[1], in_flit[3]};

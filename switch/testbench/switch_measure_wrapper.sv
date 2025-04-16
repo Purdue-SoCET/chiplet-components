@@ -80,7 +80,8 @@ module switch_wrapper(
     ) switch1 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if1)
+        .sw_if(sw_if1),
+        .packet_recv()
     );
 
     `CONNECT_TO_TOP(sw_if1, 0)
@@ -106,7 +107,8 @@ module switch_wrapper(
     ) switch2 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if2)
+        .sw_if(sw_if2),
+        .packet_recv()
     );
 
     `CONNECT_TO_TOP(sw_if2, 1)
@@ -130,7 +132,8 @@ module switch_wrapper(
     ) switch3 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if3)
+        .sw_if(sw_if3),
+        .packet_recv()
     );
 
     `CONNECT_TO_TOP(sw_if3, 2)
@@ -154,7 +157,8 @@ module switch_wrapper(
     ) switch4 (
         .clk(clk),
         .n_rst(nrst),
-        .sw_if(sw_if4)
+        .sw_if(sw_if4),
+        .packet_recv()
     );
 
     `CONNECT_TO_TOP(sw_if4, 3)

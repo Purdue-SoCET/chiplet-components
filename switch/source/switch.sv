@@ -14,7 +14,8 @@ module switch #(
     parameter int TOTAL_NODES
 ) (
     input logic clk, n_rst,
-    switch_if.switch sw_if
+    switch_if.switch sw_if,
+    output logic packet_recv
 );
     // Interfaces
     pipeline_if #(
@@ -116,6 +117,7 @@ module switch #(
         rb_if.in_flit = rb_if.reg_bank_claim ? buf_if.rdata[pipe_if.rc_ingress_port] : '0;
         buf_if.reg_bank_granted = rb_if.reg_bank_claim << pipe_if.rc_ingress_port;
     end
+    assign sw_if.config_done = rb_if.config_done;
 
     // Stage 2: VC allocation
     vc_allocator #(
@@ -173,6 +175,8 @@ module switch #(
     assign cb_if.credit_granted = sw_if.credit_granted[NUM_OUTPORTS-1:0];
     assign sw_if.out = cb_if.out;
     assign sw_if.data_ready_out = cb_if.valid;
+
+    assign packet_recv = |cb_if.enable[0];
 
     // Stage 5: Claim things going to this node and forward things to reg bank
     // as necessary
