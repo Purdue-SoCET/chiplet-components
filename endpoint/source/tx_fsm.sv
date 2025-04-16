@@ -107,7 +107,7 @@ module tx_fsm#(
                 end
             end
             SEND_CRC : begin
-                if (!stop_sending) begin
+                if (endpoint_if.data_ready_in) begin
                     next_state = IDLE;
                 end
             end
