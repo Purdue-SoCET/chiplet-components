@@ -174,6 +174,7 @@ module tx_fsm#(
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = crc_out;
                 endpoint_if.data_ready_in = !stop_sending;
+                tx_if.busy = 1;
             end
             default : begin end
         endcase
