@@ -9,14 +9,12 @@ module tx_fsm#(
 )(
     input logic clk, n_rst,
     tx_fsm_if.tx_fsm tx_if,
-    endpoint_if.tx_fsm endpoint_if,
-    bus_protocol_if.protocol tx_cache_if,
-    message_table_if.endpoint msg_if
+    endpoint_if.tx_fsm endpoint_if
 );
     import chiplet_types_pkg::*;
 
     typedef enum logic [3:0] {
-        IDLE, START_SEND_PKT, SEND_PKT, CRC
+        IDLE, HEADER, SEND_PKT, CRC, SEND_CRC
     } state_e;
 
     typedef logic [PKT_LENGTH_WIDTH-1:0] length_counter_t;
@@ -26,7 +24,7 @@ module tx_fsm#(
     length_counter_t curr_pkt_length, next_curr_pkt_length, length, next_length;
     format_e curr_pkt_fmt, next_curr_pkt_fmt;
     logic length_clear, length_done, stop_sending, crc_done, crc_update;
-    logic [31:0] crc_out, crc_in;
+    logic [31:0] crc_out, crc_in, data_store, next_data_store;
     flit_t flit;
     pkt_id_t curr_pkt_id, next_curr_pkt_id;
 
@@ -70,46 +68,48 @@ module tx_fsm#(
             curr_pkt_length <= 0;
             curr_pkt_id <= 0;
             curr_pkt_fmt <= FMT_LONG_READ;
+            data_store <= 0;
         end else begin
             state <= next_state;
             curr_pkt_length <= next_curr_pkt_length;
             curr_pkt_id <= next_curr_pkt_id;
             curr_pkt_fmt <= next_curr_pkt_fmt;
+            data_store <= next_data_store;
         end
     end
 
     // Next state logic
     always_comb begin
         next_state = state;
-        next_curr_pkt_id = curr_pkt_id;
         casez (state)
             IDLE : begin
-                if (|msg_if.trigger_send) begin
-                    next_state = START_SEND_PKT;
-                    for (int i = 0; i < NUM_MSGS; i++) begin
-                        if (msg_if.trigger_send[i]) begin
-                            /* verilator lint_off WIDTHTRUNC */
-                            next_curr_pkt_id = i;
-                            /* verilator lint_on WIDTHTRUNC */
-                        end
-                    end
+                if (tx_if.start) begin
+                    next_state = HEADER;
                 end
             end
-            START_SEND_PKT : begin
-                if (!tx_cache_if.request_stall) begin
-                    next_state = SEND_PKT;
+            HEADER : begin
+                if (!stop_sending && tx_if.wen && next_curr_pkt_fmt == FMT_SWITCH_CFG) begin
+                    next_state = IDLE;
+                end else if (tx_if.wen && next_curr_pkt_fmt != FMT_SWITCH_CFG) begin
+                    next_state = CRC;
                 end
             end
             SEND_PKT : begin
-                if (length_done && curr_pkt_fmt == FMT_SWITCH_CFG) begin
-                    next_state = IDLE;
-                end
-                else if(length_done && curr_pkt_fmt != FMT_SWITCH_CFG) begin
+                if (length_done) begin
+                    next_state = SEND_CRC;
+                end if (tx_if.wen) begin
                     next_state = CRC;
                 end
             end
             CRC : begin
-                next_state = IDLE;
+                if (endpoint_if.data_ready_in) begin
+                    next_state = SEND_PKT;
+                end
+            end
+            SEND_CRC : begin
+                if (endpoint_if.data_ready_in) begin
+                    next_state = IDLE;
+                end
             end
             default : begin end
         endcase
@@ -119,55 +119,62 @@ module tx_fsm#(
     always_comb begin
         long_hdr = long_hdr_t'(32'd0);
         next_curr_pkt_fmt = curr_pkt_fmt;
-
-        tx_cache_if.addr = tx_if.pkt_start_addr[curr_pkt_id] + (length * 4);
-        tx_cache_if.ren = 0;
-        tx_cache_if.wen = 0;
-        tx_cache_if.strobe = '0;
-        tx_cache_if.is_burst = '0;
-        tx_cache_if.burst_type = '0;
-        tx_cache_if.burst_length = 0;
-        tx_cache_if.secure_transfer = 0;
-        
         next_curr_pkt_length = curr_pkt_length;
         endpoint_if.data_ready_in = 0;
         flit = flit_t'(0);
         length_clear = 0;
         crc_update = 0;
         crc_in = '0;
+        next_data_store = data_store;
+        tx_if.sending = state != IDLE;
+        tx_if.busy = 0;
+        next_curr_pkt_id = curr_pkt_id;
 
         casez (state)
             IDLE : begin
                 next_curr_pkt_length = '1;
                 length_clear = 1;
+                if (tx_if.start) begin
+                    next_curr_pkt_id = tx_if.wdata[0+:$clog2(NUM_MSGS)];
+                end
             end
-            START_SEND_PKT : begin
-                tx_cache_if.ren = 1;
-                if (!tx_cache_if.request_stall) begin
-                    next_curr_pkt_length = expected_num_flits(tx_cache_if.rdata);
-                    long_hdr = long_hdr_t'(tx_cache_if.rdata);
-                    next_curr_pkt_fmt = long_hdr.format;
-                    if(next_curr_pkt_fmt != FMT_SWITCH_CFG) begin
-                        next_curr_pkt_length = next_curr_pkt_length - 1;
-                    end
+            HEADER : begin
+                next_curr_pkt_length = expected_num_flits(tx_if.wdata);
+                long_hdr = long_hdr_t'(tx_if.wdata);
+                next_curr_pkt_fmt = long_hdr.format;
+                tx_if.busy = stop_sending;
+                if(next_curr_pkt_fmt != FMT_SWITCH_CFG) begin
+                    next_curr_pkt_length = next_curr_pkt_length - 1;
+                    next_data_store = tx_if.wdata;
+                end else begin
+                    endpoint_if.data_ready_in = !stop_sending && tx_if.wen;
+                    flit.metadata.vc = 0;
+                    flit.metadata.id = curr_pkt_id;
+                    flit.metadata.req = tx_if.node_id;
+                    flit.payload = tx_if.wdata;
                 end
             end
             SEND_PKT : begin
+                tx_if.busy = stop_sending || length_done;
+                next_data_store = tx_if.wdata;
+            end
+            CRC : begin
+                tx_if.busy = 1;
                 endpoint_if.data_ready_in = !stop_sending && !length_done && crc_done;
-                tx_cache_if.ren = 1;
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
-                flit.payload = tx_cache_if.rdata;
-                crc_in = tx_cache_if.rdata;
+                flit.payload = data_store;
+                crc_in = data_store;
                 crc_update = !crc_done && !length_done && !stop_sending;
             end
-            CRC : begin
+            SEND_CRC : begin
                 flit.metadata.vc = 0;
                 flit.metadata.id = curr_pkt_id;
                 flit.metadata.req = tx_if.node_id;
                 flit.payload = crc_out;
-                endpoint_if.data_ready_in = 1;
+                endpoint_if.data_ready_in = !stop_sending;
+                tx_if.busy = 1;
             end
             default : begin end
         endcase

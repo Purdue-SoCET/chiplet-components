@@ -6,13 +6,8 @@ filesets:
     rtl:
         files:
             - "source/endpoint.sv"
-            - "source/cache.sv"
             - "source/tx_fsm.sv"
-            - "source/rx_fsm.sv"
-            - "source/req_fifo.sv"
-            - "source/message_table.sv"
             - "include/endpoint_if.sv" : {is_include_file: true}
-            - "include/message_table_if.sv" : {is_include_file: true}
             - "include/tx_fsm_if.sv" : {is_include_file: true}
         file_type: systemVerilogSource
         depend:
@@ -48,6 +43,9 @@ filesets:
         file_type: systemVerilogSource
         depend:
             - "socet:chiplet:switch"
+            - "socet:bus-components:ahb_manager"
+            - "socet:bus-components:ahb_subordinate"
+            - "socet:bus-components:ahb_if"
 
     synfiles:
         depend:
@@ -87,6 +85,8 @@ targets:
                     - --coverage
                     - -Wno-WIDTHEXPAND
                     - -Wno-TIMESCALEMOD
+                    - -Wno-UNSIGNED
+                    - -Wno-CASEINCOMPLETE
                     - -Wno-UNOPTFLAT
                     - -CFLAGS -std=c++20
                     - -trace-fst

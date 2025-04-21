@@ -90,6 +90,7 @@ module tile #(
     ) switch (
         .clk(clk),
         .n_rst(n_rst),
+        .packet_recv(packet_recv),
         .sw_if(sw_if)
     );
 
@@ -103,6 +104,7 @@ module tile #(
         endpoint_if.buffer_available = sw_if.buffer_available[0];
         endpoint_if.data_ready_out = sw_if.data_ready_out[0];
         endpoint_if.node_id = sw_if.node_id;
+        endpoint_if.config_done = sw_if.config_done;
         sw_if.in[0] = endpoint_if.in;
         sw_if.credit_granted[0] = endpoint_if.credit_granted;
         sw_if.data_ready_in[0] = endpoint_if.data_ready_in;
@@ -115,7 +117,6 @@ module tile #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .packet_recv(packet_recv),
         .endpoint_if(endpoint_if),
         .bus_if(bus_if)
     );

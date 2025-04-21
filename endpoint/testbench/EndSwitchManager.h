@@ -12,6 +12,7 @@
 // across the network
 class NetworkManager {
     std::array<std::queue<std::queue<uint32_t>>, 2> to_be_sent;
+    std::queue<std::pair<uint32_t, uint32_t>> to_bus_write;
     std::array<uint16_t, 8> buffer_occupancy;
     std::array<std::vector<std::queue<uint32_t>>, 2> to_check;
     uint8_t curr_id;
@@ -23,6 +24,7 @@ class NetworkManager {
           to_check(), curr_id(0) {}
 
     void queuePacketSend(uint8_t from, std::queue<uint32_t> flit);
+    void queueBusSend(uint32_t addr, uint32_t data);
     void queuePacketCheck(uint8_t to, std::queue<uint32_t> flit);
     void reportRemainingCheck();
     void tick();

@@ -33,6 +33,19 @@ module switch_endpoint_wrapper #(
     input logic packet_sent,
     input logic credit_granted
 );
+    ahb_manager MANAGER (
+        .busif(bus_if),
+        .ahbif(ahb_if)
+    );
+
+    ahb_subordinate #(
+        .BASE_ADDR(0),
+        .NWORDS(4096)
+    ) SUBORDINATE (
+        .ahb_if(ahb_if),
+        .bus_if(endpoint_bus_if)
+    );
+
     switch_if #(
         .NUM_OUTPORTS(2),
         .NUM_BUFFERS(2),
@@ -48,7 +61,8 @@ module switch_endpoint_wrapper #(
     ) switch1 (
         .clk(clk),
         .n_rst(n_rst),
-        .sw_if(sw_if)
+        .sw_if(sw_if),
+        .packet_recv()
     );
 
     endpoint_if #(
@@ -67,6 +81,12 @@ module switch_endpoint_wrapper #(
     end
 
     bus_protocol_if bus_if();
+    bus_protocol_if endpoint_bus_if();
+
+    ahb_if ahb_if (
+        .HCLK(clk),
+        .HRESETn(n_rst)
+    );
 
     endpoint #(
         .NUM_MSGS(4),
@@ -74,9 +94,8 @@ module switch_endpoint_wrapper #(
     ) endpoint1 (
         .clk(clk),
         .n_rst(n_rst),
-        .packet_recv(),
         .endpoint_if(endpoint_if),
-        .bus_if(bus_if)
+        .bus_if(endpoint_bus_if)
     );
 
     assign bus_if.wen = wen;

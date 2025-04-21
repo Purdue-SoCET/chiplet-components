@@ -4,16 +4,17 @@
 `include "chiplet_types_pkg.vh"
 
 interface tx_fsm_if #(
-    parameter NUM_MSGS=4,
-    parameter ADDR_WIDTH
+    parameter NUM_MSGS=4
 );
     import chiplet_types_pkg::*;
 
-    logic [NUM_MSGS-1:0] [ADDR_WIDTH-1:0] pkt_start_addr;
+    logic wen, start, busy, sending;
+    logic [31:0] wdata;
     node_id_t node_id;
 
     modport tx_fsm(
-        input pkt_start_addr, node_id
+        input wen, start, wdata, node_id,
+        output busy, sending
     );
 endinterface
 
