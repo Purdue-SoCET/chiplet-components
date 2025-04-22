@@ -94,3 +94,11 @@ directory. The benchmarking testbench will produce the files
 "switchX_perf_$time.txt" in the `tmp/build` directory which can be used with
 the `switch/scripts/parse_switch_stats.py` script to produce more readable
 statistics of the run.
+
+### References
+
+The switch architecture was heavily inspired by the [router architecture notes
+from Stanford's
+EE482B](http://cva.stanford.edu/classes/ee382c/ee482b/scribes01/lect10/lect10.pdf)
+and the [router microarchitecture slides from Georgia Tech's ECE
+8823A](https://bpb-us-e1.wpmucdn.com/sites.gatech.edu/dist/8/175/files/2016/10/L10-RouterMicroarchitecture.pdf?bid=175).
