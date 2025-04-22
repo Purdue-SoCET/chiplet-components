@@ -23,8 +23,11 @@ layer are called a **tile**.
 - Flit: the smallest atomic unit sent across the network, is defined to be 32 bits
 - Link: a bidirectional communication channel between nodes
 - Tile: a combination of an endpoint, switch, and physical layer which allows a node to enter the network
+- Node: Generally, anything that can communicate in a network, in certain contexts it may mean members of a network who are not responsible for network configuration
+- Controller: The node which is responsible for network configuration
 
 ### Topology constraints
 
-- There are a maximum of 32 devices connected in a single network
+- There are a maximum of 31 devices connected in a single network
 - Each device may have up to 4 messages in flight
+- Node ID 0 is reserved and can mean any node in certain contexts

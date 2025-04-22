@@ -82,3 +82,15 @@ therefore deadlocks cannot occur in a properly configured network. The switch
 has a single register which tracks which egress ports cross a dateline so that
 the VC field of the metadata can be set appropriately during the virtual
 channel allocation stage of the pipeline.
+
+### Switch Testing
+
+There are two testbenches for the switch: one for correctness (deadlock
+avoidance, routing closure, etc), and one for measuring the performance of the
+switch architecture. The correctness testbench can be run using `make
+versim_switch_src_correctness` from the top level directory. The performance
+benchmark can be run using `make versim_switch_src_measure` from the top level
+directory. The benchmarking testbench will produce the files
+"switchX_perf_$time.txt" in the `tmp/build` directory which can be used with
+the `switch/scripts/parse_switch_stats.py` script to produce more readable
+statistics of the run.
