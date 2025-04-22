@@ -31,3 +31,12 @@ layer are called a **tile**.
 - There are a maximum of 31 devices connected in a single network
 - Each device may have up to 4 messages in flight
 - Node ID 0 is reserved and can mean any node in certain contexts
+
+## Integration
+
+A tile can be integrated into an existing design by instantiating it with your
+top level, connecting the bus interface of the endpoint with your design, and
+then exposing the `tile_tx` and `tile_rx` signals as top level ports. As long
+as your design can talk using a bus, it can integrate easily with a tile. Note
+that there is no baud-rate handshake done, so tiles should be configured to run
+at the standard baud-rate of 1MHz.
