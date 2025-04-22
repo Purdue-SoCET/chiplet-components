@@ -8,10 +8,10 @@ layer. The stack is visualized below.
 ![Network Stack](images/network_stack.svg)
 
 An example topology is shown below. In this configuration, the physical layer
-uses UART to communicate across links. This configuration uses bidirectional
-packet communication, however, this is not a requirement. Routing tables can be
-configured such that Device 2 can only send packets to Device 0 through the
-chain Device 2->Device 3->Device 1->Device 0.
+uses UART to communicate across links. Routing tables can be configured such
+that Device 4 can only send packets to Device 3 through the chain Device
+4->Device 2->Device 1->Device 3. Each set of endpoint, switch, and physical
+layer are called a **tile**.
 
 ![Example Topology](images/topology.svg)
 
@@ -22,6 +22,7 @@ chain Device 2->Device 3->Device 1->Device 0.
 - Packet: same as message
 - Flit: the smallest atomic unit sent across the network, is defined to be 32 bits
 - Link: a bidirectional communication channel between nodes
+- Tile: a combination of an endpoint, switch, and physical layer which allows a node to enter the network
 
 ### Topology constraints
 

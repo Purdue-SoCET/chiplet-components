@@ -11,7 +11,15 @@ Note that the endpoint's memory map may not necessarily be the same as memory
 map of the tile. For example, if a compute chiplet attaches the endpoint to its
 internal AHB bus, there are no requirements that the memory map of the AHB bus
 match the memory map of the endpoint. This allows backwards compatible upgrades
-to tiles since memory maps can be consistent across the generations.
+to tiles since memory maps can be consistent across generations.
+
+An endpoint's memory map may also be considered application-defined for all
+applications on non-specialized chiplets. For example, when connecting two
+compute chiplets together, the shared application defines the assumed memory
+map between the devices. If the application requires pseudo-shared memory, it
+would be valid to interpret address fields to be absolute or relative address.
+If the application requires no specific memory map, it would also be valid to
+ignore the address field.
 
 The general format of packets is shown below. The 7 bit length is reduced to
 4 bits in the short formats. Any words after the header are dependent on the
@@ -27,15 +35,15 @@ bytes be transferred across the network.
 
 A general overview of each packet format is described in the table below.
 
-| Format               |  Value  |  Description                                                            |
-| :------------------- | :-----: | :---------------------------------------------------------------------- |
-| Long memory read     |   0x0   | Used to read up to 128 contiguous words from the endpoint's memory map. |
-| Long memory write    |   0x1   | Used to write up to 128 contiguous words to the endpoint's memory map.  |
-| Memory read response |   0x2   | Used to send responses to memory read requests.                         |
-| Message              |   0x3   | Used to send general messages to other nodes.                           |
-| Switch configuration |   0x4   | Used to configure the switch at each node.                              |
-| Short memory read    |   0x8   | Used to read up to 16 contiguous words from the endpoint's memory map.  |
-| Short memory write   |   0x9   | Used to write up to 16 contiguous words from the endpoint's memory map. |
+| Format               |  Value  |  Description                                                                         |
+| :------------------- | :-----: | :----------------------------------------------------------------------------------- |
+| Long memory read     |   0x0   | Used to read up to 128 contiguous words from the endpoint's memory map.              |
+| Long memory write    |   0x1   | Used to write up to 128 contiguous words to the endpoint's memory map.               |
+| Memory read response |   0x2   | Used to send responses to memory read requests.                                      |
+| Message              |   0x3   | Used to send general messages to other nodes. Can contain data up to 127 bytes long. |
+| Switch configuration |   0x4   | Used to send configuration data to a switches register bank.                         |
+| Short memory read    |   0x8   | Used to read up to 16 contiguous words from the endpoint's memory map.               |
+| Short memory write   |   0x9   | Used to write up to 16 contiguous words from the endpoint's memory map.              |
 
 #### Long Memory Read/Write Packet
 
@@ -68,6 +76,8 @@ have no following data words.
 
 ![Message Format](images/msg_packet.svg)
 
+#### An example mapping of message codes
+
 | Message Code       |  Value  |
 | :------------------| :-----: |
 | Interrupt Assert   |   0x0   |
@@ -99,15 +109,13 @@ endpoint base address register, giving up to 2MB of address space.
 
 ### Endpoint
 
-From the processor side of the network, network communication occurs through
-the endpoint which manages network state and buffers for packets. A high level
-diagram of the endpoint is shown below. The endpoint has interrupt lines that
-can be used to interrupt the processor on the reception of a packet or can be
-used to trigger DMA to transfer the packet to main memory. The endpoint
-maintains the state of each of the 4 possible in-flight packets and can
-automatically handle some errors such as transmission failures.
-
-![Endpoint](images/endpoint.svg)
+From the processor side of the network, all network communication occurs
+through the endpoint which manages network state and buffers for packets.
+The endpoint is a small wrapper around an FSM which attaches a CRC flit to the
+end of applicable packets and manages the flow of flits into the switch. This
+FSM must be activated before any data is sent into the endpoint. The endpoint
+has interrupt lines that can be used to interrupt the processor on the
+reception of a packet.
 
 The memory map of the endpoint is shown below. The caches are mapped directly
 in the address space of the endpoint. The bus-facing memory map of the endpoint
