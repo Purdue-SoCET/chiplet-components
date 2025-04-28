@@ -120,16 +120,10 @@ module wrap_dec_8b_10b #(
                 if (dec_if.enc_flit.word[9:0] == START_COMMA && dec_if.comma_length_sel == SELECT_COMMA_1_FLIT && dec_if.done) begin
                     n_seen_start_comma = LOOK_FOR_DATA_PACKET;
                 end
-                else if (dec_if.comma_length_sel == SELECT_COMMA_DATA && dec_if.done) begin
-                    err_in_order = '1;
-                end
             end
             LOOK_FOR_DATA_PACKET: begin
                 if (dec_if.comma_length_sel == SELECT_COMMA_DATA && dec_if.done) begin
                     n_seen_start_comma = LOOK_FOR_END_PACKET;
-                end
-                else if ((dec_if.comma_length_sel == SELECT_COMMA_1_FLIT || dec_if.comma_length_sel == SELECT_COMMA_2_FLIT) && dec_if.done) begin
-                    err_in_order = '1;
                 end
             end
             LOOK_FOR_END_PACKET: begin
@@ -140,7 +134,6 @@ module wrap_dec_8b_10b #(
                     if (dec_if.enc_flit.word[9:0] == START_COMMA) begin
                         n_seen_start_comma = LOOK_FOR_DATA_PACKET;
                     end
-                    err_in_order = '1;
                 end
             end
             default : begin end
@@ -149,10 +142,10 @@ module wrap_dec_8b_10b #(
 
     always_comb begin
         n_curr_packet_size =  dec_if.curr_packet_size;
-        if (seen_start_comma == LOOK_FOR_DATA_PACKET) begin
+        if (seen_start_comma == LOOK_FOR_DATA_PACKET && dec_if.comma_length_sel == SELECT_COMMA_DATA) begin
             n_curr_packet_size = expected_num_flits(flit_data.payload) - 'd1;
         end
-        else if (dec_if.comma_length_sel == SELECT_COMMA_1_FLIT || dec_if.comma_length_sel == SELECT_COMMA_2_FLIT) begin
+        else if (seen_start_comma != LOOK_FOR_END_PACKET && (dec_if.comma_length_sel == SELECT_COMMA_1_FLIT || dec_if.comma_length_sel == SELECT_COMMA_2_FLIT)) begin
             n_curr_packet_size = '0;
         end
     end

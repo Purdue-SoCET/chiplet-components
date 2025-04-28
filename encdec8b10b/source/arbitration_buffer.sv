@@ -95,15 +95,18 @@ module arbitration_buffer #(
         n_state = state;
         case (state)
             IDLE: begin
-                if (send_data_arb && (grtcred_0_if.count != 0 || grtcred_1_if.count != 0 || ack_if.count != 'd0)) begin
+                if ((grtcred_0_if.count != 0 || grtcred_1_if.count != 0 || ack_if.count != 'd0)) begin
                     n_state = SENDING_COMMA;
                 end
-                else if (~send_data_arb && send_data)begin
+                else if (send_data)begin
                     n_state = SENDING_START;
                 end
             end
             SENDING_END, SENDING_COMMA: begin
-                if (arb_if.done) begin
+                if (arb_if.done && send_data) begin
+		    n_state = STALL_DATA_SEND;
+		end
+		if (arb_if.done) begin
                     n_state = IDLE;
                 end
             end
@@ -118,7 +121,10 @@ module arbitration_buffer #(
                 end
             end
             STALL_DATA_SEND: begin
-                if (curr_flits_sent == packet_size) begin
+                if (grtcred_0_if.count != 0 || grtcred_1_if.count != 0) begin
+		    n_state = SENDING_COMMA;
+                end
+                else if (curr_flits_sent == packet_size) begin
                     n_state = SENDING_END;
                 end
                 else if (arb_if.send_new_data) begin
@@ -146,7 +152,6 @@ module arbitration_buffer #(
         case (state)
             IDLE: begin
                 send_data_n = send_data ? send_data : arb_if.data_write;
-                if (send_data_arb) begin
                     if (grtcred_0_if.count != '0) begin
                         arb_if.start = '1;
                         arb_if.comma_sel = GRTCRED0_SEL;
@@ -161,14 +166,10 @@ module arbitration_buffer #(
                         ack_que_if.dec = '1;
                         arb_if.comma_header_out = ack_que_if.que_out;
                     end
-                end
-                else begin
-                    if (send_data != 'd0) begin
+                    else if (send_data != 'd0) begin
                         arb_if.comma_sel = START_PACKET_SEL;
                         arb_if.start = '1;
                     end
-                end
-                send_data_arb_n = !send_data_arb;
             end
             SENDING_START: begin
                 if (arb_if.done) begin
@@ -194,7 +195,15 @@ module arbitration_buffer #(
                 end
             end
             STALL_DATA_SEND: begin
-                if (curr_flits_sent != packet_size && arb_if.send_new_data) begin
+		if (grtcred_0_if.count != '0) begin
+		    arb_if.start = '1;
+		    arb_if.comma_sel = GRTCRED0_SEL;
+		end
+		else if (grtcred_1_if.count != '0) begin
+		    arb_if.start = '1;
+		    arb_if.comma_sel = GRTCRED1_SEL;
+		end
+                else if (curr_flits_sent != packet_size && arb_if.send_new_data) begin
                     flit_cnt_en = '1;
                     arb_if.start = '1;
                     arb_if.comma_sel = DATA_SEL;

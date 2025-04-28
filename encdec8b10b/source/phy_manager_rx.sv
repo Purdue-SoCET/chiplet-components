@@ -72,10 +72,10 @@ module phy_manager_rx #(
                 if (dec_if.err) begin
                     n_state = ERR;
                 end
-                else if (dec_if.done_out &&  count_out == dec_if.curr_packet_size) begin
+                else if (dec_if.comma_sel == DATA_SEL && dec_if.done_out && count_out == dec_if.curr_packet_size) begin
                     n_state = CHECK_CRC;
                 end
-                else if (dec_if.done_out) begin
+                else if (dec_if.comma_sel == DATA_SEL && dec_if.done_out) begin
                     n_state = RUN_CRC;
                 end
             end
@@ -109,6 +109,7 @@ module phy_manager_rx #(
         cntr_enable = '0;
         mngrx_if.packet_done = '0;
         crc_in = dec_if.flit.payload;
+	if (dec_if.comma_sel == DATA_SEL) begin 
         case (state)
             INIT: begin
                 if (dec_if.done_out && count_out != dec_if.curr_packet_size) begin
@@ -142,5 +143,9 @@ module phy_manager_rx #(
             end
             default: begin end
         endcase
+	end
+	else begin
+		mngrx_if.done_out = dec_if.done_out;
+	end
     end
 endmodule
