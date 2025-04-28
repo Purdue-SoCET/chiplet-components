@@ -42,12 +42,22 @@ a spot, the packet must retry its entry into the pipeline.
 
 TODO: talk about each pipeline stage and details
 
-![Switch Architecture](images/switch_new.svg)
 
-#### Switch Memory Map
+![Switch Architecture](images/switch_2_rtl.svg)
+
+
 
 TODO: talk about memory map
-TODO: mention config done sequence
+
+#### Configuration 
+
+When configuring a chiplet network the controller must first get its own node and 
+routing table from its core. It can then send a node and routing table to each other 
+node in the network which allows a node to send and recieve packets. Once a node is 
+configured it will recieve a config done packet that will signal to that node's core 
+that it can send packets.
+
+#### Switch Memory Map
 
 | Address            |     Name      |  Description                                                                                                                                       |
 | :------------------| :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
