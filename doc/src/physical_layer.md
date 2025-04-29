@@ -49,25 +49,9 @@ followed by any number of parity bits(0 -2) and an end bit with a value 1. Since
 ports, we can gaurantee bit disparity across all 5 ports during a message transmission. This then means we can send variable length messages 
 due to the gaurantee that there will not be a start bit or stop bit across all 5 ports at the same time.
 
-TOP LEVEL: UART_BAUD   
-parameters: 
-    FREQUENCY ~ synthesized frequency of system
-    PORTCOUNT ~ number of ports in UART
-    EXPECTED_BAUD_RATE ~ expected baud rate for system
 
-uart_rx_if ~ noteworthy interface signals
-    uart_in ~ uart data in
-    data ~ enc_flit out
-    comma_sel ~ length of message used to calculate if incoming message is coma or not
-    done_out ~ done output of rx 
-
-uart_rx_if ~ noteworty interface signals
-    data ~ enc_flit in
-    uart_out ~ uart output out
-    comma_sel ~ outgoing length of message select used to calculate if outgoing message is komma
-    done ~ packet is odne sending
 ### Module Definition
-#### Endnode Interface
+#### Uart Interface
 | Port Name          |   Direction   |  Description                                                                                                                                       |
 | :------------------| :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FREQUENCY                 |  Param        | current syn frequency of design                                                                                                             |
