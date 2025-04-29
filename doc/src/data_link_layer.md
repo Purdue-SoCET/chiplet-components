@@ -49,7 +49,7 @@ TODO: talk about each pipeline stage and details
 
 TODO: talk about memory map
 
-#### Configuration 
+### Configuration 
 
 When configuring a chiplet network the controller must first get its own node and 
 routing table from its core. It can then send a node and routing table to each other 
@@ -104,6 +104,20 @@ directory. The benchmarking testbench will produce the files
 "switchX_perf_$time.txt" in the `tmp/build` directory which can be used with
 the `switch/scripts/parse_switch_stats.py` script to produce more readable
 statistics of the run.
+
+### Module Definition
+#### Switch Interface
+| Port Name          |   Direction   |  Description                                                                                                                                       |
+| :------------------| :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| in                 |  Input        |  [NUM_BUFFERS-1:0] Input flits                                                                                                                     |
+| out                |  Output       |  [NUM_BUFFERS-1:0] Output flits                                                                                                                    |
+| data_ready_in      |  Input        |  [NUM_BUFFERS-1:0] Bit that indicates if data is ready to be input from the endpoint[0] or the phy layer[NUM_BUFFERS-1:1]                          |
+| data_ready_out     |  Output       |  [NUM_BUFFERS-1:0] Bit that indicates if data is ready to be output from the endpoint[0] or the phy layer[NUM_BUFFERS-1:1]                         |
+| credit_granted     |  Input        |  [NUM_OUTPORTS-1:0] [NUM_VCS-1:0] denotes when a VC has been granted a credit for the link. Does this for each link                                |
+| packet_sent        |  Input        |  [NUM_OUTPORTS-1:0] Indicates when an outport of the switch has sent a packet through the phy layer or to this nodes endpoint                      |
+| buffer_available   |  Output       |  [NUM_BUFFERS-1:0] [NUM_VCS-1:0] Indicates when each VC of each buffer is available                                                                |
+| config_done        |  Output       |  1 bit logic that indicates that configuration is complete at this node                                                                            |
+| node_id            |  Output       |  5 bit logic that specifies the node id of the node                                                                                                |
 
 ### References
 
