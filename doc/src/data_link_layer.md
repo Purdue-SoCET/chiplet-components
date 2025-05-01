@@ -40,14 +40,45 @@ destination information from the previous stages and tries to allocate a spot
 in the crossbar for the packet to be sent through. If it is unable to allocate
 a spot, the packet must retry its entry into the pipeline.
 
-TODO: talk about each pipeline stage and details
-
 
 ![Switch Architecture](images/switch_2_rtl.svg)
 
+#### Switch Pipeline
 
+The pipeline consists of 3 stages with a speculative optimization which allows
+a packet to be allocated to the crossbar in two cycles. All packets enter the
+ingress buffers and contend for entrace into the pipeline with a round-robin
+arbiter. Once a buffer has been selected, its header is sent into the pipeline
+to determine its egress port and virtual channel which is then used to allocate
+a spot on the crossbar for it.
 
-TODO: talk about memory map
+In the first stage, route compute, the source and destination fields of the
+header are analyzed to match against the 32 entries in the switch routing
+table. In this stage, the register bank peeks at the flit to determine whether
+it can be claimed by the register bank and insert a bubble into the pipeline.
+
+The next stage is virtual channel allocation where the egress port determined
+in the previous stage is used to determine whether the packet will be crossing
+a dateline. If it crosses a dateline, its final virtual channel is incremented.
+
+The final stage is switch allocation where packets are allocated a spot in the
+crossbar. If there is not a spot in the crossbar, the packet restarts the
+pipeline by bidding entrace through the arbiter (this can be improved upon in
+the future). If there is a free spot in the crossbar, the packet will wait for
+its data to be sent through. The switch allocator also takes the input flit to
+the virtual channel allocator stage and attempts to speculatively allocate
+a space in the crossbar if none of the virtual channels have been allocated.
+When this happens, the switch allocator will allocate both spots, and then once
+the flit passes to the switch allocation stage, it will clean up the
+speculative work now that the correct virtual channel is known.
+
+The final part of the switch is the crossbar with muxes all of the ingress
+buffers to the egress buffers. The crossbar tracks how many flits have been
+sent and pauses transmission if it doesn't have enough credit on its buffers.
+A `credit_granted` signal resets that counter and allows more packets to be
+sent. When enough packets have been popped off the ingress buffer,
+a `buffer_available` signal will be sent which is converted to
+a `credit_granted` signal on the other side of the link.
 
 ### Configuration 
 

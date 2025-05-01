@@ -25,6 +25,8 @@ layer are called a **tile**.
 - Tile: a combination of an endpoint, switch, and physical layer which allows a node to enter the network
 - Node: Generally, anything that can communicate in a network, in certain contexts it may mean members of a network who are not responsible for network configuration
 - Controller: The node which is responsible for network configuration
+- Ingress: the buffers/flits coming into the switch
+- Egress: the buffers/flits leaving from the switch
 
 ### Topology constraints
 
