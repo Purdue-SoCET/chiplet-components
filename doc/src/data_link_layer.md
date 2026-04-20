@@ -1,6 +1,6 @@
 # Data-Link Layer
 
-### 8b/10b Encoding
+## 8b/10b Encoding
 
 8b/10b encoding is a communications industry standard. This encoding takes 8 bit words and 
 encodes them as 10 bit symbols by checking the running disparity of the number of ones and 
@@ -13,9 +13,11 @@ phy layer. The switch only deals with decoded flits and the phy layer only sends
 recieves encoded flits. When flits are decoded before entering the switch input buffers the
 crc values of the packets are also checked for potential errors.
 
-![General Format](images/8b10b.svg)
+![8b10b Encoding Format, described below](images/8b10b.svg)
 
-### Switch Architecture
+The 8b10b encoding splits the input 8-bit byte into upper 3 and lower 5 bit chunks, encoded as 4 bits and 6 bits respectively; the even number of bits in each segment allows for DC balancing. 
+
+## Switch Architecture
 
 The switch module consists of input buffers that store incoming flits from the
 physical layer. There is one buffer for each node connected to a particular
@@ -43,7 +45,7 @@ a spot, the packet must retry its entry into the pipeline.
 
 ![Switch Architecture](images/switch_2_rtl.svg)
 
-#### Switch Pipeline
+### Switch Pipeline
 
 The pipeline consists of 3 stages with a speculative optimization which allows
 a packet to be allocated to the crossbar in two cycles. All packets enter the
@@ -80,7 +82,7 @@ sent. When enough packets have been popped off the ingress buffer,
 a `buffer_available` signal will be sent which is converted to
 a `credit_granted` signal on the other side of the link.
 
-### Configuration 
+## Configuration 
 
 When configuring a chiplet network the controller must first get its own node and 
 routing table from its core. It can then send a node and routing table to each other 
@@ -88,7 +90,7 @@ node in the network which allows a node to send and recieve packets. Once a node
 configured it will recieve a config done packet that will signal to that node's core 
 that it can send packets.
 
-#### Switch Memory Map
+### Switch Memory Map
 
 | Address            |     Name      |  Description                                                                                                                                       |
 | :------------------| :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,7 +101,7 @@ that it can send packets.
 | 0x12               |    Node ID    | Sets a tiles node ID which is used when sending and receiving packets.                                                                             |
 | 0x13               |  Config Done  | This register is set to 1 when configuration of a strongly connected component is completed.                                                       |
 
-### Speculative Switch Allocation
+## Speculative Switch Allocation
 
 The 3-stage pipelined switch supports speculative switch allocation. This
 optimization forwards the inputs of the virtual channel allocator to the switch
@@ -109,7 +111,7 @@ will clean up the speculative work by deallocated the unused virtual channel.
 This allows a certain class of packets to be sent across the switch in 2 cycles
 instead of 3.
 
-### Virtual Channels
+## Virtual Channels
 
 Virtual channels are used to ensure deadlock avoidance in the network. If there
 are packets being sent in a cyclic pattern, and no packet can make progress,
@@ -124,7 +126,7 @@ has a single register which tracks which egress ports cross a dateline so that
 the VC field of the metadata can be set appropriately during the virtual
 channel allocation stage of the pipeline.
 
-### Switch Testing
+## Switch Testing
 
 There are two testbenches for the switch: one for correctness (deadlock
 avoidance, routing closure, etc), and one for measuring the performance of the
@@ -136,8 +138,8 @@ directory. The benchmarking testbench will produce the files
 the `switch/scripts/parse_switch_stats.py` script to produce more readable
 statistics of the run.
 
-### Module Definition
-#### Switch Interface
+## Module Definition
+### Switch Interface
 | Port Name          |   Direction   |  Description                                                                                                                                       |
 | :------------------| :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
 | in                 |  Input        |  [NUM_BUFFERS-1:0] Input flits                                                                                                                     |
@@ -150,7 +152,7 @@ statistics of the run.
 | config_done        |  Output       |  1 bit logic that indicates that configuration is complete at this node                                                                            |
 | node_id            |  Output       |  5 bit logic that specifies the node id of the node                                                                                                |
 
-### References
+## References
 
 The switch architecture was heavily inspired by the [router architecture notes
 from Stanford's

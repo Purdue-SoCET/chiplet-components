@@ -5,7 +5,9 @@ offchip communication between functional units. The networking stack consists
 of three layers: the protocol layer, the data link layer, and the physical
 layer. The stack is visualized below.
 
-![Network Stack](images/network_stack.svg)
+![Chiplet networking stack diagram, described below](images/network_stack.svg)
+
+The stack has four layers from top to bottom: Application Logic, Protocol Message Format, Data Link (8b/10b encoding), and PHY (5× UART).
 
 An example topology is shown below. In this configuration, the physical layer
 uses UART to communicate across links. Routing tables can be configured such
@@ -15,7 +17,7 @@ layer are called a **tile**.
 
 ![Example Topology](images/topology.svg)
 
-### Terminology
+## Terminology
 
 - Endpoint: the bus-connected component which enables communication in the network
 - Message: an entire packet made up of a number of words dependent on the format and length of the header
@@ -28,7 +30,7 @@ layer are called a **tile**.
 - Ingress: the buffers/flits coming into the switch
 - Egress: the buffers/flits leaving from the switch
 
-### Topology constraints
+## Topology constraints
 
 - There are a maximum of 31 devices connected in a single network
 - Each device may have up to 4 messages in flight

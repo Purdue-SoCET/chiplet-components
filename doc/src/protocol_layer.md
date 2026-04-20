@@ -29,7 +29,9 @@ read/write packets, a length of 0 is translated to transfer the maximum number
 of words for that packet type. This ensures that it is impossible to request no
 bytes be transferred across the network.
 
-![General Format](images/generic_protocol.svg)
+![Generic packet header bit layout, described below](images/generic_protocol.svg)
+
+The 32-bit header word contains a 4-bit Format field (bits 31–28), a 5-bit Destination field (bits 27–23), a 7-bit Length field (bits 22–15, reduced to 4 bits in short formats), and a CRC in the lower bits. Any words following the header depend on the format and length values.
 
 ### Packet formats
 
@@ -56,7 +58,9 @@ the memory transaction. For example a write packet with `Lst BE = 0x7` would
 only write the lower 3 bytes of the final word. The `Addr` field is assumed to
 be word aligned and reserves the lower bits as 0's.
 
-![Long Format](images/long_packet.svg)
+![Long memory read/write packet bit layout, described above](images/long_packet.svg)
+
+The first word contains a 4-bit Format, 5-bit Destination, 7-bit Length, Lst BE and Fst BE byte-enable fields, and reserved bits. The second word carries the 30-bit word-aligned address (Addr[31:2]). Subsequent words carry the data payload up to 128 words.
 
 #### Memory Read Response Packet
 
@@ -74,7 +78,9 @@ particular set of message codes. Endpoints are free to define their
 interpretation of undefined message codes. Message packets with `Length = 0`
 have no following data words.
 
-![Message Format](images/msg_packet.svg)
+![Message packet bit layout, described above](images/msg_packet.svg)
+
+The first word carries the Format, Destination, and Length fields. The second word contains a 16-bit message code in the lower half. Any following words are the data payload; if Length = 0, no data words follow.
 
 #### An example mapping of message codes
 
@@ -93,7 +99,7 @@ aspects of each switch such as routing tables, datelines, and node IDs. The
 switch configuration packet is special in that it is only a single word. No
 response packets are sent following initialization. The switch configuration
 space consists of a 256 15-bit entries. The switch configuration address space
-is described in more depth in [switch](data_link_layer.md).
+is described in more depth in [switch configuration space](data_link_layer.md).
 
 ![Switch Config Format](images/switch_config_packet.svg)
 
@@ -105,7 +111,9 @@ length describes the length of the memory read response NOT the length of the
 request packet. The `Addr` field is a word-aligned, 21-bit offset from the
 endpoint base address register, giving up to 2MB of address space.
 
-![Short Format](images/short_packet.svg)
+![Short memory read/write packet bit layout, described above](images/short_packet.svg)
+
+The header word contains a 4-bit Format, 5-bit Destination, 4-bit Length, and a 19-bit word-aligned address offset (Addr[20:2]). Subsequent words carry the data payload up to 16 words.
 
 ### Endpoint
 
